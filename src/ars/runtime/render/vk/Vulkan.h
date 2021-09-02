@@ -78,4 +78,16 @@ class VulkanMemoryAllocator {
   private:
     VmaAllocator _allocator;
 };
+
+struct MemoryView {
+    const uint8_t *data;
+    size_t size;
+};
+
+// Return nullptr if shader is not found.
+// When the shader exists, this method return the pointer to the SPIRV code
+// and the size will be set correctly
+MemoryView
+load_spirv_code(const char *path, const char **flags, uint32_t flag_count);
+
 } // namespace ars::render

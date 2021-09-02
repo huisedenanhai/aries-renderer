@@ -1,5 +1,5 @@
 #include "Vulkan.h"
-
+#include <frill_shaders.hpp>
 #include <stdexcept>
 
 namespace ars::render {
@@ -59,5 +59,11 @@ VulkanInstance::~VulkanInstance() {
     if (_instance != VK_NULL_HANDLE) {
         Destroy();
     }
+}
+
+MemoryView
+load_spirv_code(const char *path, const char **flags, uint32_t flag_count) {
+    auto code = frill_shaders::load(path, flags, flag_count);
+    return MemoryView{code.code, code.size};
 }
 } // namespace ars::render

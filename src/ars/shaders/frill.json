@@ -1,0 +1,10 @@
+{
+  "sources": [
+    "test.frag",
+    "test.vert",
+    "tex.frag",
+    "tex.vert",
+    "model_vis.vert",
+    "model_vis.frag"
+  ]
+}

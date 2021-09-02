@@ -1,4 +1,7 @@
-add_library(core)
+add_library(core
+    Log.cpp
+    Log.h
+    )
 aries_setup_common_target(core)
 
 target_link_libraries(core PUBLIC

@@ -13,6 +13,8 @@ add_library(render
         IMesh.h
         IMaterial.cpp
         IMaterial.h)
+
+target_link_libraries(render PUBLIC glfw)
 aries_setup_common_target(render)
 
 add_subdirectory(vk)

@@ -2,6 +2,9 @@
 
 #include <memory>
 #include <optional>
+#include <string>
+
+struct GLFWwindow;
 
 namespace ars::render {
 class ISwapchain;
@@ -12,6 +15,24 @@ class IMesh;
 class IMaterial;
 
 enum class Backend { Vulkan };
+
+struct ApplicationInfo {
+    Backend backend = Backend::Vulkan;
+    std::string app_name{};
+
+    struct Version {
+        int major = 0;
+        int minor = 0;
+        int patch = 0;
+    };
+
+    Version version{};
+
+    bool enable_presentation = true;
+    bool enable_validation = false;
+};
+
+void init_render_backend(const ApplicationInfo &info);
 
 // The root of the renderer. The factory of render resources.
 // All resources should be destroyed before context is released.
@@ -28,12 +49,11 @@ class IRenderContext {
     // If the backend needs to actually create a swapchain to proceed, the
     // swapchain is created and cached, which will be returned by the next call
     // to create_swapchain with the same window handle.
-    static std::unique_ptr<IRenderContext>
-    create(Backend backend, std::optional<uint64_t> window_handle);
+    static std::unique_ptr<IRenderContext> create(GLFWwindow *window);
 
     // This method returns nullptr if swapchain creation fails
     virtual std::unique_ptr<ISwapchain>
-    create_swapchain(uint64_t window_handle) = 0;
+    create_swapchain(GLFWwindow *window) = 0;
 
     virtual std::unique_ptr<IBuffer> create_buffer() = 0;
     virtual std::unique_ptr<ITexture> create_texture() = 0;

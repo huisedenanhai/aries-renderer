@@ -1,0 +1,10 @@
+.vscode
+.cache
+build/
+cmake-build-release/
+cmake-build-debug/
+.idea
+.DS_Store
+.vs
+out/
+Folder.DotSettings.user

@@ -1,0 +1,9 @@
+BasedOnStyle: LLVM
+AccessModifierOffset: -2
+IndentCaseLabels: false
+Standard: Latest
+IndentWidth: 4
+AllowShortFunctionsOnASingleLine: Empty
+BinPackParameters: false
+BinPackArguments: false
+AlignTrailingComments: true

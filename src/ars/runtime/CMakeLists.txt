@@ -1,0 +1,5 @@
+add_subdirectory(asset)
+add_subdirectory(core)
+add_subdirectory(engine)
+add_subdirectory(render)
+add_subdirectory(script)

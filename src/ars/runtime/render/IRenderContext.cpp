@@ -22,6 +22,19 @@ void init_render_backend(const ApplicationInfo &info) {
     }
 }
 
+void destroy_render_backend() {
+    if (s_application_info == nullptr) {
+        log_warn("Backend is not init, but you want to destroy it.");
+        return;
+    }
+    switch (s_application_info->backend) {
+    case Backend::Vulkan:
+        destroy_vulkan_backend();
+        break;
+    }
+    s_application_info.reset();
+}
+
 std::unique_ptr<IRenderContext>
 IRenderContext::create(GLFWwindow *window_handle) {
     if (s_application_info == nullptr) {

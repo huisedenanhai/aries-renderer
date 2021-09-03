@@ -7,12 +7,15 @@ namespace ars::render {
 class VulkanSwapchain;
 
 void init_vulkan_backend(const ApplicationInfo &app_info);
+void destroy_vulkan_backend();
 
 class VulkanContext : public IRenderContext {
   public:
     VulkanContext();
 
     ARS_NO_COPY_MOVE(VulkanContext);
+
+    ~VulkanContext() override;
 
     std::unique_ptr<ISwapchain> create_swapchain(GLFWwindow *window) override;
     std::unique_ptr<IBuffer> create_buffer() override;

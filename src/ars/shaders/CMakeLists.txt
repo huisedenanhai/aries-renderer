@@ -1,7 +1,7 @@
 set(ARS_FRILL_EXECUTABLE "" CACHE PATH "The frill executable")
 
 if (NOT EXISTS ${ARS_FRILL_EXECUTABLE})
-  message(FATAL_ERROR "Please specify the correct path to the frill executable")
+  message(FATAL_ERROR "Please specify the correct path to ARS_FRILL_EXECUTABLE")
 endif ()
 
 add_custom_target(shaders ALL

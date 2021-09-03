@@ -221,7 +221,7 @@ struct VulkanEnvironment {
 
     VulkanEnvironment(std::unique_ptr<VulkanInstance> ins,
                       VkDebugUtilsMessengerEXT debug)
-        : instance(std::move(ins)), debug_messenger(std::move(debug)) {}
+        : instance(std::move(ins)), debug_messenger(debug) {}
 
     ~VulkanEnvironment() {
         if (!instance) {
@@ -259,6 +259,11 @@ void init_vulkan_backend(const ApplicationInfo &app_info) {
                                                    debug_messenger);
 }
 
+void destroy_vulkan_backend() {
+    assert(s_vulkan != nullptr);
+    s_vulkan.reset();
+}
+
 VulkanContext::VulkanContext() {}
 
 std::unique_ptr<ISwapchain>
@@ -285,4 +290,6 @@ std::unique_ptr<IMesh> VulkanContext::create_mesh() {
 std::unique_ptr<IMaterial> VulkanContext::create_material() {
     return std::make_unique<VulkanMaterial>();
 }
+
+VulkanContext::~VulkanContext() = default;
 } // namespace ars::render

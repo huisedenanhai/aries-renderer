@@ -17,7 +17,7 @@ int main() {
 
     ApplicationInfo app_info{};
     app_info.app_name = "Playground Render";
-//    app_info.enable_validation = true;
+    app_info.enable_validation = true;
 
     init_render_backend(app_info);
 
@@ -33,6 +33,8 @@ int main() {
         view->render();
         swapchain->present(view->get_color_texture());
     }
+
+    destroy_render_backend();
 
     glfwTerminate();
     return 0;

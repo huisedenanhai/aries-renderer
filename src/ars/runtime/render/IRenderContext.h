@@ -33,6 +33,7 @@ struct ApplicationInfo {
 };
 
 void init_render_backend(const ApplicationInfo &info);
+void destroy_render_backend();
 
 // The root of the renderer. The factory of render resources.
 // All resources should be destroyed before context is released.

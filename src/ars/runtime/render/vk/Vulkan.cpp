@@ -6,7 +6,9 @@ namespace ars::render {
 VulkanMemoryAllocator::VulkanMemoryAllocator(VulkanDevice *device) {
     auto instance = device->instance();
     VmaAllocatorCreateInfo allocator_info{};
-    allocator_info.vulkanApiVersion = instance->api_version();
+
+    // just use the default api version, which is Vulkan 1.0
+    allocator_info.vulkanApiVersion = 0;
     allocator_info.physicalDevice = device->physical_device();
     allocator_info.device = device->device();
     allocator_info.instance = instance->instance();

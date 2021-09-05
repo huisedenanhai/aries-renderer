@@ -7,19 +7,10 @@
 
 using namespace ars::render;
 
-int main() {
-    std::cout << "Hello World" << std::endl;
-    glfwInit();
-
+void main_loop() {
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     auto window =
         glfwCreateWindow(800, 600, "Playground Render", nullptr, nullptr);
-
-    ApplicationInfo app_info{};
-    app_info.app_name = "Playground Render";
-    app_info.enable_validation = true;
-
-    init_render_backend(app_info);
 
     auto rd_context = IRenderContext::create(window);
     auto scene = rd_context->create_scene();
@@ -29,10 +20,21 @@ int main() {
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
-
         view->render();
         swapchain->present(view->get_color_texture());
     }
+}
+
+int main() {
+    glfwInit();
+
+    ApplicationInfo app_info{};
+    app_info.app_name = "Playground Render";
+    app_info.enable_validation = true;
+
+    init_render_backend(app_info);
+
+    main_loop();
 
     destroy_render_backend();
 

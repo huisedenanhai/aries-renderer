@@ -18,19 +18,27 @@ class VulkanInstance : public volk::Instance {
   public:
     VulkanInstance(VkInstance instance,
                    uint32_t api_version,
+                   bool presentation_enabled,
                    const VkAllocationCallbacks *allocator = nullptr)
-        : volk::Instance(instance, allocator), _api_version(api_version) {}
+        : volk::Instance(instance, allocator),
+          _presentation_enabled(presentation_enabled),
+          _api_version(api_version) {}
 
     ARS_NO_COPY_MOVE(VulkanInstance);
 
     ~VulkanInstance();
 
-    uint32_t api_version() const {
+    [[nodiscard]] uint32_t api_version() const {
         return _api_version;
     }
 
+    [[nodiscard]] bool presentation_enabled() const {
+        return _presentation_enabled;
+    };
+
   private:
     uint32_t _api_version = 0;
+    bool _presentation_enabled = false;
 };
 
 class VulkanDevice : public volk::Device {
@@ -47,22 +55,17 @@ class VulkanDevice : public volk::Device {
 
     ~VulkanDevice();
 
-    inline VkPhysicalDevice physical_device() const {
+    [[nodiscard]] inline VkPhysicalDevice physical_device() const {
         return _physical_device;
     }
 
-    inline VulkanInstance *instance() const {
+    [[nodiscard]] inline VulkanInstance *instance() const {
         return _instance;
     }
 
   private:
     VulkanInstance *_instance = nullptr;
     VkPhysicalDevice _physical_device = VK_NULL_HANDLE;
-};
-
-struct Queue {
-    uint32_t family_index = 0;
-    VkQueue queue = VK_NULL_HANDLE;
 };
 
 class VulkanMemoryAllocator {
@@ -73,7 +76,7 @@ class VulkanMemoryAllocator {
 
     ~VulkanMemoryAllocator();
 
-    VmaAllocator raw() const;
+    [[nodiscard]] VmaAllocator raw() const;
 
   private:
     VmaAllocator _allocator;

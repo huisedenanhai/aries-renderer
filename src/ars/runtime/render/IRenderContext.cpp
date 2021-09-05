@@ -35,8 +35,7 @@ void destroy_render_backend() {
     s_application_info.reset();
 }
 
-std::unique_ptr<IRenderContext>
-IRenderContext::create(GLFWwindow *window_handle) {
+std::unique_ptr<IRenderContext> IRenderContext::create(GLFWwindow *window) {
     if (s_application_info == nullptr) {
         log_error("Render backend has not been initialized. Please call "
                   "init_render_backend first");
@@ -46,7 +45,7 @@ IRenderContext::create(GLFWwindow *window_handle) {
     std::unique_ptr<IRenderContext> result{};
     switch (s_application_info->backend) {
     case Backend::Vulkan:
-        result = std::make_unique<VulkanContext>();
+        result = std::make_unique<VulkanContext>(window);
         break;
     }
     return result;

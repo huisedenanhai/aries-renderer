@@ -160,17 +160,8 @@ bool check_validation_layers() {
 }
 
 std::unique_ptr<VulkanInstance>
-create_vulkan_instance(const ApplicationInfo &app_info) {
-    if (volkInitialize() != VK_SUCCESS) {
-        panic("Failed to load vulkan function pointers");
-    }
-
-    bool enable_validation = app_info.enable_validation;
-
-    if (enable_validation && !check_validation_layers()) {
-        log_warn("validation layers requested but not available");
-        enable_validation = false;
-    }
+create_vulkan_instance(const ApplicationInfo &app_info,
+                       bool enable_validation) {
 
     auto api_version = VK_API_VERSION_1_2;
     VkApplicationInfo vk_app_info{VK_STRUCTURE_TYPE_APPLICATION_INFO};
@@ -256,9 +247,20 @@ std::unique_ptr<VulkanEnvironment> s_vulkan{};
 
 void init_vulkan_backend(const ApplicationInfo &app_info) {
     assert(s_vulkan == nullptr);
-    auto instance = create_vulkan_instance(app_info);
+
+    if (volkInitialize() != VK_SUCCESS) {
+        panic("Failed to load vulkan function pointers");
+    }
+
+    bool enable_validation = app_info.enable_validation;
+    if (enable_validation && !check_validation_layers()) {
+        log_warn("Validation layers requested but not available");
+        enable_validation = false;
+    }
+
+    auto instance = create_vulkan_instance(app_info, enable_validation);
     VkDebugUtilsMessengerEXT debug_messenger = VK_NULL_HANDLE;
-    if (app_info.enable_validation) {
+    if (enable_validation) {
         debug_messenger = create_debug_messenger(instance.get());
     }
     s_vulkan = std::make_unique<VulkanEnvironment>(std::move(instance),
@@ -527,8 +529,8 @@ VkPhysicalDevice choose_physical_device(VulkanInstance *instance,
 } // namespace
 
 void VulkanContext::init_device_and_queues(VulkanInstance *instance,
-                                          bool enable_validation,
-                                          VkSurfaceKHR surface) {
+                                           bool enable_validation,
+                                           VkSurfaceKHR surface) {
     auto physical_device = choose_physical_device(instance, surface);
     QueueFamilyIndices indices =
         find_queue_families(instance, physical_device, surface);

@@ -87,9 +87,9 @@ template <typename T, typename Getter>
 inline bool check_contains(const std::vector<const char *> &target,
                            const std::vector<T> &available,
                            Getter &&getter) {
-    return check_contains(&target[0],
+    return check_contains(target.data(),
                           target.size(),
-                          &available[0],
+                          available.data(),
                           available.size(),
                           std::forward<Getter>(getter));
 }
@@ -278,7 +278,7 @@ std::unique_ptr<ISwapchain> Context::create_swapchain(GLFWwindow *window) {
         return std::move(_cached_swapchain);
     }
 
-    return nullptr;
+    return create_swapchain_impl(window);
 }
 
 std::unique_ptr<IBuffer> Context::create_buffer() {
@@ -299,46 +299,6 @@ std::unique_ptr<IMesh> Context::create_mesh() {
 
 std::unique_ptr<IMaterial> Context::create_material() {
     return std::make_unique<Material>();
-}
-
-struct SwapChainSupportDetails {
-    VkSurfaceCapabilitiesKHR capabilities{};
-    std::vector<VkSurfaceFormatKHR> formats{};
-    std::vector<VkPresentModeKHR> present_modes{};
-};
-
-SwapChainSupportDetails
-query_swapchain_support(Instance *instance,
-                        VkPhysicalDevice physical_device,
-                        VkSurfaceKHR surface) {
-    SwapChainSupportDetails details;
-    instance->GetPhysicalDeviceSurfaceCapabilitiesKHR(
-        physical_device, surface, &details.capabilities);
-
-    uint32_t format_count = 0;
-    instance->GetPhysicalDeviceSurfaceFormatsKHR(
-        physical_device, surface, &format_count, nullptr);
-
-    if (format_count != 0) {
-        details.formats.resize(format_count);
-        instance->GetPhysicalDeviceSurfaceFormatsKHR(
-            physical_device, surface, &format_count, details.formats.data());
-    }
-
-    uint32_t present_mode_count = 0;
-    instance->GetPhysicalDeviceSurfacePresentModesKHR(
-        physical_device, surface, &present_mode_count, nullptr);
-
-    if (present_mode_count != 0) {
-        details.present_modes.resize(present_mode_count);
-        instance->GetPhysicalDeviceSurfacePresentModesKHR(
-            physical_device,
-            surface,
-            &present_mode_count,
-            details.present_modes.data());
-    }
-
-    return details;
 }
 
 namespace {
@@ -577,16 +537,43 @@ void Context::init_device_and_queues(Instance *instance,
     }
 
     _device = std::make_unique<Device>(instance, device, physical_device);
-
-    _device->GetDeviceQueue(
-        indices.graphics_family.value(), 0, &_graphics_queue.queue);
-    _graphics_queue.family_index = indices.graphics_family.value();
-    _device->GetDeviceQueue(
-        indices.present_family.value(), 0, &_present_queue.queue);
-    _present_queue.family_index = indices.present_family.value();
+    _graphics_queue =
+        std::make_unique<Queue>(this, indices.graphics_family.value());
+    _present_queue =
+        std::make_unique<Queue>(this, indices.present_family.value());
 }
 
 Context::Context(GLFWwindow *window) {
+    _cached_swapchain = create_swapchain_impl(window);
+
+    if (_cached_swapchain != nullptr) {
+        _cached_window = window;
+    }
+
+    _vma = std::make_unique<VulkanMemoryAllocator>(_device.get());
+}
+
+Instance *Context::instance() const {
+    return _device->instance();
+}
+
+VulkanMemoryAllocator *Context::vma() const {
+    return _vma.get();
+}
+
+Device *Context::device() const {
+    return _device.get();
+}
+
+Queue *Context::graphics_queue() const {
+    return _graphics_queue.get();
+}
+
+Queue *Context::present_queue() const {
+    return _present_queue.get();
+}
+
+std::unique_ptr<Swapchain> Context::create_swapchain_impl(GLFWwindow *window) {
     VkSurfaceKHR surface = VK_NULL_HANDLE;
     if (window != nullptr) {
         if (!s_vulkan->instance->presentation_enabled()) {
@@ -600,24 +587,49 @@ Context::Context(GLFWwindow *window) {
         }
     }
 
-    init_device_and_queues(
-        s_vulkan->instance.get(), s_vulkan->validation_enabled(), surface);
-
-    if (surface != VK_NULL_HANDLE) {
-        _cached_window = window;
-        _cached_swapchain = std::make_unique<Swapchain>(this, surface);
+    if (_device == nullptr) {
+        init_device_and_queues(
+            s_vulkan->instance.get(), s_vulkan->validation_enabled(), surface);
     }
 
-    _vma = std::make_unique<VulkanMemoryAllocator>(_device.get());
-}
+    if (surface != VK_NULL_HANDLE) {
+        // must check if the surface is supported by the physical device
+        if (VkBool32 is_supported_surface = VK_FALSE;
+            instance()->GetPhysicalDeviceSurfaceSupportKHR(
+                _device->physical_device(),
+                _present_queue->family_index(),
+                surface,
+                &is_supported_surface) != VK_SUCCESS ||
+            is_supported_surface != VK_TRUE) {
 
-Instance *Context::get_instance() const {
-    return _device->instance();
-}
+            log_error("The physical device of the context does not support the "
+                      "presentation of the given window");
 
-VulkanMemoryAllocator *Context::get_vma() const {
-    return _vma.get();
+            // cleanup
+            instance()->Destroy(surface);
+            return nullptr;
+        }
+
+        int fb_width, fb_height;
+        glfwGetFramebufferSize(window, &fb_width, &fb_height);
+        return std::make_unique<Swapchain>(this, surface, fb_width, fb_height);
+    }
+
+    return nullptr;
 }
 
 Context::~Context() = default;
+
+Queue::Queue(Context *context, uint32_t family_index)
+    : _context(context), _family_index(family_index) {
+    _context->device()->GetDeviceQueue(family_index, 0, &_queue);
+}
+
+uint32_t Queue::family_index() const {
+    return _family_index;
+}
+
+VkQueue Queue::raw() const {
+    return _queue;
+}
 } // namespace ars::render::vk

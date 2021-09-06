@@ -1,4 +1,4 @@
-#include "IRenderContext.h"
+#include "IContext.h"
 #include "vk/Context.h"
 #include <ars/runtime/core/Log.h>
 
@@ -35,14 +35,14 @@ void destroy_render_backend() {
     s_application_info.reset();
 }
 
-std::unique_ptr<IRenderContext> IRenderContext::create(GLFWwindow *window) {
+std::unique_ptr<IContext> IContext::create(GLFWwindow *window) {
     if (s_application_info == nullptr) {
         log_error("Render backend has not been initialized. Please call "
                   "init_render_backend first");
         return nullptr;
     }
 
-    std::unique_ptr<IRenderContext> result{};
+    std::unique_ptr<IContext> result{};
     switch (s_application_info->backend) {
     case Backend::Vulkan:
         result = std::make_unique<vk::Context>(window);

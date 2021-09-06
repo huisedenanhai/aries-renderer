@@ -1,2 +1,4 @@
 target_sources(core PRIVATE
-        NoCopyMove.h)
+        NoCopyMove.h
+        SmallVec.h
+        )

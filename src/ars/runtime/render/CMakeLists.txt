@@ -1,8 +1,8 @@
 add_library(render
         ISwapchain.cpp
         ISwapchain.h
-        IRenderContext.cpp
-        IRenderContext.h
+        IContext.cpp
+        IContext.h
         IBuffer.cpp
         IBuffer.h
         ITexture.cpp

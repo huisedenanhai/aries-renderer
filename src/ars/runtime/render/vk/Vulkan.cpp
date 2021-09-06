@@ -2,8 +2,8 @@
 #include <frill_shaders.hpp>
 #include <stdexcept>
 
-namespace ars::render {
-VulkanMemoryAllocator::VulkanMemoryAllocator(VulkanDevice *device) {
+namespace ars::render::vk {
+VulkanMemoryAllocator::VulkanMemoryAllocator(Device *device) {
     auto instance = device->instance();
     VmaAllocatorCreateInfo allocator_info{};
 
@@ -50,14 +50,14 @@ VmaAllocator VulkanMemoryAllocator::raw() const {
     return _allocator;
 }
 
-VulkanDevice::~VulkanDevice() {
+Device::~Device() {
     if (_device != VK_NULL_HANDLE) {
         DeviceWaitIdle();
         Destroy();
     }
 }
 
-VulkanInstance::~VulkanInstance() {
+Instance::~Instance() {
     if (_instance != VK_NULL_HANDLE) {
         Destroy();
     }
@@ -68,4 +68,4 @@ load_spirv_code(const char *path, const char **flags, uint32_t flag_count) {
     auto code = frill_shaders::load(path, flags, flag_count);
     return MemoryView{code.code, code.size};
 }
-} // namespace ars::render
+} // namespace ars::render::vk

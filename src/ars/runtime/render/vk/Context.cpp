@@ -1,10 +1,10 @@
-#include "VulkanContext.h"
-#include "VulkanBuffer.h"
-#include "VulkanMaterial.h"
-#include "VulkanMesh.h"
-#include "VulkanScene.h"
-#include "VulkanSwapchain.h"
-#include "VulkanTexture.h"
+#include "Context.h"
+#include "Buffer.h"
+#include "Material.h"
+#include "Mesh.h"
+#include "Scene.h"
+#include "Swapchain.h"
+#include "Texture.h"
 #include <GLFW/glfw3.h>
 #include <algorithm>
 #include <ars/runtime/core/Log.h>
@@ -13,7 +13,7 @@
 #include <sstream>
 #include <vector>
 
-namespace ars::render {
+namespace ars::render::vk {
 namespace {
 void remove_duplicates(std::vector<const char *> &vec) {
     std::sort(vec.begin(), vec.end(), [](const char *a, const char *b) {
@@ -159,7 +159,7 @@ bool check_validation_layers() {
                           [](auto &&layer) { return layer.layerName; });
 }
 
-std::unique_ptr<VulkanInstance>
+std::unique_ptr<Instance>
 create_vulkan_instance(const ApplicationInfo &app_info,
                        bool enable_validation) {
 
@@ -204,15 +204,15 @@ create_vulkan_instance(const ApplicationInfo &app_info,
         panic("Failed to create vulkan instance");
     }
 
-    return std::make_unique<VulkanInstance>(
+    return std::make_unique<Instance>(
         instance, api_version, app_info.enable_presentation, allocator);
 }
 
 struct VulkanEnvironment {
-    std::unique_ptr<VulkanInstance> instance = nullptr;
+    std::unique_ptr<Instance> instance = nullptr;
     VkDebugUtilsMessengerEXT debug_messenger = VK_NULL_HANDLE;
 
-    VulkanEnvironment(std::unique_ptr<VulkanInstance> ins,
+    VulkanEnvironment(std::unique_ptr<Instance> ins,
                       VkDebugUtilsMessengerEXT debug)
         : instance(std::move(ins)), debug_messenger(debug) {}
 
@@ -231,7 +231,7 @@ struct VulkanEnvironment {
     }
 };
 
-VkDebugUtilsMessengerEXT create_debug_messenger(VulkanInstance *instance) {
+VkDebugUtilsMessengerEXT create_debug_messenger(Instance *instance) {
     VkDebugUtilsMessengerEXT debug_messenger;
     auto info = default_debug_utils_messenger_create_info();
     if (instance->Create(&info, &debug_messenger) != VK_SUCCESS) {
@@ -272,8 +272,7 @@ void destroy_vulkan_backend() {
     s_vulkan.reset();
 }
 
-std::unique_ptr<ISwapchain>
-VulkanContext::create_swapchain(GLFWwindow *window) {
+std::unique_ptr<ISwapchain> Context::create_swapchain(GLFWwindow *window) {
     if (window == _cached_window && _cached_swapchain != nullptr) {
         _cached_window = nullptr;
         return std::move(_cached_swapchain);
@@ -282,24 +281,24 @@ VulkanContext::create_swapchain(GLFWwindow *window) {
     return nullptr;
 }
 
-std::unique_ptr<IBuffer> VulkanContext::create_buffer() {
-    return std::make_unique<VulkanBuffer>();
+std::unique_ptr<IBuffer> Context::create_buffer() {
+    return std::make_unique<Buffer>();
 }
 
-std::unique_ptr<ITexture> VulkanContext::create_texture() {
-    return std::make_unique<VulkanTexture>();
+std::unique_ptr<ITexture> Context::create_texture() {
+    return std::make_unique<Texture>();
 }
 
-std::unique_ptr<IScene> VulkanContext::create_scene() {
-    return std::make_unique<VulkanScene>();
+std::unique_ptr<IScene> Context::create_scene() {
+    return std::make_unique<Scene>();
 }
 
-std::unique_ptr<IMesh> VulkanContext::create_mesh() {
-    return std::make_unique<VulkanMesh>();
+std::unique_ptr<IMesh> Context::create_mesh() {
+    return std::make_unique<Mesh>();
 }
 
-std::unique_ptr<IMaterial> VulkanContext::create_material() {
-    return std::make_unique<VulkanMaterial>();
+std::unique_ptr<IMaterial> Context::create_material() {
+    return std::make_unique<Material>();
 }
 
 struct SwapChainSupportDetails {
@@ -309,7 +308,7 @@ struct SwapChainSupportDetails {
 };
 
 SwapChainSupportDetails
-query_swapchain_support(VulkanInstance *instance,
+query_swapchain_support(Instance *instance,
                         VkPhysicalDevice physical_device,
                         VkSurfaceKHR surface) {
     SwapChainSupportDetails details;
@@ -344,7 +343,7 @@ query_swapchain_support(VulkanInstance *instance,
 
 namespace {
 std::vector<VkExtensionProperties>
-enumerate_device_extensions(VulkanInstance *instance,
+enumerate_device_extensions(Instance *instance,
                             VkPhysicalDevice physical_device) {
     uint32_t available_extension_count = 0;
     instance->EnumerateDeviceExtensionProperties(
@@ -358,7 +357,7 @@ enumerate_device_extensions(VulkanInstance *instance,
     return available_extensions;
 }
 
-bool is_portability_subset(VulkanInstance *instance,
+bool is_portability_subset(Instance *instance,
                            VkPhysicalDevice physical_device) {
     auto available_extensions =
         enumerate_device_extensions(instance, physical_device);
@@ -371,7 +370,7 @@ bool is_portability_subset(VulkanInstance *instance,
 }
 
 bool check_device_extension_supported(
-    VulkanInstance *instance,
+    Instance *instance,
     VkPhysicalDevice physical_device,
     const std::vector<const char *> &extensions) {
     return check_contains(
@@ -380,10 +379,8 @@ bool check_device_extension_supported(
         [](auto &&ext) { return ext.extensionName; });
 }
 
-std::vector<const char *>
-get_device_extensions(VulkanInstance *instance,
-                      VkPhysicalDevice physical_device,
-                      bool need_swapchain) {
+std::vector<const char *> get_device_extensions(
+    Instance *instance, VkPhysicalDevice physical_device, bool need_swapchain) {
     auto available_extensions =
         enumerate_device_extensions(instance, physical_device);
     std::vector<const char *> enabled_extensions{};
@@ -414,7 +411,7 @@ struct QueueFamilyIndices {
     }
 };
 
-QueueFamilyIndices find_queue_families(VulkanInstance *instance,
+QueueFamilyIndices find_queue_families(Instance *instance,
                                        VkPhysicalDevice device,
                                        VkSurfaceKHR surface) {
     QueueFamilyIndices indices;
@@ -453,7 +450,7 @@ QueueFamilyIndices find_queue_families(VulkanInstance *instance,
 
 // return 0 to reject
 // surface is VK_NULL_HANDLE if swapchain support is required
-int rate_device_suitability(VulkanInstance *instance,
+int rate_device_suitability(Instance *instance,
                             VkPhysicalDevice physical_device,
                             VkSurfaceKHR surface) {
     assert(physical_device != VK_NULL_HANDLE);
@@ -500,7 +497,7 @@ int rate_device_suitability(VulkanInstance *instance,
     return score;
 }
 
-VkPhysicalDevice choose_physical_device(VulkanInstance *instance,
+VkPhysicalDevice choose_physical_device(Instance *instance,
                                         VkSurfaceKHR surface) {
     uint32_t device_count = 0;
     instance->EnumeratePhysicalDevices(&device_count, nullptr);
@@ -528,9 +525,9 @@ VkPhysicalDevice choose_physical_device(VulkanInstance *instance,
 }
 } // namespace
 
-void VulkanContext::init_device_and_queues(VulkanInstance *instance,
-                                           bool enable_validation,
-                                           VkSurfaceKHR surface) {
+void Context::init_device_and_queues(Instance *instance,
+                                     bool enable_validation,
+                                     VkSurfaceKHR surface) {
     auto physical_device = choose_physical_device(instance, surface);
     QueueFamilyIndices indices =
         find_queue_families(instance, physical_device, surface);
@@ -579,7 +576,7 @@ void VulkanContext::init_device_and_queues(VulkanInstance *instance,
         panic("failed to create logical device!");
     }
 
-    _device = std::make_unique<VulkanDevice>(instance, device, physical_device);
+    _device = std::make_unique<Device>(instance, device, physical_device);
 
     _device->GetDeviceQueue(
         indices.graphics_family.value(), 0, &_graphics_queue.queue);
@@ -589,7 +586,7 @@ void VulkanContext::init_device_and_queues(VulkanInstance *instance,
     _present_queue.family_index = indices.present_family.value();
 }
 
-VulkanContext::VulkanContext(GLFWwindow *window) {
+Context::Context(GLFWwindow *window) {
     VkSurfaceKHR surface = VK_NULL_HANDLE;
     if (window != nullptr) {
         if (!s_vulkan->instance->presentation_enabled()) {
@@ -608,19 +605,19 @@ VulkanContext::VulkanContext(GLFWwindow *window) {
 
     if (surface != VK_NULL_HANDLE) {
         _cached_window = window;
-        _cached_swapchain = std::make_unique<VulkanSwapchain>(this, surface);
+        _cached_swapchain = std::make_unique<Swapchain>(this, surface);
     }
 
     _vma = std::make_unique<VulkanMemoryAllocator>(_device.get());
 }
 
-VulkanInstance *VulkanContext::get_instance() const {
+Instance *Context::get_instance() const {
     return _device->instance();
 }
 
-VulkanMemoryAllocator *VulkanContext::get_vma() const {
+VulkanMemoryAllocator *Context::get_vma() const {
     return _vma.get();
 }
 
-VulkanContext::~VulkanContext() = default;
-} // namespace ars::render
+Context::~Context() = default;
+} // namespace ars::render::vk

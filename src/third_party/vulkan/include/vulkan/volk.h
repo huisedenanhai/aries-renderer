@@ -322,7 +322,7 @@ struct VolkInstanceTable {
 };
 
 /**
- * VulkanDevice-specific function pointer table
+ * Device-specific function pointer table
  */
 struct VolkDeviceTable
 {

@@ -1,5 +1,5 @@
 #include "IRenderContext.h"
-#include "vk/VulkanContext.h"
+#include "vk/Context.h"
 #include <ars/runtime/core/Log.h>
 
 namespace ars::render {
@@ -17,7 +17,7 @@ void init_render_backend(const ApplicationInfo &info) {
 
     switch (info.backend) {
     case Backend::Vulkan:
-        init_vulkan_backend(info);
+        vk::init_vulkan_backend(info);
         break;
     }
 }
@@ -29,7 +29,7 @@ void destroy_render_backend() {
     }
     switch (s_application_info->backend) {
     case Backend::Vulkan:
-        destroy_vulkan_backend();
+        vk::destroy_vulkan_backend();
         break;
     }
     s_application_info.reset();
@@ -45,7 +45,7 @@ std::unique_ptr<IRenderContext> IRenderContext::create(GLFWwindow *window) {
     std::unique_ptr<IRenderContext> result{};
     switch (s_application_info->backend) {
     case Backend::Vulkan:
-        result = std::make_unique<VulkanContext>(window);
+        result = std::make_unique<vk::Context>(window);
         break;
     }
     return result;

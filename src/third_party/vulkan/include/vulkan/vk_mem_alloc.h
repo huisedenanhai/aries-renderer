@@ -89,8 +89,8 @@ Documentation of all members: vk_mem_alloc.h
 - \subpage configuration
   - [Pointers to Vulkan functions](@ref config_Vulkan_functions)
   - [Custom host memory allocator](@ref custom_memory_allocator)
-  - [VulkanDevice memory allocation callbacks](@ref allocation_callbacks)
-  - [VulkanDevice heap memory limit](@ref heap_memory_limit)
+  - [Device memory allocation callbacks](@ref allocation_callbacks)
+  - [Device heap memory limit](@ref heap_memory_limit)
   - \subpage vk_khr_dedicated_allocation
 - \subpage general_considerations
   - [Thread safety](@ref general_considerations_thread_safety)
@@ -1600,14 +1600,14 @@ by filling optional member VmaAllocatorCreateInfo::pAllocationCallbacks. These
 functions will be passed to Vulkan, as well as used by the library itself to
 make any CPU-side allocations.
 
-\section allocation_callbacks VulkanDevice memory allocation callbacks
+\section allocation_callbacks Device memory allocation callbacks
 
 The library makes calls to `vkAllocateMemory()` and `vkFreeMemory()` internally.
 You can setup callbacks to be informed about these calls, e.g. for the purpose
 of gathering some statistics. To do it, fill optional member
 VmaAllocatorCreateInfo::pDeviceMemoryCallbacks.
 
-\section heap_memory_limit VulkanDevice heap memory limit
+\section heap_memory_limit Device heap memory limit
 
 When device memory of certain heap runs out of free space, new allocations may
 fail (returning error code) or they may succeed, silently pushing some existing
@@ -17509,7 +17509,7 @@ VMA_CALL_PRE VkResult VMA_CALL_POST vmaCreateBuffer(
             requiresDedicatedAllocation, prefersDedicatedAllocation);
 
         // Make sure alignment requirements for specific buffer usages reported
-        // in Physical VulkanDevice Properties are included in alignment reported by memory requirements.
+        // in Physical Device Properties are included in alignment reported by memory requirements.
         if((pBufferCreateInfo->usage & VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT) != 0)
         {
            VMA_ASSERT(vkMemReq.alignment %

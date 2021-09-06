@@ -4,19 +4,19 @@
 #include "../ITexture.h"
 #include "Vulkan.h"
 
-namespace ars::render {
-class VulkanContext;
+namespace ars::render::vk {
+class Context;
 
-class VulkanSwapchain : public ISwapchain {
+class Swapchain : public ISwapchain {
   public:
-    VulkanSwapchain(VulkanContext *context, VkSurfaceKHR surface);
-    ~VulkanSwapchain() override;
+    Swapchain(Context *context, VkSurfaceKHR surface);
+    ~Swapchain() override;
 
     void present(ITexture *texture) override;
     void resize(int physical_width, int physical_height) override;
 
   private:
-    VulkanContext *_context = nullptr;
+    Context *_context = nullptr;
     VkSurfaceKHR _surface = VK_NULL_HANDLE;
 };
-} // namespace ars::render
+} // namespace ars::render::vk

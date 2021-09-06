@@ -9,24 +9,24 @@
 
 #include "../../core/misc/NoCopyMove.h"
 
-namespace ars::render {
+namespace ars::render::vk {
 // By now in this project we only use a single allocator.
 //
 // These wrappers will take the ownership of vulkan handles and release
 // them on destruction.
-class VulkanInstance : public volk::Instance {
+class Instance : public volk::Instance {
   public:
-    VulkanInstance(VkInstance instance,
-                   uint32_t api_version,
-                   bool presentation_enabled,
-                   const VkAllocationCallbacks *allocator = nullptr)
+    Instance(VkInstance instance,
+             uint32_t api_version,
+             bool presentation_enabled,
+             const VkAllocationCallbacks *allocator = nullptr)
         : volk::Instance(instance, allocator),
           _presentation_enabled(presentation_enabled),
           _api_version(api_version) {}
 
-    ARS_NO_COPY_MOVE(VulkanInstance);
+    ARS_NO_COPY_MOVE(Instance);
 
-    ~VulkanInstance();
+    ~Instance();
 
     [[nodiscard]] uint32_t api_version() const {
         return _api_version;
@@ -41,36 +41,36 @@ class VulkanInstance : public volk::Instance {
     bool _presentation_enabled = false;
 };
 
-class VulkanDevice : public volk::Device {
+class Device : public volk::Device {
   public:
-    VulkanDevice(VulkanInstance *instance,
-                 VkDevice device,
-                 VkPhysicalDevice physical_device)
+    Device(Instance *instance,
+           VkDevice device,
+           VkPhysicalDevice physical_device)
         : volk::Device(device,
                        instance->table().vkGetDeviceProcAddr,
                        instance->allocator()),
           _instance(instance), _physical_device(physical_device) {}
 
-    ARS_NO_COPY_MOVE(VulkanDevice);
+    ARS_NO_COPY_MOVE(Device);
 
-    ~VulkanDevice();
+    ~Device();
 
     [[nodiscard]] inline VkPhysicalDevice physical_device() const {
         return _physical_device;
     }
 
-    [[nodiscard]] inline VulkanInstance *instance() const {
+    [[nodiscard]] inline Instance *instance() const {
         return _instance;
     }
 
   private:
-    VulkanInstance *_instance = nullptr;
+    Instance *_instance = nullptr;
     VkPhysicalDevice _physical_device = VK_NULL_HANDLE;
 };
 
 class VulkanMemoryAllocator {
   public:
-    explicit VulkanMemoryAllocator(VulkanDevice *device);
+    explicit VulkanMemoryAllocator(Device *device);
 
     ARS_NO_COPY_MOVE(VulkanMemoryAllocator);
 
@@ -93,4 +93,4 @@ struct MemoryView {
 MemoryView
 load_spirv_code(const char *path, const char **flags, uint32_t flag_count);
 
-} // namespace ars::render
+} // namespace ars::render::vk

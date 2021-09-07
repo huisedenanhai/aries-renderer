@@ -286,7 +286,9 @@ std::unique_ptr<IBuffer> Context::create_buffer() {
 }
 
 std::unique_ptr<ITexture> Context::create_texture() {
-    return std::make_unique<Texture>();
+    auto info =
+        TextureCreateInfo::sampled_2d(VK_FORMAT_R8G8B8A8_SRGB, 128, 128, 1);
+    return std::make_unique<Texture>(this, info);
 }
 
 std::unique_ptr<IScene> Context::create_scene() {
@@ -616,6 +618,12 @@ std::unique_ptr<Swapchain> Context::create_swapchain_impl(GLFWwindow *window) {
     }
 
     return nullptr;
+}
+
+std::vector<uint32_t> Context::get_unique_queue_family_indices() const {
+    std::set<uint32_t> queues = {_graphics_queue->family_index(),
+                                 _present_queue->family_index()};
+    return {queues.begin(), queues.end()};
 }
 
 Context::~Context() = default;

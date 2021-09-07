@@ -79,7 +79,8 @@ class VulkanMemoryAllocator {
     [[nodiscard]] VmaAllocator raw() const;
 
   private:
-    VmaAllocator _allocator;
+    Device *_device = nullptr;
+    VmaAllocator _allocator = VK_NULL_HANDLE;
 };
 
 struct MemoryView {

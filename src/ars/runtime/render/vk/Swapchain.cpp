@@ -133,14 +133,13 @@ void Swapchain::init_swapchain(int physical_width, int physical_height) {
     create_info.imageArrayLayers = 1;
     create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-    uint32_t queue_family_indices[] = {
-        _context->graphics_queue()->family_index(),
-        _context->present_queue()->family_index()};
+    auto queue_family_indices = _context->get_unique_queue_family_indices();
 
-    if (queue_family_indices[0] != queue_family_indices[1]) {
+    if (queue_family_indices.size() > 1) {
         create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-        create_info.queueFamilyIndexCount = 2;
-        create_info.pQueueFamilyIndices = queue_family_indices;
+        create_info.queueFamilyIndexCount =
+            static_cast<uint32_t>(queue_family_indices.size());
+        create_info.pQueueFamilyIndices = queue_family_indices.data();
     } else {
         create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
         create_info.queueFamilyIndexCount = 0;     // Optional

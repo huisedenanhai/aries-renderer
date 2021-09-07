@@ -3,7 +3,7 @@
 #include <stdexcept>
 
 namespace ars::render::vk {
-VulkanMemoryAllocator::VulkanMemoryAllocator(Device *device) {
+VulkanMemoryAllocator::VulkanMemoryAllocator(Device *device) : _device(device) {
     auto instance = device->instance();
     VmaAllocatorCreateInfo allocator_info{};
 

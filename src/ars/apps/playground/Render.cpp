@@ -3,6 +3,7 @@
 #include <ars/runtime/render/IContext.h>
 #include <ars/runtime/render/IScene.h>
 #include <ars/runtime/render/ISwapchain.h>
+#include <ars/runtime/render/ITexture.h>
 #include <iostream>
 #include <set>
 #include <string>
@@ -54,6 +55,8 @@ void main_loop() {
     }
     auto scene = rd_context->create_scene();
     auto view = scene->create_view();
+
+    auto texture = rd_context->create_texture();
 
     while (!windows.empty()) {
         glfwPollEvents();

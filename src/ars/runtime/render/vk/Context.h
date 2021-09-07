@@ -2,6 +2,7 @@
 
 #include "../IContext.h"
 #include "Vulkan.h"
+#include <vector>
 
 namespace ars::render::vk {
 class Swapchain;
@@ -46,6 +47,7 @@ class Context : public IContext {
 
     [[nodiscard]] Queue *graphics_queue() const;
     [[nodiscard]] Queue *present_queue() const;
+    [[nodiscard]] std::vector<uint32_t> get_unique_queue_family_indices() const;
 
   private:
     // this method init device if not

@@ -1,7 +1,5 @@
 #pragma once
 
-#include "../IBuffer.h"
-
 namespace ars::render::vk {
-class Buffer : public IBuffer {};
+class Buffer {};
 } // namespace ars::render::vk

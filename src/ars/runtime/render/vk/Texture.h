@@ -23,11 +23,17 @@ struct TextureCreateInfo {
                                         uint32_t mip_levels);
 };
 
-class Texture : public ITexture {
+VkFormat translate(render::Format format);
+
+TextureCreateInfo translate(const render::TextureInfo &info);
+
+class Texture {
   public:
     Texture(Context *context, const TextureCreateInfo &info);
 
-    ~Texture() override;
+    ARS_NO_COPY_MOVE(Texture);
+
+    ~Texture();
 
   private:
     [[nodiscard]] VkImageSubresourceRange get_subresource_range() const;
@@ -38,5 +44,17 @@ class Texture : public ITexture {
     VkImageView _image_view = VK_NULL_HANDLE;
 
     TextureCreateInfo _info{};
+};
+
+class TextureAdapter : public ITexture {
+  public:
+    TextureAdapter(const TextureInfo &info, std::shared_ptr<Texture> texture);
+
+    ARS_NO_COPY_MOVE(TextureAdapter);
+
+    Texture *texture() const;
+
+  private:
+    std::shared_ptr<Texture> _texture = nullptr;
 };
 } // namespace ars::render::vk

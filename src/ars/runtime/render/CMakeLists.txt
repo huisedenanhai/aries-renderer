@@ -1,10 +1,9 @@
 add_library(render
+        Common.h
         ISwapchain.cpp
         ISwapchain.h
         IContext.cpp
         IContext.h
-        IBuffer.cpp
-        IBuffer.h
         ITexture.cpp
         ITexture.h
         IScene.cpp

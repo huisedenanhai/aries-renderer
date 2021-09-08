@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Common.h"
 #include <memory>
 #include <optional>
 #include <string>
@@ -8,11 +9,12 @@ struct GLFWwindow;
 
 namespace ars::render {
 class ISwapchain;
-class IBuffer;
 class ITexture;
 class IScene;
 class IMesh;
 class IMaterial;
+
+struct TextureInfo;
 
 enum class Backend { Vulkan };
 
@@ -59,8 +61,13 @@ class IContext {
     virtual std::unique_ptr<ISwapchain>
     create_swapchain(GLFWwindow *window) = 0;
 
-    virtual std::unique_ptr<IBuffer> create_buffer() = 0;
-    virtual std::unique_ptr<ITexture> create_texture() = 0;
+    virtual std::unique_ptr<ITexture>
+    create_texture(const TextureInfo &info) = 0;
+
+    std::unique_ptr<ITexture> create_texture_2d(Format format,
+                                                uint32_t width,
+                                                uint32_t height,
+                                                uint32_t mip_levels);
 
     virtual std::unique_ptr<IScene> create_scene() = 0;
     virtual std::unique_ptr<IMesh> create_mesh() = 0;

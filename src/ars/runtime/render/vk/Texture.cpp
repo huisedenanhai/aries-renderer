@@ -98,4 +98,42 @@ TextureCreateInfo TextureCreateInfo::sampled_2d(VkFormat format,
 
     return info;
 }
+
+TextureAdapter::TextureAdapter(const TextureInfo &info,
+                               std::shared_ptr<Texture> texture)
+    : ITexture(info), _texture(std::move(texture)) {}
+
+Texture *TextureAdapter::texture() const {
+    return _texture.get();
+}
+
+VkFormat translate(render::Format format) {
+    switch (format) {
+    case Format::R8G8B8A8Srgb:
+        return VK_FORMAT_R8G8B8A8_SRGB;
+    }
+}
+
+TextureCreateInfo translate(const TextureInfo &info) {
+    TextureCreateInfo up{};
+    up.format = translate(info.format);
+    switch (info.type) {
+    case TextureType::Texture2D:
+        up.image_type = VK_IMAGE_TYPE_2D;
+        up.view_type = VK_IMAGE_VIEW_TYPE_2D;
+        break;
+    }
+    up.array_layers = info.array_layers;
+    up.mip_levels = info.mip_levels;
+    up.extent.width = info.width;
+    up.extent.height = info.height;
+    up.extent.depth = info.depth;
+    up.aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT;
+    up.samples = VK_SAMPLE_COUNT_1_BIT;
+    up.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+               VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
+               VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+
+    return up;
+}
 } // namespace ars::render::vk

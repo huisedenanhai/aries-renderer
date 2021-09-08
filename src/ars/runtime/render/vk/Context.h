@@ -1,7 +1,9 @@
 #pragma once
 
 #include "../IContext.h"
+#include "Texture.h"
 #include "Vulkan.h"
+
 #include <vector>
 
 namespace ars::render::vk {
@@ -35,8 +37,7 @@ class Context : public IContext {
     ~Context() override;
 
     std::unique_ptr<ISwapchain> create_swapchain(GLFWwindow *window) override;
-    std::unique_ptr<IBuffer> create_buffer() override;
-    std::unique_ptr<ITexture> create_texture() override;
+    std::unique_ptr<ITexture> create_texture(const TextureInfo &info) override;
     std::unique_ptr<IScene> create_scene() override;
     std::unique_ptr<IMesh> create_mesh() override;
     std::unique_ptr<IMaterial> create_material() override;
@@ -68,4 +69,5 @@ class Context : public IContext {
     std::unique_ptr<Swapchain> _cached_swapchain{};
     GLFWwindow *_cached_window{};
 };
+
 } // namespace ars::render::vk

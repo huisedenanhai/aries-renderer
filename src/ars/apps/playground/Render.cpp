@@ -56,7 +56,8 @@ void main_loop() {
     auto scene = rd_context->create_scene();
     auto view = scene->create_view();
 
-    auto texture = rd_context->create_texture();
+    auto texture =
+        rd_context->create_texture_2d(Format::R8G8B8A8Srgb, 128, 128, 1);
 
     while (!windows.empty()) {
         glfwPollEvents();

@@ -46,18 +46,17 @@ void main_loop() {
     }
 
     std::set<std::unique_ptr<Window>> windows{};
-    std::unique_ptr<IContext> rd_context{};
+    std::unique_ptr<IContext> ctx{};
 
     int window_num = 4;
     for (int i = 0; i < window_num; i++) {
         windows.insert(std::make_unique<Window>(
-            800, 600, "Playground Render " + std::to_string(i), rd_context));
+            800, 600, "Playground Render " + std::to_string(i), ctx));
     }
-    auto scene = rd_context->create_scene();
+    auto scene = ctx->create_scene();
     auto view = scene->create_view();
 
-    auto texture =
-        rd_context->create_texture_2d(Format::R8G8B8A8Srgb, 128, 128, 1);
+    auto texture = ctx->create_texture_2d(Format::R8G8B8A8Srgb, 128, 128, 1);
 
     while (!windows.empty()) {
         glfwPollEvents();
@@ -70,10 +69,14 @@ void main_loop() {
             }
         }
 
-        view->render();
+        if (ctx->begin_frame()) {
+            view->render();
 
-        for (auto &w : windows) {
-            w->swapchain->present(view->get_color_texture());
+            for (auto &w : windows) {
+                w->swapchain->present(view->get_color_texture());
+            }
+
+            ctx->end_frame();
         }
     }
 }

@@ -354,11 +354,11 @@ std::vector<const char *> get_device_extensions(
 }
 
 struct QueueFamilyIndices {
-    std::optional<uint32_t> graphics_family;
-    std::optional<uint32_t> present_family;
+    // this queue family supports all operations we need
+    std::optional<uint32_t> primary_family;
 
     [[nodiscard]] bool is_complete() const {
-        return graphics_family.has_value() && present_family.has_value();
+        return primary_family.has_value();
     }
 };
 
@@ -376,19 +376,21 @@ QueueFamilyIndices find_queue_families(Instance *instance,
 
     for (int i = 0; i < queue_families.size(); i++) {
         const auto &queue_family = queue_families[i];
-        if (queue_family.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-            indices.graphics_family = i;
+        bool supports_graphics =
+            queue_family.queueFlags & VK_QUEUE_GRAPHICS_BIT;
+        bool supports_compute = queue_family.queueFlags & VK_QUEUE_COMPUTE_BIT;
+
+        bool valid = supports_graphics && supports_compute;
+
+        if (surface != VK_NULL_HANDLE) {
+            VkBool32 support_present = false;
+            instance->GetPhysicalDeviceSurfaceSupportKHR(
+                device, i, surface, &support_present);
+            valid = valid && support_present;
         }
 
-        VkBool32 present_support = false;
-        if (surface != VK_NULL_HANDLE) {
-            instance->GetPhysicalDeviceSurfaceSupportKHR(
-                device, i, surface, &present_support);
-        } else {
-            present_support = true;
-        }
-        if (present_support) {
-            indices.present_family = i;
+        if (valid) {
+            indices.primary_family = i;
         }
 
         if (indices.is_complete()) {
@@ -485,28 +487,20 @@ void Context::init_device_and_queues(Instance *instance,
 
     assert(indices.is_complete());
 
-    std::set<uint32_t> unique_queue_families = {indices.graphics_family.value(),
-                                                indices.present_family.value()};
-    std::vector<VkDeviceQueueCreateInfo> queue_create_infos{};
-    queue_create_infos.reserve(unique_queue_families.size());
+    VkDeviceQueueCreateInfo queue_create_info{};
 
     float queuePriority = 1.0f;
-    for (auto &family : unique_queue_families) {
-        VkDeviceQueueCreateInfo queue_create_info{};
-        queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        queue_create_info.queueFamilyIndex = family;
-        queue_create_info.queueCount = 1;
-        queue_create_info.pQueuePriorities = &queuePriority;
-
-        queue_create_infos.push_back(queue_create_info);
-    }
+    queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    queue_create_info.queueFamilyIndex = indices.primary_family.value();
+    queue_create_info.queueCount = 1;
+    queue_create_info.pQueuePriorities = &queuePriority;
 
     VkPhysicalDeviceFeatures device_features{};
 
     VkDeviceCreateInfo create_info{};
     create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    create_info.pQueueCreateInfos = queue_create_infos.data();
-    create_info.queueCreateInfoCount = (uint32_t)queue_create_infos.size();
+    create_info.pQueueCreateInfos = &queue_create_info;
+    create_info.queueCreateInfoCount = 1;
     create_info.pEnabledFeatures = &device_features;
 
     auto enabled_extensions = get_device_extensions(
@@ -528,10 +522,7 @@ void Context::init_device_and_queues(Instance *instance,
     }
 
     _device = std::make_unique<Device>(instance, device, physical_device);
-    _graphics_queue =
-        std::make_unique<Queue>(this, indices.graphics_family.value());
-    _present_queue =
-        std::make_unique<Queue>(this, indices.present_family.value());
+    _queue = std::make_unique<Queue>(this, indices.primary_family.value());
 }
 
 Context::Context(GLFWwindow *window) {
@@ -556,12 +547,8 @@ Device *Context::device() const {
     return _device.get();
 }
 
-Queue *Context::graphics_queue() const {
-    return _graphics_queue.get();
-}
-
-Queue *Context::present_queue() const {
-    return _present_queue.get();
+Queue *Context::queue() const {
+    return _queue.get();
 }
 
 std::unique_ptr<Swapchain> Context::create_swapchain_impl(GLFWwindow *window) {
@@ -588,7 +575,7 @@ std::unique_ptr<Swapchain> Context::create_swapchain_impl(GLFWwindow *window) {
         if (VkBool32 is_supported_surface = VK_FALSE;
             instance()->GetPhysicalDeviceSurfaceSupportKHR(
                 _device->physical_device(),
-                _present_queue->family_index(),
+                _queue->family_index(),
                 surface,
                 &is_supported_surface) != VK_SUCCESS ||
             is_supported_surface != VK_TRUE) {
@@ -609,16 +596,16 @@ std::unique_ptr<Swapchain> Context::create_swapchain_impl(GLFWwindow *window) {
     return nullptr;
 }
 
-std::vector<uint32_t> Context::get_unique_queue_family_indices() const {
-    std::set<uint32_t> queues = {_graphics_queue->family_index(),
-                                 _present_queue->family_index()};
-    return {queues.begin(), queues.end()};
-}
-
 std::unique_ptr<ITexture> Context::create_texture(const TextureInfo &info) {
     auto tex = std::make_unique<Texture>(this, translate(info));
     return std::make_unique<TextureAdapter>(info, std::move(tex));
 }
+
+bool Context::begin_frame() {
+    return true;
+}
+
+void Context::end_frame() {}
 
 Context::~Context() = default;
 

@@ -22,14 +22,8 @@ Texture::Texture(Context *context, const TextureCreateInfo &info)
         image_info.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
     }
 
-    auto queues = context->get_unique_queue_family_indices();
-    if (queues.size() <= 1) {
-        image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    } else {
-        image_info.sharingMode = VK_SHARING_MODE_CONCURRENT;
-        image_info.queueFamilyIndexCount = static_cast<uint32_t>(queues.size());
-        image_info.pQueueFamilyIndices = queues.data();
-    }
+    // All textures are used exclusively
+    image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
     VmaAllocationCreateInfo alloc_info{};
     alloc_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;

@@ -46,9 +46,22 @@ class Context : public IContext {
     [[nodiscard]] Device *device() const;
     [[nodiscard]] VulkanMemoryAllocator *vma() const;
 
-    [[nodiscard]] Queue *graphics_queue() const;
-    [[nodiscard]] Queue *present_queue() const;
-    [[nodiscard]] std::vector<uint32_t> get_unique_queue_family_indices() const;
+    // Get the primary queue.
+    //
+    // This queue supports all operations: graphics, compute, transfer,
+    // and presentation (if presentation is required).
+    //
+    // The spec says: if there are any queue supports graphics operations, there
+    // must be a queue family supports both graphics and compute operations, and
+    // transfer operations are implicitly supported if either graphics or
+    // compute operations are supported.
+    // (https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VkQueueFlagBits.html)
+    //
+    // It will be rare for us to find no such queue.
+    [[nodiscard]] Queue *queue() const;
+
+    bool begin_frame() override;
+    void end_frame() override;
 
   private:
     // this method init device if not
@@ -59,13 +72,13 @@ class Context : public IContext {
                                 VkSurfaceKHR surface);
 
     std::unique_ptr<Device> _device{};
-    std::unique_ptr<Queue> _graphics_queue{};
-    std::unique_ptr<Queue> _present_queue{};
+    std::unique_ptr<Queue> _queue{};
 
     std::unique_ptr<VulkanMemoryAllocator> _vma{};
 
-    // a swapchain will be created on context initialization, which should be
-    // returned by the next call to create_swapchain with the same window handle
+    // a swapchain will be created on context initialization, which should
+    // be returned by the next call to create_swapchain with the same window
+    // handle
     std::unique_ptr<Swapchain> _cached_swapchain{};
     GLFWwindow *_cached_window{};
 };

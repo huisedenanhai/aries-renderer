@@ -72,5 +72,20 @@ class IContext {
     virtual std::unique_ptr<IScene> create_scene() = 0;
     virtual std::unique_ptr<IMesh> create_mesh() = 0;
     virtual std::unique_ptr<IMaterial> create_material() = 0;
+
+    // Call this method when a frame begins. If this method returns false,
+    // the backend refuse to begin a new frame and no render work should be
+    // submitted. If this method returns true, a call to end_frame() is required
+    // to denote the end of the frame.
+    //
+    // begin_frame() and end_frame() are hints to backend for synchronization.
+    //
+    // e.g.
+    // if (ctx->begin_frame()) {
+    //   // submit your render works here
+    //   ctx->end_frame();
+    // }
+    virtual bool begin_frame() = 0;
+    virtual void end_frame() = 0;
 };
 } // namespace ars::render

@@ -1,11 +1,14 @@
 #include <GLFW/glfw3.h>
 
+#include <ars/runtime/core/Log.h>
 #include <ars/runtime/render/IContext.h>
 #include <ars/runtime/render/IScene.h>
 #include <ars/runtime/render/ISwapchain.h>
 #include <ars/runtime/render/ITexture.h>
 #include <iostream>
 #include <set>
+#include <sstream>
+#include <stb_image.h>
 #include <string>
 
 using namespace ars::render;
@@ -39,6 +42,28 @@ struct Window {
     }
 };
 
+std::unique_ptr<ITexture> load_texture(IContext *context,
+                                       const std::string &path) {
+    int width, height, channels;
+    unsigned char *data =
+        stbi_load(path.c_str(), &width, &height, &channels, 4);
+    if (!data) {
+        std::stringstream ss;
+        ss << "failed to load image " << path;
+        ars::panic(ss.str());
+    }
+
+    auto texture =
+        context->create_texture_2d(Format::R8G8B8A8Srgb, width, height);
+    texture->set_data(
+        data, width * height * 4, 0, 0, 0, 0, 0, width, height, 1);
+    texture->generate_mipmap();
+
+    stbi_image_free(data);
+
+    return texture;
+}
+
 void main_loop() {
     {
         // test if offscreen context runs
@@ -56,7 +81,7 @@ void main_loop() {
     auto scene = ctx->create_scene();
     auto view = scene->create_view();
 
-    auto texture = ctx->create_texture_2d(Format::R8G8B8A8Srgb, 128, 128);
+    auto texture = load_texture(ctx.get(), "test.jpg");
 
     while (!windows.empty()) {
         glfwPollEvents();

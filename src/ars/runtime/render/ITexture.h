@@ -24,13 +24,13 @@ class ITexture {
 
     virtual ~ITexture() = default;
 
-    TextureType type() const;
-    Format format() const;
-    uint32_t width() const;
-    uint32_t height() const;
-    uint32_t depth() const;
-    uint32_t mip_levels() const;
-    uint32_t array_layers() const;
+    [[nodiscard]] TextureType type() const;
+    [[nodiscard]] Format format() const;
+    [[nodiscard]] uint32_t width() const;
+    [[nodiscard]] uint32_t height() const;
+    [[nodiscard]] uint32_t depth() const;
+    [[nodiscard]] uint32_t mip_levels() const;
+    [[nodiscard]] uint32_t array_layers() const;
 
     virtual void set_data(void *data,
                           size_t size,

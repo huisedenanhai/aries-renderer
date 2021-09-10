@@ -1,5 +1,6 @@
 #include "IContext.h"
 #include "vk/Context.h"
+#include <algorithm>
 #include <ars/runtime/core/Log.h>
 
 namespace ars::render {

@@ -10,6 +10,8 @@
 #include "../../core/misc/NoCopyMove.h"
 
 namespace ars::render::vk {
+class Context;
+
 // By now in this project we only use a single allocator.
 //
 // These wrappers will take the ownership of vulkan handles and release
@@ -83,20 +85,6 @@ class VulkanMemoryAllocator {
     VmaAllocator _allocator = VK_NULL_HANDLE;
 };
 
-class CommandBuffer : public volk::CommandBuffer {
-  public:
-    CommandBuffer(Device *device,
-                  VkCommandPool pool,
-                  VkCommandBufferLevel level);
-
-    void reset();
-
-    ~CommandBuffer();
-
-  private:
-    VkCommandPool _pool;
-};
-
 struct MemoryView {
     const uint8_t *data;
     size_t size;
@@ -107,5 +95,23 @@ struct MemoryView {
 // and the size will be set correctly
 MemoryView
 load_spirv_code(const char *path, const char **flags, uint32_t flag_count);
+
+class CommandBuffer : public volk::CommandBuffer {
+  public:
+    CommandBuffer(Device *device,
+                  VkCommandPool pool,
+                  VkCommandBufferLevel level);
+
+    ARS_NO_COPY_MOVE(CommandBuffer);
+
+    ~CommandBuffer();
+
+    void begin(VkCommandBufferUsageFlags usage);
+
+    void end();
+
+  private:
+    VkCommandPool _pool = VK_NULL_HANDLE;
+};
 
 } // namespace ars::render::vk

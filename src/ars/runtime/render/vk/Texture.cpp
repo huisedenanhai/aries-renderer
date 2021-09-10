@@ -92,11 +92,15 @@ void Texture::set_data(void *data,
                        uint32_t x_size,
                        uint32_t y_size,
                        uint32_t z_size) {
-    // TODO
+    _context->queue()->submit_immediate([](CommandBuffer *cmd) {
+        // TODO
+    });
 }
 
 void Texture::generate_mipmap() {
-    // TODO
+    _context->queue()->submit_immediate([](CommandBuffer *cmd) {
+        // TODO
+    });
 }
 
 TextureCreateInfo TextureCreateInfo::sampled_2d(VkFormat format,
@@ -156,6 +160,8 @@ VkFormat translate(render::Format format) {
     case Format::R8G8B8A8Srgb:
         return VK_FORMAT_R8G8B8A8_SRGB;
     }
+    // should not happen
+    return VK_FORMAT_UNDEFINED;
 }
 
 TextureCreateInfo translate(const TextureInfo &info) {

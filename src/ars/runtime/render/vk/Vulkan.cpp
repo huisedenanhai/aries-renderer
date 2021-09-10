@@ -1,4 +1,5 @@
 #include "Vulkan.h"
+#include "Context.h"
 #include <ars/runtime/core/Log.h>
 #include <frill_shaders.hpp>
 #include <stdexcept>
@@ -90,7 +91,18 @@ CommandBuffer::~CommandBuffer() {
     }
 }
 
-void CommandBuffer::reset() {
-    _device->ResetCommandBuffer(_command_buffer, 0);
+void CommandBuffer::end() {
+    if (_device->EndCommandBuffer(_command_buffer) != VK_SUCCESS) {
+        panic("Failed to end command buffer");
+    }
 }
+
+void CommandBuffer::begin(VkCommandBufferUsageFlags usage) {
+    VkCommandBufferBeginInfo info{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
+    info.flags = usage;
+    if (_device->BeginCommandBuffer(_command_buffer, &info) != VK_SUCCESS) {
+        panic("Failed to begin command buffer");
+    }
+}
+
 } // namespace ars::render::vk

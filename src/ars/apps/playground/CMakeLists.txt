@@ -9,4 +9,5 @@ aries_setup_common_target(playground_render)
 target_link_libraries(playground_render PRIVATE
         core
         render
+        tinygltf
         )

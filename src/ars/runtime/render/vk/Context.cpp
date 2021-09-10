@@ -8,7 +8,6 @@
 #include <algorithm>
 #include <ars/runtime/core/Log.h>
 #include <cassert>
-#include <set>
 #include <sstream>
 #include <vector>
 
@@ -547,7 +546,7 @@ Device *Context::device() const {
     return _device.get();
 }
 
-Queue *Context::queue([[maybe_unused]] QueueType type) const {
+Queue *Context::queue() const {
     return _queue.get();
 }
 
@@ -604,6 +603,7 @@ Context::create_texture_impl(const TextureInfo &info) {
 
 bool Context::begin_frame() {
     _queue->flush();
+    _queue->reset_command_pool();
     return true;
 }
 
@@ -614,6 +614,7 @@ Context::~Context() = default;
 Queue::Queue(Context *context, uint32_t family_index)
     : _context(context), _family_index(family_index) {
     _context->device()->GetDeviceQueue(family_index, 0, &_queue);
+    init_command_pool();
 }
 
 uint32_t Queue::family_index() const {
@@ -624,7 +625,7 @@ VkQueue Queue::raw() const {
     return _queue;
 }
 
-void Queue::submit(CommandBuffer *command_buffer) const {
+void Queue::submit(CommandBuffer *command_buffer) {
     assert(command_buffer != nullptr);
     auto device = _context->device();
 
@@ -648,6 +649,8 @@ void Queue::submit(CommandBuffer *command_buffer) const {
         panic("Failed to create semaphore");
     }
 
+    _semaphores.push_back(signal_sem);
+
     info.signalSemaphoreCount = 1;
     info.pSignalSemaphores = &signal_sem;
 
@@ -663,6 +666,9 @@ void Queue::submit(CommandBuffer *command_buffer) const {
 
 Queue::~Queue() {
     flush();
+    if (_command_pool != VK_NULL_HANDLE) {
+        _context->device()->Destroy(_command_pool);
+    }
 }
 
 void Queue::flush() {
@@ -673,4 +679,24 @@ void Queue::flush() {
     }
     _semaphores.clear();
 }
+
+void Queue::reset_command_pool() {
+    _tmp_command_buffers.clear();
+    _context->device()->ResetCommandPool(_command_pool, 0);
+}
+
+CommandBuffer *Queue::alloc_tmp_command_buffer(VkCommandBufferLevel level) {
+    _tmp_command_buffers.emplace_back(std::make_unique<CommandBuffer>(
+        _context->device(), _command_pool, level));
+    return _tmp_command_buffers.back().get();
+}
+
+void Queue::init_command_pool() {
+    VkCommandPoolCreateInfo info{VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
+    info.queueFamilyIndex = _family_index;
+    if (_context->device()->Create(&info, &_command_pool) != VK_SUCCESS) {
+        panic("Can not create command pool");
+    }
+}
+
 } // namespace ars::render::vk

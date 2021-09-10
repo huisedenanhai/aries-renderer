@@ -489,11 +489,11 @@ void Context::init_device_and_queues(Instance *instance,
 
     VkDeviceQueueCreateInfo queue_create_info{};
 
-    float queuePriority = 1.0f;
+    float queue_priority = 1.0f;
     queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
     queue_create_info.queueFamilyIndex = indices.primary_family.value();
     queue_create_info.queueCount = 1;
-    queue_create_info.pQueuePriorities = &queuePriority;
+    queue_create_info.pQueuePriorities = &queue_priority;
 
     VkPhysicalDeviceFeatures device_features{};
 
@@ -547,7 +547,7 @@ Device *Context::device() const {
     return _device.get();
 }
 
-Queue *Context::queue() const {
+Queue *Context::queue([[maybe_unused]] QueueType type) const {
     return _queue.get();
 }
 
@@ -596,12 +596,14 @@ std::unique_ptr<Swapchain> Context::create_swapchain_impl(GLFWwindow *window) {
     return nullptr;
 }
 
-std::unique_ptr<ITexture> Context::create_texture(const TextureInfo &info) {
+std::unique_ptr<ITexture>
+Context::create_texture_impl(const TextureInfo &info) {
     auto tex = std::make_unique<Texture>(this, translate(info));
     return std::make_unique<TextureAdapter>(info, std::move(tex));
 }
 
 bool Context::begin_frame() {
+    _queue->flush();
     return true;
 }
 
@@ -620,5 +622,55 @@ uint32_t Queue::family_index() const {
 
 VkQueue Queue::raw() const {
     return _queue;
+}
+
+void Queue::submit(CommandBuffer *command_buffer) const {
+    assert(command_buffer != nullptr);
+    auto device = _context->device();
+
+    VkSubmitInfo info{VK_STRUCTURE_TYPE_SUBMIT_INFO};
+    VkPipelineStageFlags dst_mask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    VkSemaphore wait_sem = VK_NULL_HANDLE;
+    if (!_semaphores.empty()) {
+        wait_sem = _semaphores.back();
+    }
+
+    if (wait_sem != VK_NULL_HANDLE) {
+        info.waitSemaphoreCount = 1;
+        info.pWaitSemaphores = &wait_sem;
+        info.pWaitDstStageMask = &dst_mask;
+    }
+
+    VkSemaphoreCreateInfo sem_info{VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
+    VkSemaphore signal_sem = VK_NULL_HANDLE;
+
+    if (device->Create(&sem_info, &signal_sem) != VK_SUCCESS) {
+        panic("Failed to create semaphore");
+    }
+
+    info.signalSemaphoreCount = 1;
+    info.pSignalSemaphores = &signal_sem;
+
+    info.commandBufferCount = 1;
+    auto cmd = command_buffer->command_buffer();
+    info.pCommandBuffers = &cmd;
+
+    if (device->QueueSubmit(_queue, 1, &info, VK_NULL_HANDLE) !=
+        VK_NULL_HANDLE) {
+        panic("Failed to submit command to queue");
+    }
+}
+
+Queue::~Queue() {
+    flush();
+}
+
+void Queue::flush() {
+    auto device = _context->device();
+    device->QueueWaitIdle(_queue);
+    for (auto sem : _semaphores) {
+        device->Destroy(sem);
+    }
+    _semaphores.clear();
 }
 } // namespace ars::render::vk

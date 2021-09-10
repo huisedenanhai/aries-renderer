@@ -56,7 +56,7 @@ void main_loop() {
     auto scene = ctx->create_scene();
     auto view = scene->create_view();
 
-    auto texture = ctx->create_texture_2d(Format::R8G8B8A8Srgb, 128, 128, 1);
+    auto texture = ctx->create_texture_2d(Format::R8G8B8A8Srgb, 128, 128);
 
     while (!windows.empty()) {
         glfwPollEvents();

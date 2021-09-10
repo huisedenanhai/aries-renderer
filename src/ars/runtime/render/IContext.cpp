@@ -65,4 +65,15 @@ std::unique_ptr<ITexture> IContext::create_texture_2d(Format format,
     info.array_layers = 1;
     return create_texture(info);
 }
+
+std::unique_ptr<ITexture> IContext::create_texture(const TextureInfo &info) {
+    // fix out of range inputs
+    auto tex = info;
+    tex.mip_levels =
+        std::clamp(tex.mip_levels,
+                   static_cast<uint32_t>(1),
+                   calculate_mip_levels(tex.width, tex.height, tex.depth));
+
+    return create_texture_impl(tex);
+}
 } // namespace ars::render

@@ -4,7 +4,7 @@
 
 namespace ars::render::vk {
 namespace {
-constexpr VkImageUsageFlags ImageUsageSampledColor =
+constexpr VkImageUsageFlags IMAGE_USAGE_SAMPLED_COLOR =
     VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
     VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 }
@@ -82,6 +82,23 @@ VkImageSubresourceRange Texture::get_subresource_range() const {
     return range;
 }
 
+void Texture::set_data(void *data,
+                       size_t size,
+                       uint32_t mip_level,
+                       uint32_t layer,
+                       uint32_t x_offset,
+                       uint32_t y_offset,
+                       uint32_t z_offset,
+                       uint32_t x_size,
+                       uint32_t y_size,
+                       uint32_t z_size) {
+    // TODO
+}
+
+void Texture::generate_mipmap() {
+    // TODO
+}
+
 TextureCreateInfo TextureCreateInfo::sampled_2d(VkFormat format,
                                                 uint32_t width,
                                                 uint32_t height,
@@ -91,7 +108,7 @@ TextureCreateInfo TextureCreateInfo::sampled_2d(VkFormat format,
     info.view_type = VK_IMAGE_VIEW_TYPE_2D;
     info.image_type = VK_IMAGE_TYPE_2D;
     info.format = format;
-    info.usage = ImageUsageSampledColor;
+    info.usage = IMAGE_USAGE_SAMPLED_COLOR;
     info.samples = VK_SAMPLE_COUNT_1_BIT;
     info.mip_levels = mip_levels;
     info.array_layers = 1;
@@ -106,6 +123,32 @@ TextureAdapter::TextureAdapter(const TextureInfo &info,
 
 Texture *TextureAdapter::texture() const {
     return _texture.get();
+}
+
+void TextureAdapter::set_data(void *data,
+                              size_t size,
+                              uint32_t mip_level,
+                              uint32_t layer,
+                              uint32_t x_offset,
+                              uint32_t y_offset,
+                              uint32_t z_offset,
+                              uint32_t x_size,
+                              uint32_t y_size,
+                              uint32_t z_size) {
+    _texture->set_data(data,
+                       size,
+                       mip_level,
+                       layer,
+                       x_offset,
+                       y_offset,
+                       z_offset,
+                       x_size,
+                       y_size,
+                       z_size);
+}
+
+void TextureAdapter::generate_mipmap() {
+    _texture->generate_mipmap();
 }
 
 VkFormat translate(render::Format format) {
@@ -131,7 +174,7 @@ TextureCreateInfo translate(const TextureInfo &info) {
     up.extent.depth = info.depth;
     up.aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT;
     up.samples = VK_SAMPLE_COUNT_1_BIT;
-    up.usage = ImageUsageSampledColor;
+    up.usage = IMAGE_USAGE_SAMPLED_COLOR;
 
     return up;
 }

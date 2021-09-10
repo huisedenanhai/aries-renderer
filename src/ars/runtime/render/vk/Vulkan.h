@@ -83,6 +83,20 @@ class VulkanMemoryAllocator {
     VmaAllocator _allocator = VK_NULL_HANDLE;
 };
 
+class CommandBuffer : public volk::CommandBuffer {
+  public:
+    CommandBuffer(Device *device,
+                  VkCommandPool pool,
+                  VkCommandBufferLevel level);
+
+    void reset();
+
+    ~CommandBuffer();
+
+  private:
+    VkCommandPool _pool;
+};
+
 struct MemoryView {
     const uint8_t *data;
     size_t size;

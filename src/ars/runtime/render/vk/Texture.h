@@ -35,6 +35,19 @@ class Texture {
 
     ~Texture();
 
+    void set_data(void *data,
+                  size_t size,
+                  uint32_t mip_level,
+                  uint32_t layer,
+                  uint32_t x_offset,
+                  uint32_t y_offset,
+                  uint32_t z_offset,
+                  uint32_t x_size,
+                  uint32_t y_size,
+                  uint32_t z_size);
+
+    void generate_mipmap();
+
   private:
     [[nodiscard]] VkImageSubresourceRange get_subresource_range() const;
 
@@ -53,6 +66,19 @@ class TextureAdapter : public ITexture {
     ARS_NO_COPY_MOVE(TextureAdapter);
 
     Texture *texture() const;
+
+    void set_data(void *data,
+                  size_t size,
+                  uint32_t mip_level,
+                  uint32_t layer,
+                  uint32_t x_offset,
+                  uint32_t y_offset,
+                  uint32_t z_offset,
+                  uint32_t x_size,
+                  uint32_t y_size,
+                  uint32_t z_size) override;
+
+    void generate_mipmap() override;
 
   private:
     std::shared_ptr<Texture> _texture = nullptr;

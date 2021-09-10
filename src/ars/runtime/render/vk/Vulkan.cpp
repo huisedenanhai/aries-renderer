@@ -1,4 +1,5 @@
 #include "Vulkan.h"
+#include <ars/runtime/core/Log.h>
 #include <frill_shaders.hpp>
 #include <stdexcept>
 
@@ -67,5 +68,29 @@ MemoryView
 load_spirv_code(const char *path, const char **flags, uint32_t flag_count) {
     auto code = frill_shaders::load(path, flags, flag_count);
     return MemoryView{code.code, code.size};
+}
+
+CommandBuffer::CommandBuffer(Device *device,
+                             VkCommandPool pool,
+                             VkCommandBufferLevel level)
+    : volk::CommandBuffer(device, VK_NULL_HANDLE), _pool(pool) {
+    VkCommandBufferAllocateInfo info{
+        VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
+    info.commandBufferCount = 1;
+    info.commandPool = pool;
+    info.level = level;
+    if (device->Allocate(&info, &_command_buffer) != VK_SUCCESS) {
+        panic("Failed to alloc command buffer");
+    }
+}
+
+CommandBuffer::~CommandBuffer() {
+    if (_command_buffer != VK_NULL_HANDLE) {
+        _device->Free(_pool, 1, &_command_buffer);
+    }
+}
+
+void CommandBuffer::reset() {
+    _device->ResetCommandBuffer(_command_buffer, 0);
 }
 } // namespace ars::render::vk

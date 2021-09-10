@@ -61,13 +61,13 @@ class IContext {
     virtual std::unique_ptr<ISwapchain>
     create_swapchain(GLFWwindow *window) = 0;
 
-    virtual std::unique_ptr<ITexture>
-    create_texture(const TextureInfo &info) = 0;
+    std::unique_ptr<ITexture> create_texture(const TextureInfo &info);
 
-    std::unique_ptr<ITexture> create_texture_2d(Format format,
-                                                uint32_t width,
-                                                uint32_t height,
-                                                uint32_t mip_levels);
+    std::unique_ptr<ITexture>
+    create_texture_2d(Format format,
+                      uint32_t width,
+                      uint32_t height,
+                      uint32_t mip_levels = MAX_MIP_LEVELS);
 
     virtual std::unique_ptr<IScene> create_scene() = 0;
     virtual std::unique_ptr<IMesh> create_mesh() = 0;
@@ -87,5 +87,10 @@ class IContext {
     // }
     virtual bool begin_frame() = 0;
     virtual void end_frame() = 0;
+
+  protected:
+    virtual std::unique_ptr<ITexture>
+    create_texture_impl(const TextureInfo &info) = 0;
 };
+
 } // namespace ars::render

@@ -3,6 +3,12 @@
 #include <ars/runtime/core/Log.h>
 
 namespace ars::render::vk {
+namespace {
+constexpr VkImageUsageFlags ImageUsageSampledColor =
+    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
+    VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+}
+
 Texture::Texture(Context *context, const TextureCreateInfo &info)
     : _context(context), _info(info) {
     VkImageCreateInfo image_info{VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
@@ -22,7 +28,10 @@ Texture::Texture(Context *context, const TextureCreateInfo &info)
         image_info.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
     }
 
-    // All textures are used exclusively
+    // All textures are used exclusively.
+    // Concurrent access disables some potential optimizations from driver.
+    // (Like Delta Color Compression(DCC) from AMD drivers, see
+    // https://www.khronos.org/assets/uploads/developers/presentations/06-Optimising-aaa-vulkan-title-on-desktop-May19.pdf)
     image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
     VmaAllocationCreateInfo alloc_info{};
@@ -82,9 +91,7 @@ TextureCreateInfo TextureCreateInfo::sampled_2d(VkFormat format,
     info.view_type = VK_IMAGE_VIEW_TYPE_2D;
     info.image_type = VK_IMAGE_TYPE_2D;
     info.format = format;
-    info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
-                 VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
-                 VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    info.usage = ImageUsageSampledColor;
     info.samples = VK_SAMPLE_COUNT_1_BIT;
     info.mip_levels = mip_levels;
     info.array_layers = 1;
@@ -124,9 +131,7 @@ TextureCreateInfo translate(const TextureInfo &info) {
     up.extent.depth = info.depth;
     up.aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT;
     up.samples = VK_SAMPLE_COUNT_1_BIT;
-    up.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
-               VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
-               VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    up.usage = ImageUsageSampledColor;
 
     return up;
 }

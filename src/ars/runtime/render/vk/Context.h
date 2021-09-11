@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../IContext.h"
+#include "Buffer.h"
 #include "Texture.h"
 #include "Vulkan.h"
 
@@ -26,28 +27,19 @@ class Queue {
     [[nodiscard]] VkQueue raw() const;
 
     void submit(CommandBuffer *command_buffer);
-    // these command buffers will be freed when the next frame begins
-    CommandBuffer *alloc_tmp_command_buffer(VkCommandBufferLevel level);
 
     // record a command buffer and submit it immediately
-    template <typename Func> void submit_immediate(Func &&func);
+    template <typename Func> void submit_once(Func &&func);
 
     // wait the queue idle
     void flush();
-    // tmp buffers will be freed by this method
-    void reset_command_pool();
 
   private:
-    void init_command_pool();
-
     // A queue for synchronizing each command buffer submissions
     std::vector<VkSemaphore> _semaphores;
     Context *_context = nullptr;
     uint32_t _family_index = 0;
     VkQueue _queue = VK_NULL_HANDLE;
-
-    VkCommandPool _command_pool = VK_NULL_HANDLE;
-    std::vector<std::unique_ptr<CommandBuffer>> _tmp_command_buffers{};
 };
 
 class Context : public IContext {
@@ -87,13 +79,27 @@ class Context : public IContext {
     bool begin_frame() override;
     void end_frame() override;
 
+    Handle<Texture> create_texture(const TextureCreateInfo &info);
+    Handle<CommandBuffer> create_command_buffer(VkCommandBufferLevel level);
+    Handle<Buffer> create_buffer(VkDeviceSize size,
+                                 VkBufferUsageFlags buffer_usage,
+                                 VmaMemoryUsage memory_usage);
+
   private:
-    // this method init device if not
+    // This method init device if not
     std::unique_ptr<Swapchain> create_swapchain_impl(GLFWwindow *window);
 
     void init_device_and_queues(Instance *instance,
                                 bool enable_validation,
                                 VkSurfaceKHR surface);
+    void init_command_pool();
+
+    // Clear unused resources
+    void gc();
+
+    template <typename T, typename... Args>
+    static Handle<T> create_handle(std::vector<std::shared_ptr<T>> &pool,
+                                   Args &&...args);
 
     std::unique_ptr<Device> _device{};
     std::unique_ptr<Queue> _queue{};
@@ -105,14 +111,21 @@ class Context : public IContext {
     // handle
     std::unique_ptr<Swapchain> _cached_swapchain{};
     GLFWwindow *_cached_window{};
+
+    VkCommandPool _command_pool = VK_NULL_HANDLE;
+
+    // cached resources
+    std::vector<std::shared_ptr<Texture>> _textures{};
+    std::vector<std::shared_ptr<CommandBuffer>> _command_buffers{};
+    std::vector<std::shared_ptr<Buffer>> _buffers{};
 };
 
-template <typename Func> void Queue::submit_immediate(Func &&func) {
-    auto cmd = alloc_tmp_command_buffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+template <typename Func> void Queue::submit_once(Func &&func) {
+    auto cmd = _context->create_command_buffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     cmd->begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-    func(cmd);
+    func(cmd.get());
     cmd->end();
-    submit(cmd);
+    submit(cmd.get());
 }
 
 } // namespace ars::render::vk

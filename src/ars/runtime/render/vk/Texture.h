@@ -39,9 +39,9 @@ class Texture {
                   size_t size,
                   uint32_t mip_level,
                   uint32_t layer,
-                  uint32_t x_offset,
-                  uint32_t y_offset,
-                  uint32_t z_offset,
+                  int32_t x_offset,
+                  int32_t y_offset,
+                  int32_t z_offset,
                   uint32_t x_size,
                   uint32_t y_size,
                   uint32_t z_size);
@@ -49,31 +49,42 @@ class Texture {
     void generate_mipmap();
 
   private:
+    // Transfer all subresources to the target layout and set the _layout field.
+    // This method assumes all layers and levels of the image are in the same
+    // layout, and public methods should maintain this invariance.
+    void transfer_layout(CommandBuffer *cmd,
+                         VkImageLayout dst_layout,
+                         VkShaderStageFlags src_stage_mask,
+                         VkAccessFlags src_access_mask,
+                         VkShaderStageFlags dst_stage_mask,
+                         VkAccessFlags dst_access_mask);
+
     [[nodiscard]] VkImageSubresourceRange get_subresource_range() const;
 
     Context *_context = nullptr;
     VmaAllocation _allocation = VK_NULL_HANDLE;
     VkImage _image = VK_NULL_HANDLE;
     VkImageView _image_view = VK_NULL_HANDLE;
+    // Public methods should ensure all layers and levels of the image are in
+    // the same layout
+    VkImageLayout _layout = VK_IMAGE_LAYOUT_UNDEFINED;
 
     TextureCreateInfo _info{};
 };
 
 class TextureAdapter : public ITexture {
   public:
-    TextureAdapter(const TextureInfo &info, std::shared_ptr<Texture> texture);
+    TextureAdapter(const TextureInfo &info, Handle<Texture> texture);
 
     ARS_NO_COPY_MOVE(TextureAdapter);
-
-    Texture *texture() const;
 
     void set_data(void *data,
                   size_t size,
                   uint32_t mip_level,
                   uint32_t layer,
-                  uint32_t x_offset,
-                  uint32_t y_offset,
-                  uint32_t z_offset,
+                  int32_t x_offset,
+                  int32_t y_offset,
+                  int32_t z_offset,
                   uint32_t x_size,
                   uint32_t y_size,
                   uint32_t z_size) override;
@@ -81,6 +92,6 @@ class TextureAdapter : public ITexture {
     void generate_mipmap() override;
 
   private:
-    std::shared_ptr<Texture> _texture = nullptr;
+    Handle<Texture> _texture{};
 };
 } // namespace ars::render::vk

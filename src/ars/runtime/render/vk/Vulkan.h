@@ -8,10 +8,9 @@
 #include <vulkan/volk.hpp>
 
 #include "../../core/misc/NoCopyMove.h"
+#include <memory>
 
 namespace ars::render::vk {
-class Context;
-
 // By now in this project we only use a single allocator.
 //
 // These wrappers will take the ownership of vulkan handles and release
@@ -112,6 +111,31 @@ class CommandBuffer : public volk::CommandBuffer {
 
   private:
     VkCommandPool _pool = VK_NULL_HANDLE;
+};
+
+class Context;
+
+// A reference counted handle for resources.
+// The context uses the handle for resource usage tracking and delayed resource
+// destruction.
+template <typename T> struct Handle {
+  public:
+    Handle() = default;
+
+    [[nodiscard]] T *get() const {
+        return _ptr.get();
+    }
+
+    T *operator->() const {
+        return _ptr.get();
+    }
+
+  private:
+    friend Context;
+
+    explicit Handle(std::shared_ptr<T> ptr) : _ptr(std::move(ptr)) {}
+
+    std::shared_ptr<T> _ptr = nullptr;
 };
 
 } // namespace ars::render::vk

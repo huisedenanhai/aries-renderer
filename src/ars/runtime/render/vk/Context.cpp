@@ -3,7 +3,6 @@
 #include "Mesh.h"
 #include "Scene.h"
 #include "Swapchain.h"
-#include "Texture.h"
 #include <GLFW/glfw3.h>
 #include <algorithm>
 #include <ars/runtime/core/Log.h>
@@ -532,6 +531,7 @@ Context::Context(GLFWwindow *window) {
     }
 
     _vma = std::make_unique<VulkanMemoryAllocator>(_device.get());
+    init_command_pool();
 }
 
 Instance *Context::instance() const {
@@ -597,24 +597,29 @@ std::unique_ptr<Swapchain> Context::create_swapchain_impl(GLFWwindow *window) {
 
 std::unique_ptr<ITexture>
 Context::create_texture_impl(const TextureInfo &info) {
-    auto tex = std::make_unique<Texture>(this, translate(info));
+    auto tex = create_texture(translate(info));
     return std::make_unique<TextureAdapter>(info, std::move(tex));
 }
 
 bool Context::begin_frame() {
     _queue->flush();
-    _queue->reset_command_pool();
+    _device->ResetCommandPool(_command_pool, 0);
+    gc();
     return true;
 }
 
 void Context::end_frame() {}
 
-Context::~Context() = default;
+Context::~Context() {
+    gc();
+    if (_command_pool != VK_NULL_HANDLE) {
+        _device->Destroy(_command_pool);
+    }
+}
 
 Queue::Queue(Context *context, uint32_t family_index)
     : _context(context), _family_index(family_index) {
     _context->device()->GetDeviceQueue(family_index, 0, &_queue);
-    init_command_pool();
 }
 
 uint32_t Queue::family_index() const {
@@ -666,9 +671,6 @@ void Queue::submit(CommandBuffer *command_buffer) {
 
 Queue::~Queue() {
     flush();
-    if (_command_pool != VK_NULL_HANDLE) {
-        _context->device()->Destroy(_command_pool);
-    }
 }
 
 void Queue::flush() {
@@ -680,23 +682,50 @@ void Queue::flush() {
     _semaphores.clear();
 }
 
-void Queue::reset_command_pool() {
-    _tmp_command_buffers.clear();
-    _context->device()->ResetCommandPool(_command_pool, 0);
-}
-
-CommandBuffer *Queue::alloc_tmp_command_buffer(VkCommandBufferLevel level) {
-    _tmp_command_buffers.emplace_back(std::make_unique<CommandBuffer>(
-        _context->device(), _command_pool, level));
-    return _tmp_command_buffers.back().get();
-}
-
-void Queue::init_command_pool() {
+void Context::init_command_pool() {
     VkCommandPoolCreateInfo info{VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
-    info.queueFamilyIndex = _family_index;
-    if (_context->device()->Create(&info, &_command_pool) != VK_SUCCESS) {
+    info.queueFamilyIndex = _queue->family_index();
+    if (_device->Create(&info, &_command_pool) != VK_SUCCESS) {
         panic("Can not create command pool");
     }
+}
+
+template <typename T, typename... Args>
+Handle<T> Context::create_handle(std::vector<std::shared_ptr<T>> &pool,
+                                 Args &&...args) {
+    auto res = std::make_shared<T>(std::forward<Args>(args)...);
+    pool.push_back(res);
+    return Handle<T>(res);
+}
+
+Handle<CommandBuffer>
+Context::create_command_buffer(VkCommandBufferLevel level) {
+    return create_handle(_command_buffers, _device.get(), _command_pool, level);
+}
+
+Handle<Texture> Context::create_texture(const TextureCreateInfo &info) {
+    return create_handle(_textures, this, info);
+}
+
+Handle<Buffer> Context::create_buffer(VkDeviceSize size,
+                                      VkBufferUsageFlags buffer_usage,
+                                      VmaMemoryUsage memory_usage) {
+    return create_handle(_buffers, this, size, buffer_usage, memory_usage);
+}
+
+namespace {
+template <typename T> void run_gc(std::vector<std::shared_ptr<T>> &pool) {
+    pool.erase(std::remove_if(pool.begin(),
+                              pool.end(),
+                              [](auto &res) { return res.use_count() <= 1; }),
+               pool.end());
+}
+} // namespace
+
+void Context::gc() {
+    run_gc(_textures);
+    run_gc(_command_buffers);
+    run_gc(_buffers);
 }
 
 } // namespace ars::render::vk

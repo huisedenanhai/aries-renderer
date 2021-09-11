@@ -36,9 +36,9 @@ class ITexture {
                           size_t size,
                           uint32_t mip_level,
                           uint32_t layer,
-                          uint32_t x_offset,
-                          uint32_t y_offset,
-                          uint32_t z_offset,
+                          int32_t x_offset,
+                          int32_t y_offset,
+                          int32_t z_offset,
                           uint32_t x_size,
                           uint32_t y_size,
                           uint32_t z_size) = 0;

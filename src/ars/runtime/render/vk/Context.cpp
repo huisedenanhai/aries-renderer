@@ -626,26 +626,33 @@ uint32_t Queue::family_index() const {
     return _family_index;
 }
 
-VkQueue Queue::raw() const {
+VkQueue Queue::queue() const {
     return _queue;
 }
 
-void Queue::submit(CommandBuffer *command_buffer) {
+void Queue::submit(CommandBuffer *command_buffer,
+                   uint32_t wait_semaphore_count,
+                   VkSemaphore *wait_semaphores) {
     assert(command_buffer != nullptr);
     auto device = _context->device();
 
     VkSubmitInfo info{VK_STRUCTURE_TYPE_SUBMIT_INFO};
-    VkPipelineStageFlags dst_mask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-    VkSemaphore wait_sem = VK_NULL_HANDLE;
+    std::vector<VkSemaphore> wait_sems{};
+    wait_sems.reserve(1 + wait_semaphore_count);
     if (!_semaphores.empty()) {
-        wait_sem = _semaphores.back();
+        wait_sems.push_back(_semaphores.back());
     }
 
-    if (wait_sem != VK_NULL_HANDLE) {
-        info.waitSemaphoreCount = 1;
-        info.pWaitSemaphores = &wait_sem;
-        info.pWaitDstStageMask = &dst_mask;
+    for (int i = 0; i < wait_semaphore_count; i++) {
+        wait_sems.push_back(wait_semaphores[i]);
     }
+
+    std::vector<VkPipelineStageFlags> dst_masks(
+        wait_sems.size(), VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+
+    info.waitSemaphoreCount = static_cast<uint32_t>(wait_sems.size());
+    info.pWaitSemaphores = wait_sems.data();
+    info.pWaitDstStageMask = dst_masks.data();
 
     VkSemaphoreCreateInfo sem_info{VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
     VkSemaphore signal_sem = VK_NULL_HANDLE;
@@ -680,6 +687,13 @@ void Queue::flush() {
         device->Destroy(sem);
     }
     _semaphores.clear();
+}
+
+VkSemaphore Queue::get_semaphore() const {
+    if (!_semaphores.empty()) {
+        return _semaphores.back();
+    }
+    return VK_NULL_HANDLE;
 }
 
 void Context::init_command_pool() {

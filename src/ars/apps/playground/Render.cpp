@@ -49,7 +49,7 @@ std::unique_ptr<ITexture> load_texture(IContext *context,
         stbi_load(path.c_str(), &width, &height, &channels, 4);
     if (!data) {
         std::stringstream ss;
-        ss << "failed to load image " << path;
+        ss << "Failed to load image " << path;
         ars::panic(ss.str());
     }
 
@@ -98,7 +98,11 @@ void main_loop() {
             view->render();
 
             for (auto &w : windows) {
-                w->swapchain->present(view->get_color_texture());
+                if (!w->swapchain->present(texture.get())) {
+                    int fb_width, fb_height;
+                    glfwGetFramebufferSize(w->window, &fb_width, &fb_height);
+                    w->swapchain->resize(fb_width, fb_height);
+                }
             }
 
             ctx->end_frame();

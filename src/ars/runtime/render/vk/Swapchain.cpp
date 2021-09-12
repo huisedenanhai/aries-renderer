@@ -188,6 +188,11 @@ void Swapchain::init_image_views() {
 
 void Swapchain::cleanup_swapchain() {
     Device *device = _context->device();
+
+    if (_image_ready_semaphore != VK_NULL_HANDLE) {
+        device->Destroy(_image_ready_semaphore);
+    }
+
     for (auto fb : _framebuffers) {
         device->Destroy(fb);
     }
@@ -203,7 +208,79 @@ void Swapchain::cleanup_swapchain() {
     }
 }
 
-void Swapchain::present(ITexture *texture) {}
+bool Swapchain::present(ITexture *texture) {
+    auto device = _context->device();
+    auto queue = _context->queue();
+
+    if (need_recreate()) {
+        queue->flush();
+        recreate_swapchain();
+    }
+
+    uint32_t image_index = 0;
+    auto acquire_result = device->AcquireNextImageKHR(_swapchain,
+                                                      UINT64_MAX,
+                                                      _image_ready_semaphore,
+                                                      VK_NULL_HANDLE,
+                                                      &image_index);
+    if (acquire_result == VK_ERROR_OUT_OF_DATE_KHR) {
+        // Skip this frame
+        return false;
+    }
+
+    auto good_present = true;
+    if (acquire_result == VK_SUBOPTIMAL_KHR) {
+        good_present = false;
+    }
+
+    if (acquire_result != VK_SUCCESS && acquire_result != VK_SUBOPTIMAL_KHR) {
+        panic("Failed to acquire swap chain image!");
+    }
+
+    queue->submit_once(
+        [&](CommandBuffer *cmd) {
+            VkRenderPassBeginInfo rp_info{
+                VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
+            rp_info.renderPass = _render_pass;
+            rp_info.framebuffer = _framebuffers[image_index];
+            rp_info.renderArea = VkRect2D{{0, 0}, _extent};
+
+            VkClearValue clear_value{};
+            clear_value.color.float32[0] = 0.0;
+            clear_value.color.float32[1] = 0.0;
+            clear_value.color.float32[2] = 0.0;
+            clear_value.color.float32[3] = 1.0;
+
+            rp_info.clearValueCount = 1;
+            rp_info.pClearValues = &clear_value;
+
+            cmd->BeginRenderPass(&rp_info, VK_SUBPASS_CONTENTS_INLINE);
+
+            cmd->EndRenderPass();
+        },
+        1,
+        &_image_ready_semaphore);
+
+    auto blit_finish_sem = queue->get_semaphore();
+
+    VkPresentInfoKHR present_info{VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
+    present_info.waitSemaphoreCount = 1;
+    present_info.pWaitSemaphores = &blit_finish_sem;
+    present_info.swapchainCount = 1;
+    present_info.pSwapchains = &_swapchain;
+    present_info.pImageIndices = &image_index;
+    VkResult present_result =
+        _context->device()->QueuePresentKHR(queue->queue(), &present_info);
+
+    if (present_result == VK_ERROR_OUT_OF_DATE_KHR ||
+        present_result == VK_SUBOPTIMAL_KHR) {
+        good_present = false;
+    } else if (present_result != VK_SUCCESS) {
+        panic("Failed to present to swapchain");
+    }
+
+    return good_present;
+}
 
 void Swapchain::resize(uint32_t physical_width, uint32_t physical_height) {
     set_target_size(physical_width, physical_height);
@@ -229,6 +306,7 @@ void Swapchain::recreate_swapchain() {
     init_image_views();
     init_render_pass();
     init_framebuffers();
+    init_semaphores();
 }
 
 Extent2D Swapchain::get_size() {
@@ -289,6 +367,14 @@ void Swapchain::init_render_pass() {
 
     if (_context->device()->Create(&info, &_render_pass) != VK_SUCCESS) {
         panic("Failed to create render pass for presentation");
+    }
+}
+
+void Swapchain::init_semaphores() {
+    VkSemaphoreCreateInfo info{VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
+    if (_context->device()->Create(&info, &_image_ready_semaphore) !=
+        VK_SUCCESS) {
+        panic("Failed to create image ready semaphore");
     }
 }
 

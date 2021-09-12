@@ -27,13 +27,13 @@ class Swapchain : public ISwapchain {
 
     ARS_NO_COPY_MOVE(Swapchain);
 
-    void present(ITexture *texture) override;
+    bool present(ITexture *texture) override;
     void resize(uint32_t physical_width, uint32_t physical_height) override;
     Extent2D get_size() override;
 
   private:
     void set_target_size(uint32_t physical_width, uint32_t physical_height);
-    bool need_recreate() const;
+    [[nodiscard]] bool need_recreate() const;
     // Recreation of swapchain does not change surface format after first call
     // for initialization.
     void recreate_swapchain();
@@ -42,6 +42,7 @@ class Swapchain : public ISwapchain {
     void init_image_views();
     void init_render_pass();
     void init_framebuffers();
+    void init_semaphores();
 
     Context *_context = nullptr;
     VkSurfaceKHR _surface = VK_NULL_HANDLE;
@@ -56,6 +57,8 @@ class Swapchain : public ISwapchain {
     // Blit the image using shader
     VkRenderPass _render_pass = VK_NULL_HANDLE;
     std::vector<VkFramebuffer> _framebuffers{};
+    // Now we don't support frames in flight. One semaphore is fine.
+    VkSemaphore _image_ready_semaphore{};
 
     // lazy swapchain recreation
     VkExtent2D _target_extent{};

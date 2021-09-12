@@ -24,12 +24,21 @@ class Queue {
     ~Queue();
 
     [[nodiscard]] uint32_t family_index() const;
-    [[nodiscard]] VkQueue raw() const;
+    [[nodiscard]] VkQueue queue() const;
 
-    void submit(CommandBuffer *command_buffer);
+    void submit(CommandBuffer *command_buffer,
+                uint32_t wait_semaphore_count = 0,
+                VkSemaphore *wait_semaphores = nullptr);
 
     // record a command buffer and submit it immediately
-    template <typename Func> void submit_once(Func &&func);
+    template <typename Func>
+    void submit_once(Func &&func,
+                     uint32_t wait_semaphore_count = 0,
+                     VkSemaphore *wait_semaphores = nullptr);
+
+    // The signaled semaphore for the last submitted command.
+    // If the queue is flushed, this method returns VK_NULL_HANDLE
+    [[nodiscard]] VkSemaphore get_semaphore() const;
 
     // wait the queue idle
     void flush();
@@ -120,12 +129,15 @@ class Context : public IContext {
     std::vector<std::shared_ptr<Buffer>> _buffers{};
 };
 
-template <typename Func> void Queue::submit_once(Func &&func) {
+template <typename Func>
+void Queue::submit_once(Func &&func,
+                        uint32_t wait_semaphore_count,
+                        VkSemaphore *wait_semaphores) {
     auto cmd = _context->create_command_buffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     cmd->begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
     func(cmd.get());
     cmd->end();
-    submit(cmd.get());
+    submit(cmd.get(), wait_semaphore_count, wait_semaphores);
 }
 
 } // namespace ars::render::vk

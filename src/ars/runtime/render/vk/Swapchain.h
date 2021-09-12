@@ -34,10 +34,14 @@ class Swapchain : public ISwapchain {
   private:
     void set_target_size(uint32_t physical_width, uint32_t physical_height);
     bool need_recreate() const;
+    // Recreation of swapchain does not change surface format after first call
+    // for initialization.
     void recreate_swapchain();
     void cleanup_swapchain();
     void init_swapchain();
     void init_image_views();
+    void init_render_pass();
+    void init_framebuffers();
 
     Context *_context = nullptr;
     VkSurfaceKHR _surface = VK_NULL_HANDLE;
@@ -45,9 +49,13 @@ class Swapchain : public ISwapchain {
 
     std::vector<VkImage> _images{};
     std::vector<VkImageView> _image_views{};
-    VkFormat _image_format{};
+    VkSurfaceFormatKHR _format{};
     VkExtent2D _extent{};
     VkImageSubresourceRange _subresource_range{};
+
+    // Blit the image using shader
+    VkRenderPass _render_pass = VK_NULL_HANDLE;
+    std::vector<VkFramebuffer> _framebuffers{};
 
     // lazy swapchain recreation
     VkExtent2D _target_extent{};

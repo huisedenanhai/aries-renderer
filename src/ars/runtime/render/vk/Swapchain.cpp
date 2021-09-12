@@ -19,7 +19,14 @@ Swapchain::Swapchain(Context *context,
 }
 
 Swapchain::~Swapchain() {
+    _context->queue()->flush();
+
     cleanup_swapchain();
+
+    if (_render_pass != VK_NULL_HANDLE) {
+        _context->device()->Destroy(_render_pass);
+    }
+
     _context->instance()->Destroy(_surface);
 }
 
@@ -105,10 +112,12 @@ void Swapchain::init_swapchain() {
 
     SwapChainSupportDetails swapchain_support = query_swapchain_support(
         _context->instance(), physical_device, _surface);
-    VkSurfaceFormatKHR surface_format =
-        choose_surface_format(swapchain_support.formats);
     VkPresentModeKHR present_mode =
         choose_present_mode(swapchain_support.present_modes);
+
+    if (_format.format == VK_FORMAT_UNDEFINED) {
+        _format = choose_surface_format(swapchain_support.formats);
+    }
 
     uint32_t image_count = swapchain_support.capabilities.minImageCount + 1;
     if (swapchain_support.capabilities.maxImageCount > 0 &&
@@ -120,8 +129,8 @@ void Swapchain::init_swapchain() {
     create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     create_info.surface = _surface;
     create_info.minImageCount = image_count;
-    create_info.imageFormat = surface_format.format;
-    create_info.imageColorSpace = surface_format.colorSpace;
+    create_info.imageFormat = _format.format;
+    create_info.imageColorSpace = _format.colorSpace;
     create_info.imageExtent = _target_extent;
     create_info.imageArrayLayers = 1;
     create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
@@ -147,7 +156,6 @@ void Swapchain::init_swapchain() {
     device->GetSwapchainImagesKHR(
         _swapchain, &swapchain_image_count, _images.data());
 
-    _image_format = surface_format.format;
     _extent = _target_extent;
 }
 
@@ -164,7 +172,7 @@ void Swapchain::init_image_views() {
         create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         create_info.image = _images[i];
         create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        create_info.format = _image_format;
+        create_info.format = _format.format;
         create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
         create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
         create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -180,9 +188,16 @@ void Swapchain::init_image_views() {
 
 void Swapchain::cleanup_swapchain() {
     Device *device = _context->device();
+    for (auto fb : _framebuffers) {
+        device->Destroy(fb);
+    }
+    _framebuffers.clear();
+
     for (auto image_view : _image_views) {
         device->Destroy(image_view);
     }
+    _image_views.clear();
+
     if (_swapchain != VK_NULL_HANDLE) {
         device->Destroy(_swapchain);
     }
@@ -212,6 +227,8 @@ void Swapchain::recreate_swapchain() {
     cleanup_swapchain();
     init_swapchain();
     init_image_views();
+    init_render_pass();
+    init_framebuffers();
 }
 
 Extent2D Swapchain::get_size() {
@@ -219,6 +236,60 @@ Extent2D Swapchain::get_size() {
     // But all public operation of the swapchain will behave as if the target
     // size is immediately updated.
     return {_target_extent.width, _target_extent.height};
+}
+
+void Swapchain::init_framebuffers() {
+    auto device = _context->device();
+    auto fb_count = static_cast<int>(_image_views.size());
+    _framebuffers.resize(fb_count);
+
+    for (int i = 0; i < fb_count; i++) {
+        VkFramebufferCreateInfo info{VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO};
+        info.attachmentCount = 1;
+        info.pAttachments = &_image_views[i];
+        info.width = _extent.width;
+        info.height = _extent.height;
+        info.layers = 1;
+        info.renderPass = _render_pass;
+
+        if (device->Create(&info, &_framebuffers[i]) != VK_SUCCESS) {
+            panic("Failed to create framebuffers for swapchain images");
+        }
+    }
+}
+
+void Swapchain::init_render_pass() {
+    if (_render_pass != VK_NULL_HANDLE) {
+        // No need to recreate render pass as the image format will not change
+        // after initialization.
+        return;
+    }
+
+    VkAttachmentDescription attachment{};
+    attachment.format = _format.format;
+    attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+
+    VkAttachmentReference color{};
+    color.attachment = 0;
+    color.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpass{};
+    subpass.colorAttachmentCount = 1;
+    subpass.pColorAttachments = &color;
+
+    VkRenderPassCreateInfo info{VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO};
+    info.attachmentCount = 1;
+    info.pAttachments = &attachment;
+    info.subpassCount = 1;
+    info.pSubpasses = &subpass;
+
+    if (_context->device()->Create(&info, &_render_pass) != VK_SUCCESS) {
+        panic("Failed to create render pass for presentation");
+    }
 }
 
 } // namespace ars::render::vk

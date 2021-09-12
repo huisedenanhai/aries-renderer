@@ -5,20 +5,17 @@
 #include <cassert>
 
 namespace ars::render::vk {
-void Swapchain::present(ITexture *texture) {}
-
-void Swapchain::resize(int physical_width, int physical_height) {}
 
 Swapchain::Swapchain(Context *context,
                      VkSurfaceKHR surface,
-                     int physical_width,
-                     int physical_height)
+                     uint32_t physical_width,
+                     uint32_t physical_height)
     : _context(context), _surface(surface) {
     assert(context != nullptr);
     assert(surface != VK_NULL_HANDLE);
 
-    init_swapchain(physical_width, physical_height);
-    init_image_views();
+    set_target_size(physical_width, physical_height);
+    recreate_swapchain();
 }
 
 Swapchain::~Swapchain() {
@@ -50,14 +47,12 @@ VkPresentModeKHR choose_present_mode(
 }
 
 VkExtent2D choose_swapchain_extent(const VkSurfaceCapabilitiesKHR &capabilities,
-                                   int width,
-                                   int height) {
+                                   VkExtent2D target_extent) {
     if (capabilities.currentExtent.width != UINT32_MAX) {
         return capabilities.currentExtent;
     }
 
-    VkExtent2D actual_extent = {static_cast<uint32_t>(width),
-                                static_cast<uint32_t>(height)};
+    VkExtent2D actual_extent = target_extent;
 
     actual_extent.width = std::clamp(actual_extent.width,
                                      capabilities.minImageExtent.width,
@@ -104,7 +99,7 @@ query_swapchain_support(Instance *instance,
     return details;
 }
 
-void Swapchain::init_swapchain(int physical_width, int physical_height) {
+void Swapchain::init_swapchain() {
     Device *device = _context->device();
     VkPhysicalDevice physical_device = device->physical_device();
 
@@ -114,8 +109,6 @@ void Swapchain::init_swapchain(int physical_width, int physical_height) {
         choose_surface_format(swapchain_support.formats);
     VkPresentModeKHR present_mode =
         choose_present_mode(swapchain_support.present_modes);
-    VkExtent2D extent = choose_swapchain_extent(
-        swapchain_support.capabilities, physical_width, physical_height);
 
     uint32_t image_count = swapchain_support.capabilities.minImageCount + 1;
     if (swapchain_support.capabilities.maxImageCount > 0 &&
@@ -129,7 +122,7 @@ void Swapchain::init_swapchain(int physical_width, int physical_height) {
     create_info.minImageCount = image_count;
     create_info.imageFormat = surface_format.format;
     create_info.imageColorSpace = surface_format.colorSpace;
-    create_info.imageExtent = extent;
+    create_info.imageExtent = _target_extent;
     create_info.imageArrayLayers = 1;
     create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
@@ -150,36 +143,36 @@ void Swapchain::init_swapchain(int physical_width, int physical_height) {
 
     uint32_t swapchain_image_count = 0;
     device->GetSwapchainImagesKHR(_swapchain, &swapchain_image_count, nullptr);
-    _swapchain_images.resize(swapchain_image_count);
+    _images.resize(swapchain_image_count);
     device->GetSwapchainImagesKHR(
-        _swapchain, &swapchain_image_count, _swapchain_images.data());
+        _swapchain, &swapchain_image_count, _images.data());
 
-    _swapchain_image_format = surface_format.format;
-    _swapchain_extent = extent;
+    _image_format = surface_format.format;
+    _extent = _target_extent;
 }
 
 void Swapchain::init_image_views() {
-    _swapchain_image_views.resize(_swapchain_images.size());
-    _swapchain_subresource_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    _swapchain_subresource_range.baseMipLevel = 0;
-    _swapchain_subresource_range.levelCount = 1;
-    _swapchain_subresource_range.baseArrayLayer = 0;
-    _swapchain_subresource_range.layerCount = 1;
+    _image_views.resize(_images.size());
+    _subresource_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    _subresource_range.baseMipLevel = 0;
+    _subresource_range.levelCount = 1;
+    _subresource_range.baseArrayLayer = 0;
+    _subresource_range.layerCount = 1;
 
-    for (int i = 0; i < _swapchain_images.size(); i++) {
+    for (int i = 0; i < _images.size(); i++) {
         VkImageViewCreateInfo create_info{};
         create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        create_info.image = _swapchain_images[i];
+        create_info.image = _images[i];
         create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        create_info.format = _swapchain_image_format;
+        create_info.format = _image_format;
         create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
         create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
         create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
         create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-        create_info.subresourceRange = _swapchain_subresource_range;
+        create_info.subresourceRange = _subresource_range;
 
-        if (_context->device()->Create(
-                &create_info, &_swapchain_image_views[i]) != VK_SUCCESS) {
+        if (_context->device()->Create(&create_info, &_image_views[i]) !=
+            VK_SUCCESS) {
             panic("Failed to create image views!");
         }
     }
@@ -187,9 +180,45 @@ void Swapchain::init_image_views() {
 
 void Swapchain::cleanup_swapchain() {
     Device *device = _context->device();
-    for (auto image_view : _swapchain_image_views) {
+    for (auto image_view : _image_views) {
         device->Destroy(image_view);
     }
-    device->Destroy(_swapchain);
+    if (_swapchain != VK_NULL_HANDLE) {
+        device->Destroy(_swapchain);
+    }
 }
+
+void Swapchain::present(ITexture *texture) {}
+
+void Swapchain::resize(uint32_t physical_width, uint32_t physical_height) {
+    set_target_size(physical_width, physical_height);
+}
+
+void Swapchain::set_target_size(uint32_t physical_width,
+                                uint32_t physical_height) {
+    SwapChainSupportDetails swapchain_support = query_swapchain_support(
+        _context->instance(), _context->device()->physical_device(), _surface);
+
+    _target_extent = choose_swapchain_extent(swapchain_support.capabilities,
+                                             {physical_width, physical_height});
+}
+
+bool Swapchain::need_recreate() const {
+    return _extent.width != _target_extent.width ||
+           _extent.height != _target_extent.height;
+}
+
+void Swapchain::recreate_swapchain() {
+    cleanup_swapchain();
+    init_swapchain();
+    init_image_views();
+}
+
+Extent2D Swapchain::get_size() {
+    // The actual size may differ as the swapchain is lazy recreated.
+    // But all public operation of the swapchain will behave as if the target
+    // size is immediately updated.
+    return {_target_extent.width, _target_extent.height};
+}
+
 } // namespace ars::render::vk

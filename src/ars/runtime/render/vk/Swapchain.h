@@ -21,28 +21,35 @@ class Swapchain : public ISwapchain {
   public:
     Swapchain(Context *context,
               VkSurfaceKHR surface,
-              int physical_width,
-              int physical_height);
+              uint32_t physical_width,
+              uint32_t physical_height);
     ~Swapchain() override;
 
     ARS_NO_COPY_MOVE(Swapchain);
 
     void present(ITexture *texture) override;
-    void resize(int physical_width, int physical_height) override;
+    void resize(uint32_t physical_width, uint32_t physical_height) override;
+    Extent2D get_size() override;
 
   private:
+    void set_target_size(uint32_t physical_width, uint32_t physical_height);
+    bool need_recreate() const;
+    void recreate_swapchain();
     void cleanup_swapchain();
-    void init_swapchain(int physical_width, int physical_height);
+    void init_swapchain();
     void init_image_views();
 
     Context *_context = nullptr;
     VkSurfaceKHR _surface = VK_NULL_HANDLE;
     VkSwapchainKHR _swapchain = VK_NULL_HANDLE;
 
-    std::vector<VkImage> _swapchain_images{};
-    std::vector<VkImageView> _swapchain_image_views{};
-    VkFormat _swapchain_image_format{};
-    VkExtent2D _swapchain_extent{};
-    VkImageSubresourceRange _swapchain_subresource_range{};
+    std::vector<VkImage> _images{};
+    std::vector<VkImageView> _image_views{};
+    VkFormat _image_format{};
+    VkExtent2D _extent{};
+    VkImageSubresourceRange _subresource_range{};
+
+    // lazy swapchain recreation
+    VkExtent2D _target_extent{};
 };
 } // namespace ars::render::vk

@@ -43,6 +43,7 @@ class Swapchain : public ISwapchain {
     void init_render_pass();
     void init_framebuffers();
     void init_semaphores();
+    void init_pipeline();
 
     Context *_context = nullptr;
     VkSurfaceKHR _surface = VK_NULL_HANDLE;
@@ -56,7 +57,9 @@ class Swapchain : public ISwapchain {
 
     // Blit the image using shader
     VkRenderPass _render_pass = VK_NULL_HANDLE;
+    VkPipeline _pipeline = VK_NULL_HANDLE;
     std::vector<VkFramebuffer> _framebuffers{};
+
     // Now we don't support frames in flight. One semaphore is fine.
     VkSemaphore _image_ready_semaphore{};
 

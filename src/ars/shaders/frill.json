@@ -5,6 +5,8 @@
     "tex.frag",
     "tex.vert",
     "model_vis.vert",
-    "model_vis.frag"
+    "model_vis.frag",
+    "Blit.vert",
+    "Blit.frag"
   ]
 }

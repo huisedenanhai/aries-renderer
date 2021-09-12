@@ -1,4 +1,6 @@
 target_sources(render PRIVATE
+        Pipeline.cpp
+        Pipeline.h
         Context.cpp
         Context.h
         Buffer.cpp

@@ -1,5 +1,6 @@
 #include "Swapchain.h"
 #include "Context.h"
+#include "Pipeline.h"
 #include <algorithm>
 #include <ars/runtime/core/Log.h>
 #include <cassert>
@@ -20,12 +21,15 @@ Swapchain::Swapchain(Context *context,
 
 Swapchain::~Swapchain() {
     _context->queue()->flush();
-
-    cleanup_swapchain();
-
     if (_render_pass != VK_NULL_HANDLE) {
         _context->device()->Destroy(_render_pass);
     }
+
+    if (_pipeline != VK_NULL_HANDLE) {
+        _context->device()->Destroy(_pipeline);
+    }
+
+    cleanup_swapchain();
 
     _context->instance()->Destroy(_surface);
 }
@@ -305,6 +309,7 @@ void Swapchain::recreate_swapchain() {
     init_swapchain();
     init_image_views();
     init_render_pass();
+    init_pipeline();
     init_framebuffers();
     init_semaphores();
 }
@@ -376,6 +381,20 @@ void Swapchain::init_semaphores() {
         VK_SUCCESS) {
         panic("Failed to create image ready semaphore");
     }
+}
+
+void Swapchain::init_pipeline() {
+    if (_pipeline != VK_NULL_HANDLE) {
+        // No need to recreate pipeline as _render_pass will not change after
+        // initialization
+        return;
+    }
+
+    auto vert_shader = std::make_unique<Shader>(_context, "Blit.vert");
+    auto frag_shader = std::make_unique<Shader>(_context, "Blit.frag");
+
+    VkGraphicsPipelineCreateInfo info{
+        VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO};
 }
 
 } // namespace ars::render::vk

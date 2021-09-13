@@ -302,6 +302,13 @@ bool Swapchain::present(ITexture *texture) {
         panic("Failed to present to swapchain");
     }
 
+#ifdef __APPLE__
+    // Dirty Fix: It crashes on macOS when multiple swapchains want to present
+    // in the same frame.
+    // Just flush the queue. Synchronization overhead is better than nothing.
+    _context->queue()->flush();
+#endif
+
     return good_present;
 }
 

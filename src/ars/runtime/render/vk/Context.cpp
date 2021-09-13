@@ -532,6 +532,7 @@ Context::Context(GLFWwindow *window) {
 
     _vma = std::make_unique<VulkanMemoryAllocator>(_device.get());
     init_command_pool();
+    init_pipeline_cache();
 }
 
 Instance *Context::instance() const {
@@ -612,6 +613,10 @@ void Context::end_frame() {}
 
 Context::~Context() {
     gc();
+    if (_pipeline_cache != VK_NULL_HANDLE) {
+        _device->Destroy(_pipeline_cache);
+    }
+
     if (_command_pool != VK_NULL_HANDLE) {
         _device->Destroy(_command_pool);
     }
@@ -740,6 +745,20 @@ void Context::gc() {
     run_gc(_textures);
     run_gc(_command_buffers);
     run_gc(_buffers);
+}
+
+VkPipelineCache Context::pipeline_cache() const {
+    return _pipeline_cache;
+}
+
+void Context::init_pipeline_cache() {
+    VkPipelineCacheCreateInfo info{
+        VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO};
+
+    if (_device->Create(&info, &_pipeline_cache) != VK_SUCCESS) {
+        log_error(
+            "Failed to create pipeline cache, pipeline creation might be slow");
+    }
 }
 
 } // namespace ars::render::vk

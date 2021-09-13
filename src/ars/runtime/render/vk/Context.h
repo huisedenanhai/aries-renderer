@@ -70,6 +70,7 @@ class Context : public IContext {
     [[nodiscard]] Instance *instance() const;
     [[nodiscard]] Device *device() const;
     [[nodiscard]] VulkanMemoryAllocator *vma() const;
+    [[nodiscard]] VkPipelineCache pipeline_cache() const;
 
     // The primary queue.
     //
@@ -102,6 +103,7 @@ class Context : public IContext {
                                 bool enable_validation,
                                 VkSurfaceKHR surface);
     void init_command_pool();
+    void init_pipeline_cache();
 
     // Clear unused resources
     void gc();
@@ -122,6 +124,8 @@ class Context : public IContext {
     GLFWwindow *_cached_window{};
 
     VkCommandPool _command_pool = VK_NULL_HANDLE;
+
+    VkPipelineCache _pipeline_cache = VK_NULL_HANDLE;
 
     // cached resources
     std::vector<std::shared_ptr<Texture>> _textures{};

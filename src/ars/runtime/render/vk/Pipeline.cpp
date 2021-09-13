@@ -278,7 +278,8 @@ void GraphicsPipeline::init_pipeline(const GraphicsPipelineInfo &info) {
     create_info.subpass = info.subpass;
 
     if (_context->device()->Create(
-            VK_NULL_HANDLE, 1, &create_info, &_pipeline) != VK_SUCCESS) {
+            _context->pipeline_cache(), 1, &create_info, &_pipeline) !=
+        VK_SUCCESS) {
         panic("Failed to create pipeline for swapchain present");
     }
 }

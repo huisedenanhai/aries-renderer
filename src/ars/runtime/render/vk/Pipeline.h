@@ -55,6 +55,8 @@ class GraphicsPipeline {
   public:
     GraphicsPipeline(Context *context, const GraphicsPipelineInfo &info);
 
+    ARS_NO_COPY_MOVE(GraphicsPipeline);
+
     ~GraphicsPipeline();
 
     [[nodiscard]] VkPipeline pipeline() const;

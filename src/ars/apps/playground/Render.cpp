@@ -98,6 +98,11 @@ void main_loop() {
             view->render();
 
             for (auto &w : windows) {
+#ifdef __APPLE__
+                if (!glfwGetWindowAttrib(w->window, GLFW_FOCUSED)) {
+                    continue;
+                }
+#endif
                 if (!w->swapchain->present(texture.get())) {
                     int fb_width, fb_height;
                     glfwGetFramebufferSize(w->window, &fb_width, &fb_height);

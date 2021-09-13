@@ -61,9 +61,18 @@ Texture::Texture(Context *context, const TextureCreateInfo &info)
     if (context->device()->Create(&view_info, &_image_view) != VK_SUCCESS) {
         panic("Failed to create image view");
     }
+
+    VkSamplerCreateInfo sampler_info{VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
+    if (context->device()->Create(&sampler_info, &_sampler)) {
+        panic("Failed to create sampler");
+    }
 }
 
 Texture::~Texture() {
+    if (_sampler != VK_NULL_HANDLE) {
+        _context->device()->Destroy(_sampler);
+    }
+
     if (_image != VK_NULL_HANDLE) {
         vmaDestroyImage(_context->vma()->raw(), _image, _allocation);
     }
@@ -307,6 +316,10 @@ void Texture::transfer_layout(CommandBuffer *cmd,
         src_stage_mask, dst_stage_mask, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 
     _layout = dst_layout;
+}
+
+VkSampler Texture::sampler() const {
+    return _sampler;
 }
 
 TextureCreateInfo TextureCreateInfo::sampled_2d(VkFormat format,

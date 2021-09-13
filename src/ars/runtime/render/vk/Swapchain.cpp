@@ -6,7 +6,6 @@
 #include <cassert>
 
 namespace ars::render::vk {
-
 Swapchain::Swapchain(Context *context,
                      VkSurfaceKHR surface,
                      uint32_t physical_width,
@@ -23,13 +22,7 @@ Swapchain::~Swapchain() {
     _context->queue()->flush();
     auto device = _context->device();
 
-    if (_pipeline_layout != VK_NULL_HANDLE) {
-        device->Destroy(_pipeline_layout);
-    }
-
-    if (_pipeline != VK_NULL_HANDLE) {
-        device->Destroy(_pipeline);
-    }
+    _pipeline.reset();
 
     if (_render_pass != VK_NULL_HANDLE) {
         device->Destroy(_render_pass);
@@ -276,7 +269,8 @@ bool Swapchain::present(ITexture *texture) {
             VkRect2D scissor{{0, 0}, _extent};
             cmd->SetScissor(0, 1, &scissor);
 
-            cmd->BindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, _pipeline);
+            cmd->BindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS,
+                              _pipeline->pipeline());
             cmd->Draw(3, 1, 0, 0);
 
             cmd->EndRenderPass();
@@ -416,105 +410,16 @@ void Swapchain::init_pipeline() {
         return;
     }
 
-    auto device = _context->device();
-
-    VkPipelineLayoutCreateInfo layout_info{
-        VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
-
-    if (device->Create(&layout_info, &_pipeline_layout) != VK_SUCCESS) {
-        panic("Failed to create pipeline layout for presentation");
-    }
-
     auto vert_shader = std::make_unique<Shader>(_context, "Blit.vert");
     auto frag_shader = std::make_unique<Shader>(_context, "Blit.frag");
 
-    VkGraphicsPipelineCreateInfo info{
-        VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO};
-
-    VkPipelineShaderStageCreateInfo shaders[2]{};
-    shaders[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    shaders[0].module = vert_shader->module();
-    shaders[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
-    shaders[0].pName = "main";
-
-    shaders[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    shaders[1].module = frag_shader->module();
-    shaders[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-    shaders[1].pName = "main";
-
-    info.stageCount = 2;
-    info.pStages = shaders;
-
-    VkPipelineVertexInputStateCreateInfo vert_input{
-        VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
-
-    info.pVertexInputState = &vert_input;
-
-    VkPipelineInputAssemblyStateCreateInfo input_assembly{
-        VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO};
-    input_assembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-
-    info.pInputAssemblyState = &input_assembly;
-
-    info.pTessellationState = nullptr;
-
-    VkPipelineViewportStateCreateInfo viewport_state{
-        VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO};
-    VkViewport viewport{0, 0, 1, 1, 0, 1};
-    VkRect2D scissor{{0, 0}, {1, 1}};
-
-    viewport_state.viewportCount = 1;
-    viewport_state.pViewports = &viewport;
-    viewport_state.scissorCount = 1;
-    viewport_state.pScissors = &scissor;
-
-    info.pViewportState = &viewport_state;
-
-    VkPipelineRasterizationStateCreateInfo raster{
-        VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO};
-    raster.cullMode = VK_CULL_MODE_NONE;
-    raster.polygonMode = VK_POLYGON_MODE_FILL;
-    raster.lineWidth = 1.0f;
-
-    info.pRasterizationState = &raster;
-
-    VkPipelineMultisampleStateCreateInfo multisample{
-        VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO};
-    multisample.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-
-    info.pMultisampleState = &multisample;
-
-    info.pDepthStencilState = nullptr;
-
-    VkPipelineColorBlendStateCreateInfo blend{
-        VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO};
-
-    VkPipelineColorBlendAttachmentState attachment{};
-    attachment.colorWriteMask =
-        VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-        VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-
-    blend.attachmentCount = 1;
-    blend.pAttachments = &attachment;
-
-    info.pColorBlendState = &blend;
-
-    VkDynamicState dyn_states[] = {VK_DYNAMIC_STATE_VIEWPORT,
-                                   VK_DYNAMIC_STATE_SCISSOR};
-    VkPipelineDynamicStateCreateInfo dynamic_state{
-        VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO};
-    dynamic_state.dynamicStateCount = std::size(dyn_states);
-    dynamic_state.pDynamicStates = dyn_states;
-
-    info.pDynamicState = &dynamic_state;
-
-    info.layout = _pipeline_layout;
-    info.renderPass = _render_pass;
+    GraphicsPipelineInfo info{};
+    info.shaders.push_back(vert_shader.get());
+    info.shaders.push_back(frag_shader.get());
+    info.render_pass = _render_pass;
     info.subpass = 0;
 
-    if (device->Create(VK_NULL_HANDLE, 1, &info, &_pipeline) != VK_SUCCESS) {
-        panic("Failed to create pipeline for swapchain present");
-    }
+    _pipeline = std::make_unique<GraphicsPipeline>(_context, info);
 }
 
 } // namespace ars::render::vk

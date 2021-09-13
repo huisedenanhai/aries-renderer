@@ -7,6 +7,7 @@
 
 namespace ars::render::vk {
 class Context;
+class GraphicsPipeline;
 
 struct SwapChainSupportDetails {
     VkSurfaceCapabilitiesKHR capabilities{};
@@ -57,8 +58,7 @@ class Swapchain : public ISwapchain {
 
     // Blit the image using shader
     VkRenderPass _render_pass = VK_NULL_HANDLE;
-    VkPipelineLayout _pipeline_layout = VK_NULL_HANDLE;
-    VkPipeline _pipeline = VK_NULL_HANDLE;
+    std::unique_ptr<GraphicsPipeline> _pipeline{};
     std::vector<VkFramebuffer> _framebuffers{};
 
     // Now we don't support frames in flight. One semaphore is fine.

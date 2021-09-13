@@ -48,6 +48,8 @@ class Texture {
 
     void generate_mipmap();
 
+    [[nodiscard]] VkSampler sampler() const;
+
   private:
     // Transfer all subresources to the target layout and set the _layout field.
     // This method assumes all layers and levels of the image are in the same
@@ -65,6 +67,7 @@ class Texture {
     VmaAllocation _allocation = VK_NULL_HANDLE;
     VkImage _image = VK_NULL_HANDLE;
     VkImageView _image_view = VK_NULL_HANDLE;
+    VkSampler _sampler = VK_NULL_HANDLE;
     // Public methods should ensure all layers and levels of the image are in
     // the same layout
     VkImageLayout _layout = VK_IMAGE_LAYOUT_UNDEFINED;

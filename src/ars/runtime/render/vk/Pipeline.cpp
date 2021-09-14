@@ -101,17 +101,7 @@ DescriptorSetInfo::create_desc_set_layout(Device *device) const {
 namespace {
 template <typename T>
 std::optional<T> merge(const std::optional<T> &lhs,
-                       const std::optional<T> &rhs) {
-    if (!lhs.has_value()) {
-        return rhs;
-    }
-
-    if (rhs.has_value()) {
-        return merge(lhs.value(), rhs.value());
-    }
-
-    return lhs;
-}
+                       const std::optional<T> &rhs);
 
 VkDescriptorSetLayoutBinding merge(const VkDescriptorSetLayoutBinding &lhs,
                                    const VkDescriptorSetLayoutBinding &rhs) {
@@ -137,6 +127,21 @@ PipelineLayoutInfo merge(const PipelineLayoutInfo &lhs,
     }
     return result;
 }
+
+template <typename T>
+std::optional<T> merge(const std::optional<T> &lhs,
+                       const std::optional<T> &rhs) {
+    if (!lhs.has_value()) {
+        return rhs;
+    }
+
+    if (rhs.has_value()) {
+        return merge(lhs.value(), rhs.value());
+    }
+
+    return lhs;
+}
+
 } // namespace
 
 GraphicsPipeline::GraphicsPipeline(Context *context,

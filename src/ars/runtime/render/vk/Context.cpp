@@ -438,13 +438,20 @@ int rate_device_suitability(Instance *instance,
         score += 1000;
     }
 
-    // prefer native vulkan driver, rather than a wrapper around other apis
+    // Prefer native vulkan driver, rather than a wrapper around other apis
     if (!is_portability_subset(instance, physical_device)) {
         score += 100;
     }
 
     // Maximum possible size of textures affects graphics quality
     score += static_cast<int>(properties.limits.maxImageDimension2D);
+
+    // Check device features
+    VkPhysicalDeviceFeatures features{};
+    instance->GetPhysicalDeviceFeatures(physical_device, &features);
+    if (features.samplerAnisotropy == VK_TRUE) {
+        score += 100;
+    }
 
     return score;
 }
@@ -495,12 +502,18 @@ void Context::init_device_and_queues(Instance *instance,
     queue_create_info.pQueuePriorities = &queue_priority;
 
     VkPhysicalDeviceFeatures device_features{};
+    instance->GetPhysicalDeviceFeatures(physical_device, &device_features);
+
+    VkPhysicalDeviceFeatures enabled_features{};
+
+    // Enable sampler anisotropy if the device supports
+    enabled_features.samplerAnisotropy = device_features.samplerAnisotropy;
 
     VkDeviceCreateInfo create_info{};
     create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     create_info.pQueueCreateInfos = &queue_create_info;
     create_info.queueCreateInfoCount = 1;
-    create_info.pEnabledFeatures = &device_features;
+    create_info.pEnabledFeatures = &enabled_features;
 
     auto enabled_extensions = get_device_extensions(
         instance, physical_device, surface != VK_NULL_HANDLE);
@@ -522,6 +535,16 @@ void Context::init_device_and_queues(Instance *instance,
 
     _device = std::make_unique<Device>(instance, device, physical_device);
     _queue = std::make_unique<Queue>(this, indices.primary_family.value());
+
+    VkPhysicalDeviceProperties device_properties{};
+    instance->GetPhysicalDeviceProperties(physical_device, &device_properties);
+
+    // Init context properties
+    if (enabled_features.samplerAnisotropy == VK_TRUE) {
+        _properties.anisotropic_sampler_enabled = true;
+        _properties.max_sampler_anisotropy =
+            device_properties.limits.maxSamplerAnisotropy;
+    }
 }
 
 Context::Context(GLFWwindow *window) {
@@ -790,6 +813,10 @@ void Context::init_descriptor_arena() {
 
     _descriptor_arena = std::make_unique<DescriptorArena>(
         _device.get(), pool_sizes, properties.limits.maxBoundDescriptorSets);
+}
+
+const ContextProperties &Context::properties() const {
+    return _properties;
 }
 
 } // namespace ars::render::vk

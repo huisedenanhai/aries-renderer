@@ -63,6 +63,20 @@ Texture::Texture(Context *context, const TextureCreateInfo &info)
     }
 
     VkSamplerCreateInfo sampler_info{VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
+
+    sampler_info.magFilter = VK_FILTER_LINEAR;
+    sampler_info.minFilter = VK_FILTER_LINEAR;
+    sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    sampler_info.mipLodBias = 0.0f;
+    sampler_info.minLod = 0.0f;
+    sampler_info.maxLod = static_cast<float>(info.mip_levels);
+
+    auto &context_properties = _context->properties();
+    if (context_properties.anisotropic_sampler_enabled) {
+        sampler_info.anisotropyEnable = VK_TRUE;
+        sampler_info.maxAnisotropy = context_properties.max_sampler_anisotropy;
+    }
+
     if (context->device()->Create(&sampler_info, &_sampler)) {
         panic("Failed to create sampler");
     }

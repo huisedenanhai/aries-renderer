@@ -59,11 +59,25 @@ Device::~Device() {
     }
 }
 
+Device::Device(Instance *instance,
+               VkDevice device,
+               VkPhysicalDevice physical_device)
+    : volk::Device(
+          device, instance->table().vkGetDeviceProcAddr, instance->allocator()),
+      _instance(instance), _physical_device(physical_device) {}
+
 Instance::~Instance() {
     if (_instance != VK_NULL_HANDLE) {
         Destroy();
     }
 }
+
+Instance::Instance(VkInstance instance,
+                   uint32_t api_version,
+                   bool presentation_enabled,
+                   const VkAllocationCallbacks *allocator)
+    : volk::Instance(instance, allocator),
+      _presentation_enabled(presentation_enabled), _api_version(api_version) {}
 
 MemoryView
 load_spirv_code(const char *path, const char **flags, uint32_t flag_count) {

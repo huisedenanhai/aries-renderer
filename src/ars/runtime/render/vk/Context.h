@@ -53,6 +53,11 @@ class Queue {
     VkQueue _queue = VK_NULL_HANDLE;
 };
 
+struct ContextProperties {
+    bool anisotropic_sampler_enabled = false;
+    float max_sampler_anisotropy = 1.0f;
+};
+
 class Context : public IContext {
   public:
     // if window is nullptr, presentation will not be supported
@@ -89,6 +94,8 @@ class Context : public IContext {
     [[nodiscard]] Queue *queue() const;
 
     [[nodiscard]] DescriptorArena *descriptor_arena() const;
+
+    [[nodiscard]] const ContextProperties &properties() const;
 
     bool begin_frame() override;
     void end_frame() override;
@@ -138,6 +145,8 @@ class Context : public IContext {
     std::vector<std::shared_ptr<Texture>> _textures{};
     std::vector<std::shared_ptr<CommandBuffer>> _command_buffers{};
     std::vector<std::shared_ptr<Buffer>> _buffers{};
+
+    ContextProperties _properties{};
 };
 
 template <typename Func>

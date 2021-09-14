@@ -20,10 +20,7 @@ class Instance : public volk::Instance {
     Instance(VkInstance instance,
              uint32_t api_version,
              bool presentation_enabled,
-             const VkAllocationCallbacks *allocator = nullptr)
-        : volk::Instance(instance, allocator),
-          _presentation_enabled(presentation_enabled),
-          _api_version(api_version) {}
+             const VkAllocationCallbacks *allocator = nullptr);
 
     ARS_NO_COPY_MOVE(Instance);
 
@@ -46,11 +43,7 @@ class Device : public volk::Device {
   public:
     Device(Instance *instance,
            VkDevice device,
-           VkPhysicalDevice physical_device)
-        : volk::Device(device,
-                       instance->table().vkGetDeviceProcAddr,
-                       instance->allocator()),
-          _instance(instance), _physical_device(physical_device) {}
+           VkPhysicalDevice physical_device);
 
     ARS_NO_COPY_MOVE(Device);
 

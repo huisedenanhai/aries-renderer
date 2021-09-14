@@ -1,5 +1,6 @@
 #include "Pipeline.h"
 #include "Context.h"
+#include "Descriptor.h"
 #include <ars/runtime/core/Log.h>
 #include <sstream>
 #include <vulkan/spirv_reflect.h>
@@ -80,7 +81,7 @@ DescriptorSetInfo::create_desc_set_layout(Device *device) const {
     VkDescriptorSetLayoutCreateInfo info{
         VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
 
-    VkDescriptorSetLayoutBinding valid_bindings[16]{};
+    VkDescriptorSetLayoutBinding valid_bindings[MAX_DESC_BINDING_COUNT]{};
     uint32_t binding_count = 0;
     for (auto &b : bindings) {
         if (b.has_value()) {
@@ -155,7 +156,9 @@ GraphicsPipeline::~GraphicsPipeline() {
     auto device = _context->device();
 
     for (auto desc_layout : _descriptor_layouts) {
-        device->Destroy(desc_layout);
+        if (desc_layout != VK_NULL_HANDLE) {
+            device->Destroy(desc_layout);
+        }
     }
 
     if (_pipeline_layout != VK_NULL_HANDLE) {
@@ -174,21 +177,27 @@ void GraphicsPipeline::init_layout(const GraphicsPipelineInfo &info) {
             merge(pipeline_layout_info, shader->pipeline_layout_info());
     }
 
-    _descriptor_layouts.reserve(16);
-    for (auto &s : pipeline_layout_info.sets) {
-        if (!s.has_value()) {
-            continue;
+    _pipeline_layout_info = pipeline_layout_info;
+
+    std::vector<VkDescriptorSetLayout> valid_desc_sets{};
+    valid_desc_sets.reserve(MAX_DESC_SET_COUNT);
+
+    for (int i = 0; i < MAX_DESC_SET_COUNT; i++) {
+        auto &s = pipeline_layout_info.sets[i];
+        if (s.has_value()) {
+            auto desc_set = s->create_desc_set_layout(_context->device());
+            _descriptor_layouts[i] = desc_set;
+            valid_desc_sets.push_back(desc_set);
+        } else {
+            _descriptor_layouts[i] = VK_NULL_HANDLE;
         }
-        _descriptor_layouts.push_back(
-            s->create_desc_set_layout(_context->device()));
     }
 
     VkPipelineLayoutCreateInfo create_info{
         VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
 
-    create_info.setLayoutCount =
-        static_cast<uint32_t>(_descriptor_layouts.size());
-    create_info.pSetLayouts = _descriptor_layouts.data();
+    create_info.setLayoutCount = static_cast<uint32_t>(valid_desc_sets.size());
+    create_info.pSetLayouts = valid_desc_sets.data();
 
     if (_context->device()->Create(&create_info, &_pipeline_layout) !=
         VK_SUCCESS) {
@@ -292,4 +301,14 @@ void GraphicsPipeline::init_pipeline(const GraphicsPipelineInfo &info) {
 VkPipeline GraphicsPipeline::pipeline() const {
     return _pipeline;
 }
+
+VkDescriptorSet GraphicsPipeline::alloc_desc_set(uint32_t set) const {
+    return _context->descriptor_arena()->alloc(
+        _descriptor_layouts[set], _pipeline_layout_info.sets[set].value());
+}
+
+VkPipelineLayout GraphicsPipeline::pipeline_layout() const {
+    return _pipeline_layout;
+}
+
 } // namespace ars::render::vk

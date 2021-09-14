@@ -1,4 +1,6 @@
 target_sources(render PRIVATE
+        Descriptor.cpp
+        Descriptor.h
         Pipeline.cpp
         Pipeline.h
         Context.cpp

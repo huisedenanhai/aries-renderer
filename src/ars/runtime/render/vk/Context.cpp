@@ -1,4 +1,5 @@
 #include "Context.h"
+#include "Descriptor.h"
 #include "Material.h"
 #include "Mesh.h"
 #include "Scene.h"
@@ -533,6 +534,7 @@ Context::Context(GLFWwindow *window) {
     _vma = std::make_unique<VulkanMemoryAllocator>(_device.get());
     init_command_pool();
     init_pipeline_cache();
+    init_descriptor_arena();
 }
 
 Instance *Context::instance() const {
@@ -605,6 +607,7 @@ Context::create_texture_impl(const TextureInfo &info) {
 bool Context::begin_frame() {
     _queue->flush();
     _device->ResetCommandPool(_command_pool, 0);
+    _descriptor_arena->reset();
     gc();
     return true;
 }
@@ -759,6 +762,34 @@ void Context::init_pipeline_cache() {
         log_error(
             "Failed to create pipeline cache, pipeline creation might be slow");
     }
+}
+
+DescriptorArena *Context::descriptor_arena() const {
+    return _descriptor_arena.get();
+}
+
+void Context::init_descriptor_arena() {
+    uint32_t count = 255;
+
+    std::vector<VkDescriptorPoolSize> pool_sizes{
+        {VK_DESCRIPTOR_TYPE_SAMPLER, count},
+        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, count},
+        {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, count},
+        {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, count},
+        {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, count},
+        {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, count},
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, count},
+        {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, count},
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, count},
+        {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, count},
+        {VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, count}};
+
+    VkPhysicalDeviceProperties properties;
+    _device->instance()->GetPhysicalDeviceProperties(_device->physical_device(),
+                                                     &properties);
+
+    _descriptor_arena = std::make_unique<DescriptorArena>(
+        _device.get(), pool_sizes, properties.limits.maxBoundDescriptorSets);
 }
 
 } // namespace ars::render::vk

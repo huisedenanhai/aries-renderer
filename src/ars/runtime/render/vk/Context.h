@@ -2,12 +2,14 @@
 
 #include "../IContext.h"
 #include "Buffer.h"
+#include "Descriptor.h"
 #include "Texture.h"
 #include "Vulkan.h"
 
 #include <vector>
 
 namespace ars::render::vk {
+class DescriptorArena;
 class Swapchain;
 class Context;
 
@@ -86,6 +88,8 @@ class Context : public IContext {
     // It will be rare for us to find no such queue.
     [[nodiscard]] Queue *queue() const;
 
+    [[nodiscard]] DescriptorArena *descriptor_arena() const;
+
     bool begin_frame() override;
     void end_frame() override;
 
@@ -104,6 +108,7 @@ class Context : public IContext {
                                 VkSurfaceKHR surface);
     void init_command_pool();
     void init_pipeline_cache();
+    void init_descriptor_arena();
 
     // Clear unused resources
     void gc();
@@ -116,6 +121,8 @@ class Context : public IContext {
     std::unique_ptr<Queue> _queue{};
 
     std::unique_ptr<VulkanMemoryAllocator> _vma{};
+
+    std::unique_ptr<DescriptorArena> _descriptor_arena{};
 
     // a swapchain will be created on context initialization, which should
     // be returned by the next call to create_swapchain with the same window

@@ -322,6 +322,14 @@ VkSampler Texture::sampler() const {
     return _sampler;
 }
 
+VkImageLayout Texture::layout() const {
+    return _layout;
+}
+
+VkImageView Texture::image_view() const {
+    return _image_view;
+}
+
 TextureCreateInfo TextureCreateInfo::sampled_2d(VkFormat format,
                                                 uint32_t width,
                                                 uint32_t height,
@@ -369,6 +377,10 @@ void TextureAdapter::generate_mipmap() {
     _texture->generate_mipmap();
 }
 
+Handle<Texture> TextureAdapter::texture() const {
+    return _texture;
+}
+
 VkFormat translate(render::Format format) {
     switch (format) {
     case Format::R8G8B8A8Srgb:
@@ -397,5 +409,13 @@ TextureCreateInfo translate(const TextureInfo &info) {
     up.usage = IMAGE_USAGE_SAMPLED_COLOR;
 
     return up;
+}
+
+Handle<Texture> upcast(ITexture *texture) {
+    if (texture == nullptr) {
+        return {};
+    }
+
+    return dynamic_cast<TextureAdapter *>(texture)->texture();
 }
 } // namespace ars::render::vk

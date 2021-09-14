@@ -9,14 +9,19 @@
 namespace ars::render::vk {
 class Context;
 
+constexpr uint32_t MAX_DESC_BINDING_COUNT = 16;
+constexpr uint32_t MAX_DESC_SET_COUNT = 16;
+
 struct DescriptorSetInfo {
-    std::array<std::optional<VkDescriptorSetLayoutBinding>, 16> bindings{};
+    std::array<std::optional<VkDescriptorSetLayoutBinding>,
+               MAX_DESC_BINDING_COUNT>
+        bindings{};
 
     VkDescriptorSetLayout create_desc_set_layout(Device *device) const;
 };
 
 struct PipelineLayoutInfo {
-    std::array<std::optional<DescriptorSetInfo>, 16> sets{};
+    std::array<std::optional<DescriptorSetInfo>, MAX_DESC_SET_COUNT> sets{};
 };
 
 class Shader {
@@ -60,13 +65,17 @@ class GraphicsPipeline {
     ~GraphicsPipeline();
 
     [[nodiscard]] VkPipeline pipeline() const;
+    [[nodiscard]] VkPipelineLayout pipeline_layout() const;
+    [[nodiscard]] VkDescriptorSet alloc_desc_set(uint32_t set) const;
 
   private:
     void init_layout(const GraphicsPipelineInfo &info);
     void init_pipeline(const GraphicsPipelineInfo &info);
 
     Context *_context = nullptr;
-    std::vector<VkDescriptorSetLayout> _descriptor_layouts{};
+
+    std::array<VkDescriptorSetLayout, MAX_DESC_SET_COUNT> _descriptor_layouts{};
+    PipelineLayoutInfo _pipeline_layout_info{};
     VkPipelineLayout _pipeline_layout = VK_NULL_HANDLE;
     VkPipeline _pipeline = VK_NULL_HANDLE;
 };

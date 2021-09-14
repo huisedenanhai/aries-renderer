@@ -259,19 +259,39 @@ bool Swapchain::present(ITexture *texture) {
 
             cmd->BeginRenderPass(&rp_info, VK_SUBPASS_CONTENTS_INLINE);
 
-            VkViewport viewport{0,
-                                0,
-                                static_cast<float>(_extent.width),
-                                static_cast<float>(_extent.height),
-                                0.0,
-                                1.0f};
-            cmd->SetViewport(0, 1, &viewport);
-            VkRect2D scissor{{0, 0}, _extent};
-            cmd->SetScissor(0, 1, &scissor);
+            if (texture != nullptr) {
+                VkViewport viewport{0,
+                                    0,
+                                    static_cast<float>(_extent.width),
+                                    static_cast<float>(_extent.height),
+                                    0.0,
+                                    1.0f};
+                cmd->SetViewport(0, 1, &viewport);
+                VkRect2D scissor{{0, 0}, _extent};
+                cmd->SetScissor(0, 1, &scissor);
 
-            cmd->BindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS,
-                              _pipeline->pipeline());
-            cmd->Draw(3, 1, 0, 0);
+                cmd->BindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                  _pipeline->pipeline());
+
+                auto desc_set = _pipeline->alloc_desc_set(0);
+
+                VkWriteDescriptorSet write{};
+                VkDescriptorImageInfo image_info{};
+                fill_combined_image_sampler(
+                    &write, &image_info, desc_set, 0, upcast(texture).get());
+
+                device->UpdateDescriptorSets(1, &write, 0, nullptr);
+
+                cmd->BindDescriptorSets(VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                        _pipeline->pipeline_layout(),
+                                        0,
+                                        1,
+                                        &desc_set,
+                                        0,
+                                        nullptr);
+
+                cmd->Draw(3, 1, 0, 0);
+            }
 
             cmd->EndRenderPass();
         },

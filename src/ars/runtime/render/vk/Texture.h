@@ -49,6 +49,8 @@ class Texture {
     void generate_mipmap();
 
     [[nodiscard]] VkSampler sampler() const;
+    [[nodiscard]] VkImageLayout layout() const;
+    [[nodiscard]] VkImageView image_view() const;
 
   private:
     // Transfer all subresources to the target layout and set the _layout field.
@@ -94,7 +96,11 @@ class TextureAdapter : public ITexture {
 
     void generate_mipmap() override;
 
+    [[nodiscard]] Handle<Texture> texture() const;
+
   private:
     Handle<Texture> _texture{};
 };
+
+Handle<Texture> upcast(ITexture *texture);
 } // namespace ars::render::vk

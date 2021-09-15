@@ -13,7 +13,7 @@ add_library(render
         IMaterial.cpp
         IMaterial.h)
 
-target_link_libraries(render PUBLIC glfw)
+target_link_libraries(render PUBLIC glfw glm)
 aries_setup_common_target(render)
 
 add_subdirectory(vk)

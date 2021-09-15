@@ -71,7 +71,7 @@ class Context : public IContext {
     std::unique_ptr<ITexture>
     create_texture_impl(const TextureInfo &info) override;
     std::unique_ptr<IScene> create_scene() override;
-    std::unique_ptr<IMesh> create_mesh() override;
+    std::unique_ptr<IMesh> create_mesh(const MeshInfo &info) override;
     std::unique_ptr<IMaterial> create_material() override;
 
     [[nodiscard]] Instance *instance() const;

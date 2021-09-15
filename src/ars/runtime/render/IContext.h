@@ -15,6 +15,7 @@ class IMesh;
 class IMaterial;
 
 struct TextureInfo;
+struct MeshInfo;
 
 enum class Backend { Vulkan };
 
@@ -70,7 +71,7 @@ class IContext {
                       uint32_t mip_levels = MAX_MIP_LEVELS);
 
     virtual std::unique_ptr<IScene> create_scene() = 0;
-    virtual std::unique_ptr<IMesh> create_mesh() = 0;
+    virtual std::unique_ptr<IMesh> create_mesh(const MeshInfo &info) = 0;
     virtual std::unique_ptr<IMaterial> create_material() = 0;
 
     // Call this method when a frame begins. If this method returns false,

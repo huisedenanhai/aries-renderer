@@ -283,8 +283,8 @@ std::unique_ptr<IScene> Context::create_scene() {
     return std::make_unique<Scene>();
 }
 
-std::unique_ptr<IMesh> Context::create_mesh() {
-    return std::make_unique<Mesh>();
+std::unique_ptr<IMesh> Context::create_mesh(const MeshInfo &info) {
+    return std::make_unique<Mesh>(info);
 }
 
 std::unique_ptr<IMaterial> Context::create_material() {

@@ -53,4 +53,17 @@ VkBuffer Buffer::buffer() const {
 VkDeviceSize Buffer::size() const {
     return _size;
 }
+
+void Buffer::set_data_raw(void *value, size_t byte_offset, size_t byte_count) {
+    if (byte_offset >= _size) {
+        return;
+    }
+
+    map_once([&](void *ptr) {
+        auto t_ptr = reinterpret_cast<uint8_t *>(ptr);
+        auto count =
+            std::min(byte_count, static_cast<size_t>(_size) - byte_offset);
+        std::memcpy(t_ptr + byte_offset, value, count);
+    });
+}
 } // namespace ars::render::vk

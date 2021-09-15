@@ -1,28 +1,49 @@
 #pragma once
 
 #include "../IMesh.h"
+#include "Vulkan.h"
 
 namespace ars::render::vk {
+class Context;
+class Buffer;
+
 class Mesh : public IMesh {
   public:
-    explicit Mesh(const MeshInfo &info);
+    Mesh(Context *context, const MeshInfo &info);
 
     void set_position(glm::vec3 *positions,
-                      size_t start_index,
-                      size_t count) override;
+                      size_t elem_offset,
+                      size_t elem_count) override;
 
-    void
-    set_normal(glm::vec3 *normals, size_t start_index, size_t count) override;
+    void set_normal(glm::vec3 *normals,
+                    size_t elem_offset,
+                    size_t elem_count) override;
 
-    void
-    set_tangent(glm::vec4 *tangents, size_t start_index, size_t count) override;
+    void set_tangent(glm::vec4 *tangents,
+                     size_t elem_offset,
+                     size_t elem_count) override;
 
     void set_tex_coord(glm::vec2 *tex_coord,
-                       size_t start_index,
-                       size_t count) override;
+                       size_t elem_offset,
+                       size_t elem_count) override;
 
-    size_t index_count() const override;
+    size_t triangle_count() const override;
 
-    void set_index_count(size_t count) override;
+    void set_triangle_count(size_t count) override;
+
+    void set_indices(glm::u32vec3 *indices,
+                     size_t elem_offset,
+                     size_t elem_count) override;
+
+  private:
+    Context *_context = nullptr;
+
+    Handle<Buffer> _position_buffer{};
+    Handle<Buffer> _normal_buffer{};
+    Handle<Buffer> _tangent_buffer{};
+    Handle<Buffer> _tex_coord_buffer{};
+
+    Handle<Buffer> _index_buffer{};
+    size_t _triangle_count = 0;
 };
 } // namespace ars::render::vk

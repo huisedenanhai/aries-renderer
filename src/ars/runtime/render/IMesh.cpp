@@ -7,7 +7,7 @@ size_t IMesh::vertex_capacity() const {
     return _info.vertex_capacity;
 }
 
-size_t IMesh::index_capacity() const {
-    return _info.index_capacity;
+size_t IMesh::triangle_capacity() const {
+    return _info.triangle_capacity;
 }
 } // namespace ars::render

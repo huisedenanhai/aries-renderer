@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../IScene.h"
+#include <ars/runtime/core/misc/SoA.h>
 
 namespace ars::render::vk {
 class View : public IView {
@@ -12,15 +13,15 @@ class View : public IView {
 
 class DirectionalLight : public IDirectionalLight {
   public:
-    math::AffineTransform<float> get_transform() override;
-    void set_transform(const math::AffineTransform<float> &transform) override;
+    math::XformTRS<float> get_xform() override;
+    void set_xform(const math::XformTRS<float> &xform) override;
     IScene *get_scene() override;
 };
 
 class RenderObject : public IRenderObject {
   public:
-    math::AffineTransform<float> get_transform() override;
-    void set_transform(const math::AffineTransform<float> &transform) override;
+    math::XformTRS<float> get_xform() override;
+    void set_xform(const math::XformTRS<float> &xform) override;
     IScene *get_scene() override;
     IMesh *get_mesh() override;
     void set_mesh(IMesh *mesh) override;
@@ -30,8 +31,11 @@ class RenderObject : public IRenderObject {
 
 class Scene : public IScene {
   public:
-    std::unique_ptr<IRenderObject> create_renderer() override;
+    std::unique_ptr<IRenderObject> create_render_object() override;
     std::unique_ptr<IDirectionalLight> create_directional_light() override;
     std::unique_ptr<IView> create_view() override;
+
+  private:
+    SoA<glm::mat4> _render_objects{};
 };
-} // namespace ars::render
+} // namespace ars::render::vk

@@ -1,7 +1,7 @@
 #include "Scene.h"
 
 namespace ars::render::vk {
-std::unique_ptr<IRenderObject> Scene::create_renderer() {
+std::unique_ptr<IRenderObject> Scene::create_render_object() {
     return std::make_unique<RenderObject>();
 }
 
@@ -23,23 +23,21 @@ ITexture *View::get_color_texture() {
     return nullptr;
 }
 
-math::AffineTransform<float> DirectionalLight::get_transform() {
-    return math::AffineTransform<float>();
+math::XformTRS<float> DirectionalLight::get_xform() {
+    return math::XformTRS<float>();
 }
 
-void DirectionalLight::set_transform(
-    const math::AffineTransform<float> &transform) {}
+void DirectionalLight::set_xform(const math::XformTRS<float> &xform) {}
 
 IScene *DirectionalLight::get_scene() {
     return nullptr;
 }
 
-math::AffineTransform<float> RenderObject::get_transform() {
-    return math::AffineTransform<float>();
+math::XformTRS<float> RenderObject::get_xform() {
+    return math::XformTRS<float>();
 }
 
-void RenderObject::set_transform(
-    const math::AffineTransform<float> &transform) {}
+void RenderObject::set_xform(const math::XformTRS<float> &xform) {}
 
 IScene *RenderObject::get_scene() {
     return nullptr;

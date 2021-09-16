@@ -73,6 +73,11 @@ void main_loop() {
     std::set<std::unique_ptr<Window>> windows{};
     std::unique_ptr<IContext> ctx{};
 
+    ars::math::XformTRS<float> trans{};
+    auto m = trans.matrix();
+
+    ars::math::XformTRS<float> t(glm::identity<glm::mat4>());
+
     int window_num = 4;
     for (int i = 0; i < window_num; i++) {
         windows.insert(std::make_unique<Window>(

@@ -23,13 +23,13 @@ class IndexPool {
 
         std::optional<uint64_t> get_alloc();
 
-        std::optional<uint64_t> get_free() const;
+        [[nodiscard]] std::optional<uint64_t> get_free() const;
 
         void set_alloc(uint64_t v);
 
         void set_free(uint64_t v);
 
-        bool is_free() const;
+        [[nodiscard]] bool is_free() const;
 
       private:
         uint64_t _value{};
@@ -54,21 +54,28 @@ template <typename T> struct IndexOfType<T> {
 template <typename... Ts> struct SoA {
   public:
     struct Id {
+      public:
+        Id() = default;
+
       private:
-        uint64_t _value;
+        friend SoA;
+
+        explicit Id(uint64_t value) : _value(value) {}
+
+        uint64_t _value = ~0ULL;
     };
 
     Id alloc() {
         auto id = _indices.alloc();
         _indices.set_value(id, static_cast<uint64_t>(size()));
         std::apply([&](auto &&v...) { v.emplace_back(); }, _soa);
-        get_inverse_id().back() = id;
-        return {id};
+        get_inverse_id().back().value = id;
+        return Id{id};
     }
 
     void free(Id id) {
         auto soa_index = _indices.get_value(id._value);
-        auto moved_id = get_inverse_id().back();
+        auto moved_id = get_inverse_id().back().value;
         std::apply(
             [&](auto &&v...) {
                 std::swap(v[soa_index], v.back());
@@ -79,7 +86,7 @@ template <typename... Ts> struct SoA {
         _indices.free(id._value);
     }
 
-    size_t size() const {
+    [[nodiscard]] size_t size() const {
         return static_cast<uint64_t>(get_inverse_id().size());
     }
 
@@ -102,13 +109,6 @@ template <typename... Ts> struct SoA {
     }
 
   private:
-    template <typename T> const T *get_array_impl() const {
-        constexpr auto tid = IndexOfType<T, Ts...>::value;
-        static_assert(sizeof...(Ts) != tid,
-                      "Type not found in the SoA type list");
-        return std::get<tid>(_soa).data();
-    }
-
     struct InverseId {
         uint64_t value;
     };
@@ -119,6 +119,15 @@ template <typename... Ts> struct SoA {
 
     const std::vector<InverseId> &get_inverse_id() const {
         return std::get<0>(_soa);
+    }
+
+    template <typename T> const T *get_array_impl() const {
+        constexpr auto tid = IndexOfType<T, Ts...>::value;
+        static_assert(sizeof...(Ts) != tid,
+                      "Type not found in the SoA type list");
+
+        // the first slot is for InverseId
+        return std::get<tid + 1>(_soa).data();
     }
 
     std::tuple<std::vector<InverseId>, std::vector<Ts>...> _soa{};

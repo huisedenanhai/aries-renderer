@@ -2,10 +2,42 @@
 
 namespace ars {
 uint64_t IndexPool::alloc() {
-    return 0;
+    if (!_free_index.has_value()) {
+        auto index = static_cast<uint64_t>(_indices.size());
+        _indices.emplace_back();
+        return index;
+    }
+
+    auto index = _free_index.value();
+    auto &slot = _indices[index];
+    auto next = slot.get_free();
+
+    if (next == index) {
+        _free_index = std::nullopt;
+    } else {
+        _free_index = next;
+    }
+
+    slot.set_alloc(0);
+
+    return index;
 }
 
-void IndexPool::free(uint64_t index) {}
+void IndexPool::free(uint64_t index) {
+    assert(index < _indices.size());
+
+    auto &slot = _indices[index];
+
+    assert(!slot.is_free());
+
+    if (_free_index.has_value()) {
+        slot.set_free(_free_index.value());
+    } else {
+        slot.set_free(index);
+    }
+
+    _free_index = index;
+}
 
 void IndexPool::set_value(uint64_t index, uint64_t value) {
     _indices[index].set_alloc(value);

@@ -23,7 +23,7 @@ class IRenderObject {
     virtual void set_mesh(IMesh *mesh) = 0;
 
     virtual IMaterial *get_material() = 0;
-    virtual void set_material(IMaterial *mesh) = 0;
+    virtual void set_material(IMaterial *material) = 0;
 };
 
 class IDirectionalLight {

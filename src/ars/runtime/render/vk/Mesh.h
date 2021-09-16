@@ -27,7 +27,7 @@ class Mesh : public IMesh {
                        size_t elem_offset,
                        size_t elem_count) override;
 
-    size_t triangle_count() const override;
+    [[nodiscard]] size_t triangle_count() const override;
 
     void set_triangle_count(size_t count) override;
 
@@ -46,4 +46,6 @@ class Mesh : public IMesh {
     Handle<Buffer> _index_buffer{};
     size_t _triangle_count = 0;
 };
+
+Mesh *upcast(IMesh *mesh);
 } // namespace ars::render::vk

@@ -246,6 +246,8 @@ std::unique_ptr<VulkanEnvironment> s_vulkan{};
 void init_vulkan_backend(const ApplicationInfo &app_info) {
     assert(s_vulkan == nullptr);
 
+    glfwInit();
+
     if (volkInitialize() != VK_SUCCESS) {
         panic("Failed to load vulkan function pointers");
     }
@@ -267,16 +269,14 @@ void init_vulkan_backend(const ApplicationInfo &app_info) {
 
 void destroy_vulkan_backend() {
     assert(s_vulkan != nullptr);
+
     s_vulkan.reset();
+
+    glfwTerminate();
 }
 
-std::unique_ptr<ISwapchain> Context::create_swapchain(GLFWwindow *window) {
-    if (window == _cached_window && _cached_swapchain != nullptr) {
-        _cached_window = nullptr;
-        return std::move(_cached_swapchain);
-    }
-
-    return create_swapchain_impl(window);
+std::unique_ptr<IWindow> Context::create_window(const WindowInfo &window) {
+    return create_swapchain_impl(&window);
 }
 
 std::unique_ptr<IScene> Context::create_scene() {
@@ -547,13 +547,9 @@ void Context::init_device_and_queues(Instance *instance,
     }
 }
 
-Context::Context(GLFWwindow *window) {
-    _cached_swapchain = create_swapchain_impl(window);
-
-    if (_cached_swapchain != nullptr) {
-        _cached_window = window;
-    }
-
+Context::Context(const WindowInfo *window,
+                 std::unique_ptr<Swapchain> &swapchain) {
+    swapchain = create_swapchain_impl(window);
     _vma = std::make_unique<VulkanMemoryAllocator>(_device.get());
     init_command_pool();
     init_pipeline_cache();
@@ -576,7 +572,20 @@ Queue *Context::queue() const {
     return _queue.get();
 }
 
-std::unique_ptr<Swapchain> Context::create_swapchain_impl(GLFWwindow *window) {
+std::unique_ptr<Swapchain>
+Context::create_swapchain_impl(const WindowInfo *window_info) {
+    GLFWwindow *window = nullptr;
+
+    if (window_info != nullptr) {
+        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+        window =
+            glfwCreateWindow(static_cast<int>(window_info->logical_size.width),
+                             static_cast<int>(window_info->logical_size.height),
+                             window_info->title,
+                             nullptr,
+                             nullptr);
+    }
+
     VkSurfaceKHR surface = VK_NULL_HANDLE;
     if (window != nullptr) {
         if (!s_vulkan->instance->presentation_enabled()) {
@@ -615,7 +624,7 @@ std::unique_ptr<Swapchain> Context::create_swapchain_impl(GLFWwindow *window) {
 
         int fb_width, fb_height;
         glfwGetFramebufferSize(window, &fb_width, &fb_height);
-        return std::make_unique<Swapchain>(this, surface, fb_width, fb_height);
+        return std::make_unique<Swapchain>(this, surface, window);
     }
 
     return nullptr;
@@ -628,6 +637,7 @@ Context::create_texture_impl(const TextureInfo &info) {
 }
 
 bool Context::begin_frame() {
+    glfwPollEvents();
     _queue->flush();
     _device->ResetCommandPool(_command_pool, 0);
     _descriptor_arena->reset();

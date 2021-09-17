@@ -1,9 +1,11 @@
 #pragma once
 
-#include "../ISwapchain.h"
 #include "../ITexture.h"
+#include "../IWindow.h"
 #include "Vulkan.h"
 #include <vector>
+
+struct GLFWwindow;
 
 namespace ars::render::vk {
 class Context;
@@ -18,23 +20,21 @@ struct SwapChainSupportDetails {
 SwapChainSupportDetails query_swapchain_support(
     Instance *instance, VkPhysicalDevice physical_device, VkSurfaceKHR surface);
 
-class Swapchain : public ISwapchain {
+class Swapchain : public IWindow {
   public:
-    Swapchain(Context *context,
-              VkSurfaceKHR surface,
-              uint32_t physical_width,
-              uint32_t physical_height);
+    Swapchain(Context *context, VkSurfaceKHR surface, GLFWwindow *window);
     ~Swapchain() override;
 
     ARS_NO_COPY_MOVE(Swapchain);
 
-    bool present(ITexture *texture) override;
-    void resize(uint32_t physical_width, uint32_t physical_height) override;
-    Extent2D get_size() override;
+    void present(ITexture *texture) override;
+    Extent2D physical_size() override;
+    bool should_close() override;
 
   private:
-    void set_target_size(uint32_t physical_width, uint32_t physical_height);
+    [[nodiscard]] VkExtent2D get_target_extent() const;
     [[nodiscard]] bool need_recreate() const;
+
     // Recreation of swapchain does not change surface format after first call
     // for initialization.
     void recreate_swapchain();
@@ -47,6 +47,7 @@ class Swapchain : public ISwapchain {
     void init_pipeline();
 
     Context *_context = nullptr;
+    GLFWwindow *_window = nullptr;
     VkSurfaceKHR _surface = VK_NULL_HANDLE;
     VkSwapchainKHR _swapchain = VK_NULL_HANDLE;
 
@@ -63,8 +64,5 @@ class Swapchain : public ISwapchain {
 
     // Now we don't support frames in flight. One semaphore is fine.
     VkSemaphore _image_ready_semaphore{};
-
-    // lazy swapchain recreation
-    VkExtent2D _target_extent{};
 };
 } // namespace ars::render::vk

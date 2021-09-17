@@ -1,7 +1,7 @@
 add_library(render
         Common.h
-        ISwapchain.cpp
-        ISwapchain.h
+        IWindow.cpp
+        IWindow.h
         IContext.cpp
         IContext.h
         ITexture.cpp
@@ -13,7 +13,8 @@ add_library(render
         IMaterial.cpp
         IMaterial.h)
 
-target_link_libraries(render PUBLIC glfw glm)
+target_link_libraries(render PUBLIC glm)
+target_link_libraries(render PRIVATE glfw)
 aries_setup_common_target(render)
 
 add_subdirectory(vk)

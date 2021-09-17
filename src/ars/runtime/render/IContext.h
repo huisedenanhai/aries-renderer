@@ -5,10 +5,8 @@
 #include <optional>
 #include <string>
 
-struct GLFWwindow;
-
 namespace ars::render {
-class ISwapchain;
+class IWindow;
 class ITexture;
 class IScene;
 class IMesh;
@@ -16,6 +14,7 @@ class IMaterial;
 
 struct TextureInfo;
 struct MeshInfo;
+struct WindowInfo;
 
 enum class Backend { Vulkan };
 
@@ -44,23 +43,13 @@ class IContext {
   public:
     virtual ~IContext() = default;
 
-    // A window is required for device selection. If no window is provided, we
-    // assume the context is not used for presentation, and later calls to
-    // create_swapchain always returns nullptr.
-    //
-    // The window handle is used as a hint.
-    //
-    // If the backend needs to actually create a swapchain to proceed, the
-    // swapchain is created and cached, which will be returned by the next call
-    // to create_swapchain with the same window handle.
-    //
-    // TODO the render context should not depends on GLFW, use a platform
-    // specific native window handle instead.
-    static std::unique_ptr<IContext> create(GLFWwindow *window);
+    // If window_info == nullptr, we assume the context is not used for
+    // presentation, and later calls to create_window always returns nullptr.
+    static std::pair<std::unique_ptr<IContext>, std::unique_ptr<IWindow>>
+    create(WindowInfo *window_info);
 
-    // This method returns nullptr if swapchain creation fails
-    virtual std::unique_ptr<ISwapchain>
-    create_swapchain(GLFWwindow *window) = 0;
+    // This method returns nullptr if window creation fails
+    virtual std::unique_ptr<IWindow> create_window(const WindowInfo &info) = 0;
 
     std::unique_ptr<ITexture> create_texture(const TextureInfo &info);
 

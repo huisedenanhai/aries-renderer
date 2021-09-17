@@ -1,20 +1,18 @@
 #include "Swapchain.h"
 #include "Context.h"
 #include "Pipeline.h"
+#include <GLFW/glfw3.h>
 #include <algorithm>
 #include <ars/runtime/core/Log.h>
 #include <cassert>
 
 namespace ars::render::vk {
-Swapchain::Swapchain(Context *context,
-                     VkSurfaceKHR surface,
-                     uint32_t physical_width,
-                     uint32_t physical_height)
-    : _context(context), _surface(surface) {
+Swapchain::Swapchain(Context *context, VkSurfaceKHR surface, GLFWwindow *window)
+    : _context(context), _surface(surface), _window(window) {
     assert(context != nullptr);
     assert(surface != VK_NULL_HANDLE);
+    assert(window != nullptr);
 
-    set_target_size(physical_width, physical_height);
     recreate_swapchain();
 }
 
@@ -31,6 +29,10 @@ Swapchain::~Swapchain() {
     cleanup_swapchain();
 
     _context->instance()->Destroy(_surface);
+
+    if (_window != nullptr) {
+        glfwDestroyWindow(_window);
+    }
 }
 
 namespace {
@@ -128,13 +130,15 @@ void Swapchain::init_swapchain() {
         image_count = swapchain_support.capabilities.maxImageCount;
     }
 
+    auto target_extent = get_target_extent();
+
     VkSwapchainCreateInfoKHR create_info{};
     create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     create_info.surface = _surface;
     create_info.minImageCount = image_count;
     create_info.imageFormat = _format.format;
     create_info.imageColorSpace = _format.colorSpace;
-    create_info.imageExtent = _target_extent;
+    create_info.imageExtent = target_extent;
     create_info.imageArrayLayers = 1;
     create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
@@ -159,7 +163,7 @@ void Swapchain::init_swapchain() {
     device->GetSwapchainImagesKHR(
         _swapchain, &swapchain_image_count, _images.data());
 
-    _extent = _target_extent;
+    _extent = target_extent;
 }
 
 void Swapchain::init_image_views() {
@@ -211,7 +215,7 @@ void Swapchain::cleanup_swapchain() {
     }
 }
 
-bool Swapchain::present(ITexture *texture) {
+void Swapchain::present(ITexture *texture) {
     auto device = _context->device();
     auto queue = _context->queue();
 
@@ -228,12 +232,7 @@ bool Swapchain::present(ITexture *texture) {
                                                       &image_index);
     if (acquire_result == VK_ERROR_OUT_OF_DATE_KHR) {
         // Skip this frame
-        return false;
-    }
-
-    auto good_present = true;
-    if (acquire_result == VK_SUBOPTIMAL_KHR) {
-        good_present = false;
+        return;
     }
 
     if (acquire_result != VK_SUCCESS && acquire_result != VK_SUBOPTIMAL_KHR) {
@@ -309,10 +308,9 @@ bool Swapchain::present(ITexture *texture) {
     VkResult present_result =
         _context->device()->QueuePresentKHR(queue->queue(), &present_info);
 
-    if (present_result == VK_ERROR_OUT_OF_DATE_KHR ||
-        present_result == VK_SUBOPTIMAL_KHR) {
-        good_present = false;
-    } else if (present_result != VK_SUCCESS) {
+    if (present_result != VK_SUCCESS &&
+        present_result != VK_ERROR_OUT_OF_DATE_KHR &&
+        present_result != VK_SUBOPTIMAL_KHR) {
         panic("Failed to present to swapchain");
     }
 
@@ -322,26 +320,17 @@ bool Swapchain::present(ITexture *texture) {
     // Just flush the queue. Synchronization overhead is better than nothing.
     _context->queue()->flush();
 #endif
-
-    return good_present;
-}
-
-void Swapchain::resize(uint32_t physical_width, uint32_t physical_height) {
-    set_target_size(physical_width, physical_height);
-}
-
-void Swapchain::set_target_size(uint32_t physical_width,
-                                uint32_t physical_height) {
-    SwapChainSupportDetails swapchain_support = query_swapchain_support(
-        _context->instance(), _context->device()->physical_device(), _surface);
-
-    _target_extent = choose_swapchain_extent(swapchain_support.capabilities,
-                                             {physical_width, physical_height});
 }
 
 bool Swapchain::need_recreate() const {
-    return _extent.width != _target_extent.width ||
-           _extent.height != _target_extent.height;
+    auto target_extent = get_target_extent();
+    if (target_extent.width == 0 && target_extent.height == 0) {
+        // no need to update swapchain when the window is minimized.
+        return false;
+    }
+
+    return _extent.width != target_extent.width ||
+           _extent.height != target_extent.height;
 }
 
 void Swapchain::recreate_swapchain() {
@@ -354,11 +343,8 @@ void Swapchain::recreate_swapchain() {
     init_semaphores();
 }
 
-Extent2D Swapchain::get_size() {
-    // The actual size may differ as the swapchain is lazy recreated.
-    // But all public operation of the swapchain will behave as if the target
-    // size is immediately updated.
-    return {_target_extent.width, _target_extent.height};
+Extent2D Swapchain::physical_size() {
+    return {_extent.width, _extent.height};
 }
 
 void Swapchain::init_framebuffers() {
@@ -442,4 +428,19 @@ void Swapchain::init_pipeline() {
     _pipeline = std::make_unique<GraphicsPipeline>(_context, info);
 }
 
+VkExtent2D Swapchain::get_target_extent() const {
+    int physical_width, physical_height;
+    glfwGetFramebufferSize(_window, &physical_width, &physical_height);
+
+    SwapChainSupportDetails swapchain_support = query_swapchain_support(
+        _context->instance(), _context->device()->physical_device(), _surface);
+
+    return choose_swapchain_extent(swapchain_support.capabilities,
+                                   {static_cast<uint32_t>(physical_width),
+                                    static_cast<uint32_t>(physical_height)});
+}
+
+bool Swapchain::should_close() {
+    return glfwWindowShouldClose(_window);
+}
 } // namespace ars::render::vk

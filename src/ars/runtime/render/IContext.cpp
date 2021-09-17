@@ -1,5 +1,6 @@
 #include "IContext.h"
 #include "vk/Context.h"
+#include "vk/Swapchain.h"
 #include <algorithm>
 #include <ars/runtime/core/Log.h>
 
@@ -36,20 +37,24 @@ void destroy_render_backend() {
     s_application_info.reset();
 }
 
-std::unique_ptr<IContext> IContext::create(GLFWwindow *window) {
+std::pair<std::unique_ptr<IContext>, std::unique_ptr<IWindow>>
+IContext::create(WindowInfo *window_info) {
     if (s_application_info == nullptr) {
         log_error("Render backend has not been initialized. Please call "
                   "init_render_backend first");
-        return nullptr;
+        return {};
     }
 
-    std::unique_ptr<IContext> result{};
+    std::unique_ptr<IContext> context{};
+    std::unique_ptr<IWindow> window{};
     switch (s_application_info->backend) {
     case Backend::Vulkan:
-        result = std::make_unique<vk::Context>(window);
+        std::unique_ptr<vk::Swapchain> swapchain{};
+        context = std::make_unique<vk::Context>(window_info, swapchain);
+        window = std::move(swapchain);
         break;
     }
-    return result;
+    return {std::move(context), std::move(window)};
 }
 
 std::unique_ptr<ITexture> IContext::create_texture_2d(Format format,

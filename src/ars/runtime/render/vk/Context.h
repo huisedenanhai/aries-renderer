@@ -61,13 +61,13 @@ struct ContextProperties {
 class Context : public IContext {
   public:
     // if window is nullptr, presentation will not be supported
-    explicit Context(GLFWwindow *window);
+    Context(const WindowInfo *window, std::unique_ptr<Swapchain> &swapchain);
 
     ARS_NO_COPY_MOVE(Context);
 
     ~Context() override;
 
-    std::unique_ptr<ISwapchain> create_swapchain(GLFWwindow *window) override;
+    std::unique_ptr<IWindow> create_window(const WindowInfo &window) override;
     std::unique_ptr<ITexture>
     create_texture_impl(const TextureInfo &info) override;
     std::unique_ptr<IScene> create_scene() override;
@@ -108,7 +108,7 @@ class Context : public IContext {
 
   private:
     // This method init device if not
-    std::unique_ptr<Swapchain> create_swapchain_impl(GLFWwindow *window);
+    std::unique_ptr<Swapchain> create_swapchain_impl(const WindowInfo *window);
 
     void init_device_and_queues(Instance *instance,
                                 bool enable_validation,
@@ -130,12 +130,6 @@ class Context : public IContext {
     std::unique_ptr<VulkanMemoryAllocator> _vma{};
 
     std::unique_ptr<DescriptorArena> _descriptor_arena{};
-
-    // a swapchain will be created on context initialization, which should
-    // be returned by the next call to create_swapchain with the same window
-    // handle
-    std::unique_ptr<Swapchain> _cached_swapchain{};
-    GLFWwindow *_cached_window{};
 
     VkCommandPool _command_pool = VK_NULL_HANDLE;
 

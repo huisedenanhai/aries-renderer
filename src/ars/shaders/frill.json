@@ -1,6 +1,8 @@
 {
   "sources": [
     "Blit.vert",
-    "Blit.frag"
+    "Blit.frag",
+    "ImGui.vert",
+    "ImGui.frag"
   ]
 }

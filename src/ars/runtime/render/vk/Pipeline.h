@@ -54,6 +54,14 @@ struct GraphicsPipelineInfo {
     std::vector<Shader *> shaders{};
     VkRenderPass render_pass = VK_NULL_HANDLE;
     uint32_t subpass = 0;
+
+    // Push constant ranges can not be inferred from shader reflection data as
+    // offsets are unknown.
+    uint32_t push_constant_range_count = 0;
+    VkPushConstantRange *push_constant_ranges = nullptr;
+
+    VkPipelineVertexInputStateCreateInfo *vertex_input = nullptr;
+    VkPipelineColorBlendStateCreateInfo *blend = nullptr;
 };
 
 class GraphicsPipeline {
@@ -79,4 +87,8 @@ class GraphicsPipeline {
     VkPipelineLayout _pipeline_layout = VK_NULL_HANDLE;
     VkPipeline _pipeline = VK_NULL_HANDLE;
 };
+
+VkPipelineColorBlendAttachmentState
+create_attachment_blend_state(VkBlendFactor src_factor,
+                              VkBlendFactor dst_factor);
 } // namespace ars::render::vk

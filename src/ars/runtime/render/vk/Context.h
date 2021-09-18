@@ -8,6 +8,8 @@
 
 #include <vector>
 
+struct GLFWwindow;
+
 namespace ars::render::vk {
 class DescriptorArena;
 class Swapchain;
@@ -67,7 +69,7 @@ class Context : public IContext {
 
     ~Context() override;
 
-    std::unique_ptr<IWindow> create_window(const WindowInfo &window) override;
+    std::unique_ptr<IWindow> create_window(const WindowInfo &info) override;
     std::unique_ptr<ITexture>
     create_texture_impl(const TextureInfo &info) override;
     std::unique_ptr<IScene> create_scene() override;
@@ -108,7 +110,8 @@ class Context : public IContext {
 
   private:
     // This method init device if not
-    std::unique_ptr<Swapchain> create_swapchain_impl(const WindowInfo *window);
+    std::tuple<GLFWwindow *, VkSurfaceKHR>
+    create_window_and_surface(const WindowInfo *info);
 
     void init_device_and_queues(Instance *instance,
                                 bool enable_validation,

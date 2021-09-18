@@ -1,7 +1,9 @@
 #pragma once
 
 #include "Common.h"
+#include <functional>
 #include <memory>
+#include <optional>
 
 namespace ars::render {
 class ITexture;
@@ -19,6 +21,9 @@ class IWindow {
     virtual Extent2D physical_size() = 0;
 
     virtual bool should_close() = 0;
+
+    virtual void
+    set_imgui_callback(std::optional<std::function<void()>> callback) = 0;
 
     virtual ~IWindow() = default;
 };

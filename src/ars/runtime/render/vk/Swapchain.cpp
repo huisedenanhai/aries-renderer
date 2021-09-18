@@ -1,5 +1,6 @@
 #include "Swapchain.h"
 #include "Context.h"
+#include "ImGui.h"
 #include "Pipeline.h"
 #include <GLFW/glfw3.h>
 #include <algorithm>
@@ -14,10 +15,15 @@ Swapchain::Swapchain(Context *context, VkSurfaceKHR surface, GLFWwindow *window)
     assert(window != nullptr);
 
     recreate_swapchain();
+
+    _imgui = std::make_unique<ImGuiPass>(this);
 }
 
 Swapchain::~Swapchain() {
     _context->queue()->flush();
+
+    _imgui.reset();
+
     auto device = _context->device();
 
     _pipeline.reset();
@@ -256,9 +262,8 @@ void Swapchain::present(ITexture *texture) {
             rp_info.clearValueCount = 1;
             rp_info.pClearValues = &clear_value;
 
-            cmd->BeginRenderPass(&rp_info, VK_SUBPASS_CONTENTS_INLINE);
-
             if (texture != nullptr) {
+                cmd->BeginRenderPass(&rp_info, VK_SUBPASS_CONTENTS_INLINE);
                 VkViewport viewport{0,
                                     0,
                                     static_cast<float>(_extent.width),
@@ -290,6 +295,12 @@ void Swapchain::present(ITexture *texture) {
                                         nullptr);
 
                 cmd->Draw(3, 1, 0, 0);
+            }
+
+            if (_imgui_callback.has_value()) {
+                _imgui->new_frame();
+                _imgui_callback.value()();
+                _imgui->draw(cmd);
             }
 
             cmd->EndRenderPass();
@@ -443,4 +454,22 @@ VkExtent2D Swapchain::get_target_extent() const {
 bool Swapchain::should_close() {
     return glfwWindowShouldClose(_window);
 }
+
+VkRenderPass Swapchain::render_pass() const {
+    return _render_pass;
+}
+
+Context *Swapchain::context() const {
+    return _context;
+}
+
+GLFWwindow *Swapchain::window() const {
+    return _window;
+}
+
+void Swapchain::set_imgui_callback(
+    std::optional<std::function<void()>> callback) {
+    _imgui_callback = std::move(callback);
+}
+
 } // namespace ars::render::vk

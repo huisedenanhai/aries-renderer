@@ -4,6 +4,7 @@
 #include <ars/runtime/render/ITexture.h>
 #include <ars/runtime/render/IWindow.h>
 #include <chrono>
+#include <imgui/imgui.h>
 #include <iostream>
 #include <set>
 #include <sstream>
@@ -67,7 +68,7 @@ void main_loop() {
 
     ars::math::XformTRS<float> t(glm::identity<glm::mat4>());
 
-    int window_num = 4;
+    int window_num = 1;
     for (int i = 0; i < window_num; i++) {
         auto title = "Playground Render " + std::to_string(i);
         WindowInfo info{};
@@ -76,6 +77,7 @@ void main_loop() {
         if (ctx == nullptr) {
             auto [context, window] = IContext::create(&info);
             ctx = std::move(context);
+            window->set_imgui_callback([]() { ImGui::ShowDemoWindow(); });
             windows.insert(std::move(window));
         } else {
             windows.insert(ctx->create_window(info));

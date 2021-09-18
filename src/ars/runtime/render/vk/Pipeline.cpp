@@ -198,6 +198,8 @@ void GraphicsPipeline::init_layout(const GraphicsPipelineInfo &info) {
 
     create_info.setLayoutCount = static_cast<uint32_t>(valid_desc_sets.size());
     create_info.pSetLayouts = valid_desc_sets.data();
+    create_info.pushConstantRangeCount = info.push_constant_range_count;
+    create_info.pPushConstantRanges = info.push_constant_ranges;
 
     if (_context->device()->Create(&create_info, &_pipeline_layout) !=
         VK_SUCCESS) {
@@ -228,6 +230,9 @@ void GraphicsPipeline::init_pipeline(const GraphicsPipelineInfo &info) {
         VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
 
     create_info.pVertexInputState = &vert_input;
+    if (info.vertex_input != nullptr) {
+        create_info.pVertexInputState = info.vertex_input;
+    }
 
     VkPipelineInputAssemblyStateCreateInfo input_assembly{
         VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO};
@@ -269,14 +274,15 @@ void GraphicsPipeline::init_pipeline(const GraphicsPipelineInfo &info) {
         VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO};
 
     VkPipelineColorBlendAttachmentState attachment{};
-    attachment.colorWriteMask =
-        VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-        VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    attachment.colorWriteMask = 0xF; // RGBA
 
     blend.attachmentCount = 1;
     blend.pAttachments = &attachment;
 
     create_info.pColorBlendState = &blend;
+    if (info.blend != nullptr) {
+        create_info.pColorBlendState = info.blend;
+    }
 
     VkDynamicState dyn_states[] = {VK_DYNAMIC_STATE_VIEWPORT,
                                    VK_DYNAMIC_STATE_SCISSOR};
@@ -311,4 +317,20 @@ VkPipelineLayout GraphicsPipeline::pipeline_layout() const {
     return _pipeline_layout;
 }
 
+VkPipelineColorBlendAttachmentState
+create_attachment_blend_state(VkBlendFactor src_factor,
+                              VkBlendFactor dst_factor) {
+    VkPipelineColorBlendAttachmentState blend{};
+
+    blend.blendEnable = VK_TRUE;
+    blend.colorWriteMask = 0xF; // RGBA
+    blend.colorBlendOp = VK_BLEND_OP_ADD;
+    blend.alphaBlendOp = VK_BLEND_OP_ADD;
+    blend.srcColorBlendFactor = src_factor;
+    blend.srcAlphaBlendFactor = src_factor;
+    blend.dstColorBlendFactor = dst_factor;
+    blend.dstAlphaBlendFactor = dst_factor;
+
+    return blend;
+}
 } // namespace ars::render::vk

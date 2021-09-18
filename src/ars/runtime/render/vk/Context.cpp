@@ -275,8 +275,9 @@ void destroy_vulkan_backend() {
     glfwTerminate();
 }
 
-std::unique_ptr<IWindow> Context::create_window(const WindowInfo &window) {
-    return create_swapchain_impl(&window);
+std::unique_ptr<IWindow> Context::create_window(const WindowInfo &info) {
+    auto [window, surface] = create_window_and_surface(&info);
+    return std::make_unique<Swapchain>(this, surface, window);
 }
 
 std::unique_ptr<IScene> Context::create_scene() {
@@ -547,13 +548,19 @@ void Context::init_device_and_queues(Instance *instance,
     }
 }
 
-Context::Context(const WindowInfo *window,
+Context::Context(const WindowInfo *info,
                  std::unique_ptr<Swapchain> &swapchain) {
-    swapchain = create_swapchain_impl(window);
+    auto [window, surface] = create_window_and_surface(info);
+
     _vma = std::make_unique<VulkanMemoryAllocator>(_device.get());
     init_command_pool();
     init_pipeline_cache();
     init_descriptor_arena();
+
+    // Now context is fully initialized, we can create the swapchain
+    if (window != nullptr && surface != VK_NULL_HANDLE) {
+        swapchain = std::make_unique<Swapchain>(this, surface, window);
+    }
 }
 
 Instance *Context::instance() const {
@@ -572,18 +579,17 @@ Queue *Context::queue() const {
     return _queue.get();
 }
 
-std::unique_ptr<Swapchain>
-Context::create_swapchain_impl(const WindowInfo *window_info) {
+std::tuple<GLFWwindow *, VkSurfaceKHR>
+Context::create_window_and_surface(const WindowInfo *info) {
     GLFWwindow *window = nullptr;
 
-    if (window_info != nullptr) {
+    if (info != nullptr) {
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        window =
-            glfwCreateWindow(static_cast<int>(window_info->logical_size.width),
-                             static_cast<int>(window_info->logical_size.height),
-                             window_info->title,
-                             nullptr,
-                             nullptr);
+        window = glfwCreateWindow(static_cast<int>(info->logical_size.width),
+                                  static_cast<int>(info->logical_size.height),
+                                  info->title,
+                                  nullptr,
+                                  nullptr);
     }
 
     VkSurfaceKHR surface = VK_NULL_HANDLE;
@@ -619,15 +625,13 @@ Context::create_swapchain_impl(const WindowInfo *window_info) {
 
             // cleanup
             instance()->Destroy(surface);
-            return nullptr;
+            return {nullptr, VK_NULL_HANDLE};
         }
 
-        int fb_width, fb_height;
-        glfwGetFramebufferSize(window, &fb_width, &fb_height);
-        return std::make_unique<Swapchain>(this, surface, window);
+        return {window, surface};
     }
 
-    return nullptr;
+    return {nullptr, VK_NULL_HANDLE};
 }
 
 std::unique_ptr<ITexture>

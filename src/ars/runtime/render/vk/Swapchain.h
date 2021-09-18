@@ -10,6 +10,7 @@ struct GLFWwindow;
 namespace ars::render::vk {
 class Context;
 class GraphicsPipeline;
+class ImGuiPass;
 
 struct SwapChainSupportDetails {
     VkSurfaceCapabilitiesKHR capabilities{};
@@ -30,6 +31,13 @@ class Swapchain : public IWindow {
     void present(ITexture *texture) override;
     Extent2D physical_size() override;
     bool should_close() override;
+    void
+    set_imgui_callback(std::optional<std::function<void()>> callback) override;
+
+    // The render pass for present
+    [[nodiscard]] VkRenderPass render_pass() const;
+    [[nodiscard]] Context *context() const;
+    [[nodiscard]] GLFWwindow *window() const;
 
   private:
     [[nodiscard]] VkExtent2D get_target_extent() const;
@@ -64,5 +72,8 @@ class Swapchain : public IWindow {
 
     // Now we don't support frames in flight. One semaphore is fine.
     VkSemaphore _image_ready_semaphore{};
+
+    std::unique_ptr<ImGuiPass> _imgui{};
+    std::optional<std::function<void()>> _imgui_callback{};
 };
 } // namespace ars::render::vk

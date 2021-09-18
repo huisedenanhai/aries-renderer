@@ -117,10 +117,8 @@ void Texture::set_data(void *data,
                        uint32_t y_size,
                        uint32_t z_size) {
     _context->queue()->submit_once([&](CommandBuffer *cmd) {
-        auto stage_buffer =
-            _context->create_buffer(size,
-                                    VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                                    VMA_MEMORY_USAGE_CPU_TO_GPU);
+        auto stage_buffer = _context->create_buffer(
+            size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
         stage_buffer->map_once(
             [&](void *ptr) { std::memcpy(ptr, data, size); });
 

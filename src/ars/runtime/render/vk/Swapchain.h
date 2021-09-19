@@ -23,7 +23,12 @@ SwapChainSupportDetails query_swapchain_support(
 
 class Swapchain : public IWindow {
   public:
-    Swapchain(Context *context, VkSurfaceKHR surface, GLFWwindow *window);
+    // Some use case manages the window destruction itself (Like ImGui
+    // multi-viewport), for that case set owns_window = false.
+    Swapchain(Context *context,
+              VkSurfaceKHR surface,
+              GLFWwindow *window,
+              bool owns_window);
     ~Swapchain() override;
 
     ARS_NO_COPY_MOVE(Swapchain);
@@ -33,6 +38,10 @@ class Swapchain : public IWindow {
     bool should_close() override;
     void
     set_imgui_callback(std::optional<std::function<void()>> callback) override;
+
+    // The present render pass has already begun when the callback is triggered
+    void set_present_additional_draw_callback(
+        std::optional<std::function<void(CommandBuffer *cmd)>> callback);
 
     // The render pass for present
     [[nodiscard]] VkRenderPass render_pass() const;
@@ -56,6 +65,7 @@ class Swapchain : public IWindow {
 
     Context *_context = nullptr;
     GLFWwindow *_window = nullptr;
+    bool _owns_window = false;
     VkSurfaceKHR _surface = VK_NULL_HANDLE;
     VkSwapchainKHR _swapchain = VK_NULL_HANDLE;
 
@@ -75,5 +85,7 @@ class Swapchain : public IWindow {
 
     std::unique_ptr<ImGuiPass> _imgui{};
     std::optional<std::function<void()>> _imgui_callback{};
+    std::optional<std::function<void(CommandBuffer *cmd)>>
+        _present_additional_draw_callback{};
 };
 } // namespace ars::render::vk

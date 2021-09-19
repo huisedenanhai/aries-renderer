@@ -395,8 +395,10 @@ Handle<Texture> TextureAdapter::texture() const {
 
 VkFormat translate(render::Format format) {
     switch (format) {
-    case Format::R8G8B8A8Srgb:
+    case Format::R8G8B8A8_SRGB:
         return VK_FORMAT_R8G8B8A8_SRGB;
+    case Format::R8G8B8A8_UNORM:
+        return VK_FORMAT_R8G8B8A8_UNORM;
     }
     // should not happen
     return VK_FORMAT_UNDEFINED;

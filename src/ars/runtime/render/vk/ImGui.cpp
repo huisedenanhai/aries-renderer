@@ -2,6 +2,8 @@
 #include "Context.h"
 #include "Pipeline.h"
 #include "Swapchain.h"
+#include <GLFW/glfw3.h>
+#include <ars/runtime/core/Log.h>
 #include <cassert>
 #include <imgui/imgui.h>
 #include <imgui/imgui_impl_glfw.h>
@@ -11,12 +13,13 @@ namespace ars::render::vk {
 namespace {
 class ImGuiRendererData {
   public:
-    explicit ImGuiRendererData(Swapchain *swapchain, ImGuiIO &io)
-        : _swapchain(swapchain) {
+    explicit ImGuiRendererData(Context *context, ImGuiIO &io, ImGuiPass *imgui)
+        : _context(context), _imgui(imgui) {
         _reserved_space = std::make_unique<uint8_t[]>(16);
         init_font_texture(io);
-        init_pipeline();
     }
+
+    ARS_NO_COPY_MOVE(ImGuiRendererData);
 
     [[nodiscard]] ImTextureID font_atlas_id() const {
         return reinterpret_cast<ImTextureID>(_reserved_space.get());
@@ -26,8 +29,12 @@ class ImGuiRendererData {
         return _font_atlas.get();
     }
 
-    [[nodiscard]] GraphicsPipeline *pipeline() const {
-        return _pipeline.get();
+    [[nodiscard]] Context *context() const {
+        return _context;
+    }
+
+    [[nodiscard]] ImGuiPass *imgui() const {
+        return _imgui;
     }
 
   private:
@@ -40,11 +47,74 @@ class ImGuiRendererData {
         auto info = TextureCreateInfo::sampled_2d(
             VK_FORMAT_R8G8B8A8_UNORM, width, height, 1);
 
-        _font_atlas = _swapchain->context()->create_texture(info);
+        _font_atlas = _context->create_texture(info);
         _font_atlas->set_data(
             pixels, data_size, 0, 0, 0, 0, 0, width, height, 1);
 
         io.Fonts->SetTexID(font_atlas_id());
+    }
+
+    Context *_context{};
+    // Allocate a small slice of memory addresses as reserved ImTextureID
+    // By default ImTextureID should be ITexture *, but some built in textures
+    // should have type Texture *.
+    std::unique_ptr<uint8_t[]> _reserved_space{};
+    Handle<Texture> _font_atlas{};
+    ImGuiPass *_imgui = nullptr;
+};
+
+class ImGuiViewportData {
+  public:
+    explicit ImGuiViewportData(Swapchain *swapchain)
+        : _swapchain(swapchain), _owns_swapchain(false) {
+        init();
+    }
+
+    explicit ImGuiViewportData(std::unique_ptr<Swapchain> swapchain)
+        : _swapchain(swapchain.release()), _owns_swapchain(true) {
+        init();
+    }
+
+    ARS_NO_COPY_MOVE(ImGuiViewportData);
+
+    ~ImGuiViewportData() {
+        if (_owns_swapchain && _swapchain != nullptr) {
+            delete _swapchain;
+        }
+    }
+
+    Buffer *vertex_buffer(VkDeviceSize size = 0) {
+        return create_or_resize(
+            _vertex_buffer, size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+    }
+
+    Buffer *index_buffer(VkDeviceSize size = 0) {
+        return create_or_resize(
+            _index_buffer, size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+    }
+
+    [[nodiscard]] Swapchain *swapchain() const {
+        return _swapchain;
+    }
+
+    [[nodiscard]] GraphicsPipeline *pipeline() const {
+        return _pipeline.get();
+    }
+
+  private:
+    void init() {
+        init_pipeline();
+    }
+
+    Buffer *create_or_resize(Handle<Buffer> &buffer,
+                             VkDeviceSize size,
+                             VkBufferUsageFlags usage) {
+        if (buffer.get() == nullptr || buffer->size() < size) {
+            buffer = _swapchain->context()->create_buffer(
+                std::max(size, 256ULL), usage, VMA_MEMORY_USAGE_CPU_TO_GPU);
+        }
+
+        return buffer.get();
     }
 
     void init_pipeline() {
@@ -107,62 +177,42 @@ class ImGuiRendererData {
         _pipeline = std::make_unique<GraphicsPipeline>(ctx, info);
     }
 
-    Swapchain *_swapchain{};
-    // Allocate a small slice of memory addresses as reserved ImTextureID
-    // By default ImTextureID should be ITexture *, but some built in textures
-    // should have type Texture *.
-    std::unique_ptr<uint8_t[]> _reserved_space{};
-    Handle<Texture> _font_atlas{};
+    Swapchain *_swapchain = nullptr;
+    bool _owns_swapchain = false;
+    Handle<Buffer> _vertex_buffer{};
+    Handle<Buffer> _index_buffer{};
     std::unique_ptr<GraphicsPipeline> _pipeline{};
 };
 
-class ImGuiViewportData {
-  public:
-    explicit ImGuiViewportData(Swapchain *swapchain) : _swapchain(swapchain) {}
-
-    Buffer *vertex_buffer(VkDeviceSize size = 0) {
-        return create_or_resize(
-            _vertex_buffer, size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+void release_viewport_data(ImGuiViewport *viewport) {
+    if (viewport == nullptr) {
+        return;
     }
 
-    Buffer *index_buffer(VkDeviceSize size = 0) {
-        return create_or_resize(
-            _index_buffer, size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
-    }
+    auto vp_data =
+        reinterpret_cast<ImGuiViewportData *>(viewport->RendererUserData);
+    delete vp_data;
 
-  private:
-    Buffer *create_or_resize(Handle<Buffer> &buffer,
-                             VkDeviceSize size,
-                             VkBufferUsageFlags usage) {
-        if (buffer.get() == nullptr || buffer->size() < size) {
-            buffer = _swapchain->context()->create_buffer(
-                std::max(size, 256ULL), usage, VMA_MEMORY_USAGE_CPU_TO_GPU);
-        }
-
-        return buffer.get();
-    }
-
-    Swapchain *_swapchain = nullptr;
-    Handle<Buffer> _vertex_buffer{};
-    Handle<Buffer> _index_buffer{};
-};
+    viewport->RendererUserData = nullptr;
+}
 } // namespace
 
-ImGuiPass::ImGuiPass(Swapchain *swapchain) : _swapchain(swapchain) {
+ImGuiPass::ImGuiPass(Swapchain *swapchain) {
     assert(swapchain != nullptr);
 
     _imgui_context = ImGui::CreateContext();
     // Only the first context will reset global context after creation.
     make_current();
     auto &io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
-    ImGui_ImplGlfw_InitForVulkan(_swapchain->window(), true);
+    ImGui_ImplGlfw_InitForVulkan(swapchain->window(), true);
 
     assert(io.BackendRendererUserData == nullptr &&
            "Already initialized a renderer backend!");
 
     // Setup backend capabilities flags
-    auto bd = new ImGuiRendererData(swapchain, io);
+    auto bd = new ImGuiRendererData(swapchain->context(), io, this);
     io.BackendRendererUserData = (void *)bd;
     io.BackendRendererName = "imgui_ars_vulkan";
     io.BackendFlags |=
@@ -180,23 +230,42 @@ ImGuiPass::ImGuiPass(Swapchain *swapchain) : _swapchain(swapchain) {
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
         ImGuiPlatformIO &platform_io = ImGui::GetPlatformIO();
         platform_io.Renderer_CreateWindow = [](ImGuiViewport *viewport) {
-            // TODO
+            auto window =
+                reinterpret_cast<GLFWwindow *>(viewport->PlatformHandle);
+            auto bd = reinterpret_cast<ImGuiRendererData *>(
+                ImGui::GetIO().BackendRendererUserData);
+            auto swapchain = bd->context()->create_swapchain(window, false);
+
+            swapchain->set_present_additional_draw_callback(
+                [viewport, imgui = bd->imgui()](CommandBuffer *cmd) {
+                    imgui->draw(cmd, viewport);
+                });
+
+            viewport->RendererUserData =
+                new ImGuiViewportData(std::move(swapchain));
         };
-        platform_io.Renderer_DestroyWindow = [](ImGuiViewport *viewport) {
-            // TODO
-        };
-        platform_io.Renderer_SetWindowSize = [](ImGuiViewport *viewport,
-                                                ImVec2 size) {
-            // TODO
-        };
+
+        platform_io.Renderer_DestroyWindow = release_viewport_data;
+
+        platform_io.Renderer_SetWindowSize =
+            []([[maybe_unused]] ImGuiViewport *viewport,
+               [[maybe_unused]] ImVec2 size) {
+                // Nothing to do. The swapchain will respect the size of the
+                // window.
+            };
+
         platform_io.Renderer_RenderWindow = [](ImGuiViewport *viewport,
-                                               void *args) {
-            // TODO
+                                               [[maybe_unused]] void *args) {
+            auto vp_data = reinterpret_cast<ImGuiViewportData *>(
+                viewport->RendererUserData);
+            vp_data->swapchain()->present(nullptr);
         };
-        platform_io.Renderer_SwapBuffers = [](ImGuiViewport *viewport,
-                                              void *args) {
-            // TODO
-        };
+
+        platform_io.Renderer_SwapBuffers =
+            []([[maybe_unused]] ImGuiViewport *viewport,
+               [[maybe_unused]] void *args) {
+                // Do nothing, render window already swaps buffer
+            };
     }
 }
 
@@ -211,10 +280,7 @@ ImGuiPass::~ImGuiPass() {
     // Manually delete main viewport render data in-case we haven't initialized
     // for viewports
     ImGuiViewport *main_viewport = ImGui::GetMainViewport();
-    auto vd =
-        reinterpret_cast<ImGuiViewportData *>(main_viewport->RendererUserData);
-    delete vd;
-    main_viewport->RendererUserData = nullptr;
+    release_viewport_data(main_viewport);
 
     // Close all platform windows
     ImGui::DestroyPlatformWindows();
@@ -240,16 +306,21 @@ void ImGuiPass::new_frame() {
     ImGui::NewFrame();
 }
 
-void ImGuiPass::draw(CommandBuffer *cmd) {
+void ImGuiPass::draw(CommandBuffer *cmd, ImGuiViewport *viewport) {
+    assert(cmd != nullptr);
+
     make_current();
+    if (viewport == nullptr) {
+        viewport = ImGui::GetMainViewport();
+    }
 
-    ImGui::Render();
-    ImDrawData *draw_data = ImGui::GetDrawData();
+    auto draw_data = viewport->DrawData;
 
-    auto vp_data = reinterpret_cast<ImGuiViewportData *>(
-        draw_data->OwnerViewport->RendererUserData);
-
+    auto vp_data =
+        reinterpret_cast<ImGuiViewportData *>(viewport->RendererUserData);
     assert(vp_data != nullptr);
+
+    auto swapchain = vp_data->swapchain();
 
     if (draw_data->TotalVtxCount > 0) {
         size_t vertex_size = draw_data->TotalVtxCount * sizeof(ImDrawVert);
@@ -277,7 +348,7 @@ void ImGuiPass::draw(CommandBuffer *cmd) {
         index_buffer->unmap();
     }
 
-    auto fb_extent = _swapchain->physical_size();
+    auto fb_extent = swapchain->physical_size();
     auto fb_width = static_cast<float>(fb_extent.width);
     auto fb_height = static_cast<float>(fb_extent.height);
 
@@ -285,7 +356,7 @@ void ImGuiPass::draw(CommandBuffer *cmd) {
         auto bd = reinterpret_cast<ImGuiRendererData *>(
             ImGui::GetIO().BackendRendererUserData);
 
-        auto pipeline = bd->pipeline();
+        auto pipeline = vp_data->pipeline();
 
         // Bind pipeline and descriptor sets:
         {
@@ -299,7 +370,7 @@ void ImGuiPass::draw(CommandBuffer *cmd) {
             fill_combined_image_sampler(
                 &write, &image_info, desc_set, 0, bd->font_atlas());
 
-            _swapchain->context()->device()->UpdateDescriptorSets(
+            swapchain->context()->device()->UpdateDescriptorSets(
                 1, &write, 0, nullptr);
 
             cmd->BindDescriptorSets(VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -311,7 +382,7 @@ void ImGuiPass::draw(CommandBuffer *cmd) {
                                     nullptr);
         }
 
-        // Bind Vertex And Index Buffer:
+        // Bind vertex and index buffers
         if (draw_data->TotalVtxCount > 0) {
             VkBuffer vertex_buffers[1] = {vp_data->vertex_buffer()->buffer()};
             VkDeviceSize vertex_offset[1] = {0};
@@ -429,5 +500,14 @@ void ImGuiPass::draw(CommandBuffer *cmd) {
 
 void ImGuiPass::make_current() const {
     ImGui::SetCurrentContext(_imgui_context);
+}
+
+void ImGuiPass::end_frame() {
+    make_current();
+    ImGui::Render();
+    if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+        ImGui::UpdatePlatformWindows();
+        ImGui::RenderPlatformWindowsDefault();
+    }
 }
 } // namespace ars::render::vk

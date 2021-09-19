@@ -277,7 +277,7 @@ void destroy_vulkan_backend() {
 
 std::unique_ptr<IWindow> Context::create_window(const WindowInfo &info) {
     auto [window, surface] = create_window_and_surface(&info);
-    return std::make_unique<Swapchain>(this, surface, window);
+    return std::make_unique<Swapchain>(this, surface, window, true);
 }
 
 std::unique_ptr<IScene> Context::create_scene() {
@@ -559,7 +559,7 @@ Context::Context(const WindowInfo *info,
 
     // Now context is fully initialized, we can create the swapchain
     if (window != nullptr && surface != VK_NULL_HANDLE) {
-        swapchain = std::make_unique<Swapchain>(this, surface, window);
+        swapchain = std::make_unique<Swapchain>(this, surface, window, true);
     }
 }
 
@@ -592,46 +592,7 @@ Context::create_window_and_surface(const WindowInfo *info) {
                                   nullptr);
     }
 
-    VkSurfaceKHR surface = VK_NULL_HANDLE;
-    if (window != nullptr) {
-        if (!s_vulkan->instance->presentation_enabled()) {
-            log_error("Presentation is not enabled for the render backend, but "
-                      "you still supply a window for presentation");
-        } else if (glfwCreateWindowSurface(s_vulkan->instance->instance(),
-                                           window,
-                                           s_vulkan->instance->allocator(),
-                                           &surface) != VK_SUCCESS) {
-            log_error("Can not create surface for the window");
-        }
-    }
-
-    if (_device == nullptr) {
-        init_device_and_queues(
-            s_vulkan->instance.get(), s_vulkan->validation_enabled(), surface);
-    }
-
-    if (surface != VK_NULL_HANDLE) {
-        // must check if the surface is supported by the physical device
-        if (VkBool32 is_supported_surface = VK_FALSE;
-            instance()->GetPhysicalDeviceSurfaceSupportKHR(
-                _device->physical_device(),
-                _queue->family_index(),
-                surface,
-                &is_supported_surface) != VK_SUCCESS ||
-            is_supported_surface != VK_TRUE) {
-
-            log_error("The physical device of the context does not support the "
-                      "presentation of the given window");
-
-            // cleanup
-            instance()->Destroy(surface);
-            return {nullptr, VK_NULL_HANDLE};
-        }
-
-        return {window, surface};
-    }
-
-    return {nullptr, VK_NULL_HANDLE};
+    return {window, create_surface(window)};
 }
 
 std::unique_ptr<ITexture>
@@ -831,6 +792,53 @@ void Context::init_descriptor_arena() {
 
 const ContextProperties &Context::properties() const {
     return _properties;
+}
+
+VkSurfaceKHR Context::create_surface(GLFWwindow *window) {
+    VkSurfaceKHR surface = VK_NULL_HANDLE;
+    if (window != nullptr) {
+        if (!s_vulkan->instance->presentation_enabled()) {
+            log_error("Presentation is not enabled for the render backend, but "
+                      "you still supply a window for presentation");
+        } else if (glfwCreateWindowSurface(s_vulkan->instance->instance(),
+                                           window,
+                                           s_vulkan->instance->allocator(),
+                                           &surface) != VK_SUCCESS) {
+            log_error("Can not create surface for the window");
+        }
+    }
+
+    if (_device == nullptr) {
+        init_device_and_queues(
+            s_vulkan->instance.get(), s_vulkan->validation_enabled(), surface);
+    }
+
+    if (surface != VK_NULL_HANDLE) {
+        // must check if the surface is supported by the physical device
+        if (VkBool32 is_supported_surface = VK_FALSE;
+            instance()->GetPhysicalDeviceSurfaceSupportKHR(
+                _device->physical_device(),
+                _queue->family_index(),
+                surface,
+                &is_supported_surface) != VK_SUCCESS ||
+            is_supported_surface != VK_TRUE) {
+
+            log_error("The physical device of the context does not support the "
+                      "presentation of the given window");
+
+            // cleanup
+            instance()->Destroy(surface);
+            return VK_NULL_HANDLE;
+        }
+    }
+
+    return surface;
+}
+
+std::unique_ptr<Swapchain> Context::create_swapchain(GLFWwindow *window,
+                                                     bool owns_window) {
+    auto surface = create_surface(window);
+    return std::make_unique<Swapchain>(this, surface, window, owns_window);
 }
 
 } // namespace ars::render::vk

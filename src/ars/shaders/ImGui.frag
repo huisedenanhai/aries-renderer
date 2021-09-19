@@ -1,5 +1,6 @@
 #version 450 core
-layout(location = 0) out vec4 fcolor;
+
+layout(location = 0) out vec4 color;
 
 layout(set = 0, binding = 0) uniform sampler2D tex;
 
@@ -9,5 +10,5 @@ layout(location = 0) in struct {
 } In;
 
 void main() {
-    fcolor = In.color * texture(tex, In.uv.st);
+    color = In.color * texture(tex, In.uv.st);
 }

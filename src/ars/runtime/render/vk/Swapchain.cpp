@@ -8,15 +8,17 @@
 #include <cassert>
 
 namespace ars::render::vk {
-Swapchain::Swapchain(Context *context, VkSurfaceKHR surface, GLFWwindow *window)
-    : _context(context), _surface(surface), _window(window) {
+Swapchain::Swapchain(Context *context,
+                     VkSurfaceKHR surface,
+                     GLFWwindow *window,
+                     bool owns_window)
+    : _context(context), _surface(surface), _window(window),
+      _owns_window(owns_window) {
     assert(context != nullptr);
     assert(surface != VK_NULL_HANDLE);
     assert(window != nullptr);
 
     recreate_swapchain();
-
-    _imgui = std::make_unique<ImGuiPass>(this);
 }
 
 Swapchain::~Swapchain() {
@@ -36,7 +38,7 @@ Swapchain::~Swapchain() {
 
     _context->instance()->Destroy(_surface);
 
-    if (_window != nullptr) {
+    if (_owns_window && _window != nullptr) {
         glfwDestroyWindow(_window);
     }
 }
@@ -262,8 +264,9 @@ void Swapchain::present(ITexture *texture) {
             rp_info.clearValueCount = 1;
             rp_info.pClearValues = &clear_value;
 
+            cmd->BeginRenderPass(&rp_info, VK_SUBPASS_CONTENTS_INLINE);
+
             if (texture != nullptr) {
-                cmd->BeginRenderPass(&rp_info, VK_SUBPASS_CONTENTS_INLINE);
                 VkViewport viewport{0,
                                     0,
                                     static_cast<float>(_extent.width),
@@ -297,10 +300,16 @@ void Swapchain::present(ITexture *texture) {
                 cmd->Draw(3, 1, 0, 0);
             }
 
-            if (_imgui_callback.has_value()) {
+            // ImGui
+            if (_imgui != nullptr && _imgui_callback.has_value()) {
                 _imgui->new_frame();
                 _imgui_callback.value()();
+                _imgui->end_frame();
                 _imgui->draw(cmd);
+            }
+
+            if (_present_additional_draw_callback.has_value()) {
+                _present_additional_draw_callback.value()(cmd);
             }
 
             cmd->EndRenderPass();
@@ -469,7 +478,15 @@ GLFWwindow *Swapchain::window() const {
 
 void Swapchain::set_imgui_callback(
     std::optional<std::function<void()>> callback) {
+    if (_imgui == nullptr) {
+        _imgui = std::make_unique<ImGuiPass>(this);
+    }
     _imgui_callback = std::move(callback);
+}
+
+void Swapchain::set_present_additional_draw_callback(
+    std::optional<std::function<void(CommandBuffer *)>> callback) {
+    _present_additional_draw_callback = std::move(callback);
 }
 
 } // namespace ars::render::vk

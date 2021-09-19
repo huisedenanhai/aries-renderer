@@ -8,7 +8,7 @@ enum class TextureType { Texture2D };
 
 struct TextureInfo {
     TextureType type = TextureType::Texture2D;
-    Format format = Format::R8G8B8A8Srgb;
+    Format format = Format::R8G8B8A8_SRGB;
     uint32_t width = 1;
     uint32_t height = 1;
     uint32_t depth = 1;

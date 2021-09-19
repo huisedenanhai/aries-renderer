@@ -107,11 +107,15 @@ class Context : public IContext {
     Handle<Buffer> create_buffer(VkDeviceSize size,
                                  VkBufferUsageFlags buffer_usage,
                                  VmaMemoryUsage memory_usage);
+    std::unique_ptr<Swapchain> create_swapchain(GLFWwindow *window,
+                                                bool owns_window);
 
   private:
     // This method init device if not
     std::tuple<GLFWwindow *, VkSurfaceKHR>
     create_window_and_surface(const WindowInfo *info);
+    // This method init device if not
+    VkSurfaceKHR create_surface(GLFWwindow *window);
 
     void init_device_and_queues(Instance *instance,
                                 bool enable_validation,

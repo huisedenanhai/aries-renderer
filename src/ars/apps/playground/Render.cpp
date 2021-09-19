@@ -30,7 +30,7 @@ std::unique_ptr<ITexture> load_texture(IContext *context,
     }
 
     auto texture =
-        context->create_texture_2d(Format::R8G8B8A8Srgb, width, height);
+        context->create_texture_2d(Format::R8G8B8A8_SRGB, width, height);
 
     auto mid = high_resolution_clock::now();
 

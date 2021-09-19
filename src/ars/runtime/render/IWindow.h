@@ -22,6 +22,9 @@ class IWindow {
 
     virtual bool should_close() = 0;
 
+    // For now only one window can have imgui callback, multiple imgui context
+    // is too messy to maintain.
+    // Usually the callback will be set on the main window of the application.
     virtual void
     set_imgui_callback(std::optional<std::function<void()>> callback) = 0;
 

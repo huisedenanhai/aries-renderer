@@ -2,7 +2,6 @@
 #include "Context.h"
 #include "Pipeline.h"
 #include "Swapchain.h"
-#include <GLFW/glfw3.h>
 #include <ars/runtime/core/Log.h>
 #include <cassert>
 #include <imgui/imgui.h>
@@ -200,11 +199,16 @@ void release_viewport_data(ImGuiViewport *viewport) {
 ImGuiPass::ImGuiPass(Swapchain *swapchain) {
     assert(swapchain != nullptr);
 
+    if (ImGui::GetCurrentContext() != nullptr) {
+        log_error("Multiple ImGui context is not supported.");
+    }
+
     _imgui_context = ImGui::CreateContext();
     // Only the first context will reset global context after creation.
     make_current();
     auto &io = ImGui::GetIO();
-    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+    io.ConfigFlags |=
+        ImGuiConfigFlags_ViewportsEnable | ImGuiConfigFlags_DockingEnable;
 
     ImGui_ImplGlfw_InitForVulkan(swapchain->window(), true);
 

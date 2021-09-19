@@ -68,7 +68,7 @@ void main_loop() {
 
     ars::math::XformTRS<float> t(glm::identity<glm::mat4>());
 
-    int window_num = 1;
+    int window_num = 4;
     for (int i = 0; i < window_num; i++) {
         auto title = "Playground Render " + std::to_string(i);
         WindowInfo info{};
@@ -80,7 +80,8 @@ void main_loop() {
             window->set_imgui_callback([]() { ImGui::ShowDemoWindow(); });
             windows.insert(std::move(window));
         } else {
-            windows.insert(ctx->create_window(info));
+            auto window = ctx->create_window(info);
+            windows.insert(std::move(window));
         }
     }
     auto scene = ctx->create_scene();

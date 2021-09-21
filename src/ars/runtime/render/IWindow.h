@@ -4,12 +4,13 @@
 #include <functional>
 #include <memory>
 #include <optional>
+#include <string>
 
 namespace ars::render {
 class ITexture;
 
 struct WindowInfo {
-    const char *title = nullptr;
+    std::string title{};
     Extent2D logical_size{800, 600};
 };
 

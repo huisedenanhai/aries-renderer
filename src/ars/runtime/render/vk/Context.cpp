@@ -587,7 +587,7 @@ Context::create_window_and_surface(const WindowInfo *info) {
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
         window = glfwCreateWindow(static_cast<int>(info->logical_size.width),
                                   static_cast<int>(info->logical_size.height),
-                                  info->title,
+                                  info->title.c_str(),
                                   nullptr,
                                   nullptr);
     }

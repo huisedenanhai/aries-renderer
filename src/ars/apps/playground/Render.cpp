@@ -1,4 +1,5 @@
 #include <ars/runtime/core/Log.h>
+#include <ars/runtime/engine/Engine.h>
 #include <ars/runtime/render/IContext.h>
 #include <ars/runtime/render/IScene.h>
 #include <ars/runtime/render/ITexture.h>
@@ -54,72 +55,63 @@ std::unique_ptr<ITexture> load_texture(IContext *context,
     return texture;
 }
 
-void main_loop() {
-    {
-        // test if offscreen context runs
-        auto offscreen_context = IContext::create(nullptr);
+class Application : public ars::engine::IApplication {
+  public:
+    [[nodiscard]] std::string get_name() const override {
+        return "Playground Render";
     }
 
-    std::set<std::unique_ptr<IWindow>> windows{};
-    std::unique_ptr<IContext> ctx{};
-
-    ars::math::XformTRS<float> trans{};
-    auto m = trans.matrix();
-
-    ars::math::XformTRS<float> t(glm::identity<glm::mat4>());
-
-    int window_num = 4;
-    for (int i = 0; i < window_num; i++) {
-        auto title = "Playground Render " + std::to_string(i);
-        WindowInfo info{};
-        info.title = title.c_str();
-
-        if (ctx == nullptr) {
-            auto [context, window] = IContext::create(&info);
-            ctx = std::move(context);
-            window->set_imgui_callback([]() { ImGui::ShowDemoWindow(); });
-            windows.insert(std::move(window));
-        } else {
-            auto window = ctx->create_window(info);
-            windows.insert(std::move(window));
+    void start() override {
+        {
+            // test if offscreen context runs
+            auto offscreen_context = IContext::create(nullptr);
         }
+
+        auto ctx = ars::engine::render_context();
+
+        ars::math::XformTRS<float> trans{};
+        auto m = trans.matrix();
+
+        ars::math::XformTRS<float> t(glm::identity<glm::mat4>());
+
+        int window_num = 4;
+        for (int i = 0; i < window_num; i++) {
+            auto title = "Playground Render " + std::to_string(i);
+            WindowInfo info{};
+            info.title = title;
+            auto window = ctx->create_window(info);
+            _windows.insert(std::move(window));
+        }
+
+        _texture = load_texture(ctx, "test.jpg");
     }
-    auto scene = ctx->create_scene();
-    auto view = scene->create_view();
 
-    auto texture = load_texture(ctx.get(), "test.jpg");
-
-    while (!windows.empty()) {
-
-        for (auto it = windows.begin(); it != windows.end();) {
+    void update() override {
+        for (auto it = _windows.begin(); it != _windows.end();) {
             if (it->get()->should_close()) {
-                it = windows.erase(it);
+                it = _windows.erase(it);
             } else {
                 ++it;
             }
         }
 
-        if (ctx->begin_frame()) {
-            view->render();
-
-            for (auto &w : windows) {
-                w->present(texture.get());
-            }
-
-            ctx->end_frame();
+        for (auto &w : _windows) {
+            w->present(_texture.get());
         }
     }
-}
+
+    void on_imgui() override {
+        ImGui::ShowDemoWindow();
+    }
+
+    void destroy() override {}
+
+  private:
+    std::unique_ptr<ITexture> _texture{};
+    std::set<std::unique_ptr<IWindow>> _windows{};
+};
 
 int main() {
-    ApplicationInfo app_info{};
-    app_info.app_name = "Playground Render";
-    app_info.enable_validation = true;
-
-    init_render_backend(app_info);
-
-    main_loop();
-
-    destroy_render_backend();
+    ars::engine::start_engine(std::make_unique<Application>());
     return 0;
 }

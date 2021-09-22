@@ -1,6 +1,6 @@
 aries_target_sources(render PRIVATE
-        Gltf.cpp
-        Gltf.h
+        Model.cpp
+        Model.h
         Texture.cpp
         Texture.h)
 

@@ -1,0 +1,80 @@
+#pragma once
+
+#include <ars/runtime/core/math/Transform.h>
+#include <filesystem>
+#include <memory>
+#include <optional>
+#include <string>
+#include <variant>
+#include <vector>
+
+namespace ars::render {
+class IMesh;
+class IMaterial;
+
+struct Model {
+    using Index = uint32_t;
+
+    struct Node {
+        std::string name;
+        std::optional<Index> parent;
+        std::vector<Index> children{};
+        std::optional<Index> mesh;
+        std::optional<Index> camera;
+        math::XformTRS<float> local_to_parent{};
+    };
+
+    struct Primitive {
+        std::shared_ptr<IMesh> mesh;
+        std::optional<Index> material;
+    };
+
+    struct Mesh {
+        std::string name;
+        std::vector<Primitive> primitives;
+    };
+
+    struct Scene {
+        std::string name;
+        std::vector<Index> nodes;
+    };
+
+    struct Camera {
+        struct PerspectiveData {
+            float y_fov;
+            bool has_z_far;
+            float z_far;
+            float z_near;
+        };
+
+        struct OrthographicData {
+            float y_mag;
+            float z_far;
+            float z_near;
+        };
+
+        enum Type { Perspective, Orthographic };
+
+        std::string name;
+
+        std::variant<PerspectiveData, OrthographicData> data;
+
+        [[nodiscard]] Type type() const;
+        [[nodiscard]] glm::mat4 projection_matrix(float aspect) const;
+    };
+
+    struct Material {
+        std::string name;
+        std::shared_ptr<IMaterial> material;
+    };
+
+    std::vector<Node> nodes{};
+    std::vector<Mesh> meshes{};
+    std::vector<Scene> scenes{};
+    std::vector<Camera> cameras{};
+    std::vector<Material> materials{};
+};
+
+Model load_gltf(const std::filesystem::path &path);
+
+} // namespace ars::render

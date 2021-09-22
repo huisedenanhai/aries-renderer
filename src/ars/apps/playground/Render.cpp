@@ -3,6 +3,7 @@
 #include <ars/runtime/render/IScene.h>
 #include <ars/runtime/render/ITexture.h>
 #include <ars/runtime/render/IWindow.h>
+#include <ars/runtime/render/res/Model.h>
 #include <ars/runtime/render/res/Texture.h>
 #include <chrono>
 #include <imgui/imgui.h>
@@ -40,6 +41,7 @@ class Application : public ars::engine::IApplication {
         }
 
         _texture = load_texture(ctx, "test.jpg");
+        auto model = load_gltf("FlightHelmet/FlightHelmet.gltf");
     }
 
     void update() override {

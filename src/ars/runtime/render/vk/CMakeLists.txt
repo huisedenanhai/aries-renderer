@@ -1,4 +1,4 @@
-target_sources(render PRIVATE
+aries_target_sources(render PRIVATE
         Descriptor.cpp
         Descriptor.h
         ImGui.cpp

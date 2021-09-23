@@ -18,7 +18,6 @@ struct Model {
 
     struct Node {
         std::string name;
-        std::optional<Index> parent;
         std::vector<Index> children{};
         std::optional<Index> mesh;
         std::optional<Index> camera;
@@ -69,6 +68,7 @@ struct Model {
         std::shared_ptr<IMaterial> material;
     };
 
+    std::optional<Index> default_scene{};
     std::vector<Node> nodes{};
     std::vector<Mesh> meshes{};
     std::vector<Scene> scenes{};

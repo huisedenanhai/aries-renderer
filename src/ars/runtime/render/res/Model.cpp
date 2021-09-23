@@ -33,7 +33,7 @@ void gltf_warn(const std::filesystem::path &path, const std::string &info) {
     std::stringstream ss;
     ss << "Loading " << path << ": " << info;
     log_warn(ss.str());
-};
+}
 
 template <typename T, typename R> R cast_value(const unsigned char *ptr) {
     return static_cast<R>(*reinterpret_cast<const T *>(ptr));
@@ -224,12 +224,98 @@ void load_meshes(IContext *context,
     }
 }
 
+void load_nodes(const tinygltf::Model &gltf, Model &model) {
+    model.nodes.reserve(gltf.nodes.size());
+    for (auto &gltf_node : gltf.nodes) {
+        Model::Node node{};
+        node.name = gltf_node.name;
+        if (gltf_node.camera >= 0) {
+            node.camera = gltf_node.camera;
+        }
+        if (gltf_node.mesh >= 0) {
+            node.mesh = gltf_node.mesh;
+        }
+        node.children.reserve(gltf_node.children.size());
+        for (auto child : gltf_node.children) {
+            node.children.push_back(child);
+        }
+
+        auto transform = glm::identity<glm::mat4>();
+        if (gltf_node.scale.size() == 3) {
+            transform =
+                glm::scale(transform,
+                           glm::vec3(static_cast<float>(gltf_node.scale[0]),
+                                     static_cast<float>(gltf_node.scale[1]),
+                                     static_cast<float>(gltf_node.scale[2])));
+        }
+        if (gltf_node.rotation.size() == 4) {
+            glm::quat rotation(static_cast<float>(gltf_node.rotation[0]),
+                               static_cast<float>(gltf_node.rotation[1]),
+                               static_cast<float>(gltf_node.rotation[2]),
+                               static_cast<float>(gltf_node.rotation[3]));
+            transform = glm::mat4_cast(rotation) * transform;
+        }
+        if (gltf_node.translation.size() == 3) {
+            transform = glm::translate(
+                transform,
+                glm::vec3(static_cast<float>(gltf_node.translation[0]),
+                          static_cast<float>(gltf_node.translation[1]),
+                          static_cast<float>(gltf_node.translation[2])));
+        }
+        if (gltf_node.matrix.size() == 16) {
+            for (int i = 0; i < 4; i++) {
+                for (int j = 0; j < 4; j++) {
+                    transform[i][j] =
+                        static_cast<float>(gltf_node.matrix[i * 4 + j]);
+                }
+            }
+        }
+
+        node.local_to_parent = math::XformTRS<float>(transform);
+
+        model.nodes.emplace_back(std::move(node));
+    }
+}
+
+void load_scenes(const tinygltf::Model &gltf, Model &model) {
+    if (gltf.defaultScene >= 0) {
+        model.default_scene = gltf.defaultScene;
+    }
+
+    model.scenes.reserve(gltf.scenes.size());
+    for (auto &gltf_scene : gltf.scenes) {
+        Model::Scene scene{};
+        scene.name = gltf_scene.name;
+
+        scene.nodes.reserve(gltf_scene.nodes.size());
+        for (auto node : gltf_scene.nodes) {
+            scene.nodes.push_back(node);
+        }
+
+        model.scenes.emplace_back(std::move(scene));
+    }
+}
+
+void load_cameras(const tinygltf::Model &gltf, Model &model) {
+    // TODO
+}
+
+void load_materials(IContext *context,
+                    const tinygltf::Model &gltf,
+                    Model &model) {
+    // TODO
+}
+
 Model load_gltf(IContext *context,
                 const std::filesystem::path &path,
                 const tinygltf::Model &gltf) {
     Model model{};
 
     load_meshes(context, path, gltf, model);
+    load_nodes(gltf, model);
+    load_scenes(gltf, model);
+    load_cameras(gltf, model);
+    load_materials(context, gltf, model);
 
     return model;
 }

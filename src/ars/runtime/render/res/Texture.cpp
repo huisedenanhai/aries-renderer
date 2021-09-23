@@ -46,7 +46,7 @@ std::unique_ptr<ITexture> load_texture(IContext *context,
         ss << "Load texture " << path << " " << width << "x" << height
            << " takes " << total_duration.count() << "ms, decode image takes "
            << decode_duration.count() << "ms, upload takes "
-           << upload_duration.count() << "ms" << std::endl;
+           << upload_duration.count() << "ms";
         log_info(ss.str());
     }
 

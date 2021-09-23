@@ -41,7 +41,7 @@ class Application : public ars::engine::IApplication {
         }
 
         _texture = load_texture(ctx, "test.jpg");
-        auto model = load_gltf("FlightHelmet/FlightHelmet.gltf");
+        auto model = load_gltf(ctx, "FlightHelmet/FlightHelmet.gltf");
     }
 
     void update() override {

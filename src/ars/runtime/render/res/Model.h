@@ -11,6 +11,7 @@
 namespace ars::render {
 class IMesh;
 class IMaterial;
+class IContext;
 
 struct Model {
     using Index = uint32_t;
@@ -75,6 +76,6 @@ struct Model {
     std::vector<Material> materials{};
 };
 
-Model load_gltf(const std::filesystem::path &path);
+Model load_gltf(IContext *context, const std::filesystem::path &path);
 
 } // namespace ars::render

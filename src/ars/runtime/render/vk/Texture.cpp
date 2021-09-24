@@ -64,9 +64,12 @@ Texture::Texture(Context *context, const TextureCreateInfo &info)
 
     VkSamplerCreateInfo sampler_info{VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
 
-    sampler_info.magFilter = VK_FILTER_LINEAR;
-    sampler_info.minFilter = VK_FILTER_LINEAR;
-    sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    sampler_info.addressModeU = info.address_mode_u;
+    sampler_info.addressModeV = info.address_mode_v;
+    sampler_info.addressModeW = info.address_mode_w;
+    sampler_info.magFilter = info.mag_filter;
+    sampler_info.minFilter = info.min_filter;
+    sampler_info.mipmapMode = info.mipmap_mode;
     sampler_info.mipLodBias = 0.0f;
     sampler_info.minLod = 0.0f;
     sampler_info.maxLod = static_cast<float>(info.mip_levels);
@@ -416,6 +419,41 @@ VkFormat translate(render::Format format) {
     return VK_FORMAT_UNDEFINED;
 }
 
+VkFilter translate(FilterMode mode) {
+    switch (mode) {
+    case FilterMode::Linear:
+        return VK_FILTER_LINEAR;
+    case FilterMode::Nearest:
+        return VK_FILTER_NEAREST;
+    }
+    // should not happen
+    return VK_FILTER_LINEAR;
+}
+
+VkSamplerMipmapMode translate(MipmapMode mode) {
+    switch (mode) {
+    case MipmapMode::Linear:
+        return VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    case MipmapMode::Nearest:
+        return VK_SAMPLER_MIPMAP_MODE_NEAREST;
+    }
+    // should not happen
+    return VK_SAMPLER_MIPMAP_MODE_LINEAR;
+}
+
+VkSamplerAddressMode translate(WrapMode mode) {
+    switch (mode) {
+    case WrapMode::Repeat:
+        return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    case WrapMode::ClampToEdge:
+        return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    case WrapMode::MirroredRepeat:
+        return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+    }
+    // should not happen
+    return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+}
+
 TextureCreateInfo translate(const TextureInfo &info) {
     TextureCreateInfo up{};
     up.format = translate(info.format);
@@ -434,6 +472,12 @@ TextureCreateInfo translate(const TextureInfo &info) {
     up.samples = VK_SAMPLE_COUNT_1_BIT;
     up.usage = IMAGE_USAGE_SAMPLED_COLOR;
 
+    up.min_filter = translate(info.min_filter);
+    up.mag_filter = translate(info.mag_filter);
+    up.mipmap_mode = translate(info.mipmap_mode);
+    up.address_mode_u = translate(info.wrap_u);
+    up.address_mode_v = translate(info.wrap_v);
+    up.address_mode_w = translate(info.wrap_w);
     return up;
 }
 

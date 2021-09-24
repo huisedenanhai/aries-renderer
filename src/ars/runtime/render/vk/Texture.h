@@ -17,6 +17,13 @@ struct TextureCreateInfo {
     VkImageUsageFlags usage;
     VkImageAspectFlags aspect_mask;
 
+    VkFilter min_filter = VK_FILTER_LINEAR;
+    VkFilter mag_filter = VK_FILTER_LINEAR;
+    VkSamplerMipmapMode mipmap_mode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    VkSamplerAddressMode address_mode_u = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    VkSamplerAddressMode address_mode_v = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    VkSamplerAddressMode address_mode_w = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+
     static TextureCreateInfo sampled_2d(VkFormat format,
                                         uint32_t width,
                                         uint32_t height,

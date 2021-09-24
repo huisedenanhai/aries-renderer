@@ -6,6 +6,12 @@
 namespace ars::render {
 enum class TextureType { Texture2D };
 
+enum class FilterMode { Linear, Nearest };
+
+enum class MipmapMode { Linear, Nearest };
+
+enum class WrapMode { Repeat, ClampToEdge, MirroredRepeat };
+
 struct TextureInfo {
     TextureType type = TextureType::Texture2D;
     Format format = Format::R8G8B8A8_SRGB;
@@ -14,6 +20,13 @@ struct TextureInfo {
     uint32_t depth = 1;
     uint32_t mip_levels = MAX_MIP_LEVELS;
     uint32_t array_layers = 1;
+
+    FilterMode min_filter = FilterMode::Linear;
+    FilterMode mag_filter = FilterMode::Linear;
+    MipmapMode mipmap_mode = MipmapMode::Linear;
+    WrapMode wrap_u = WrapMode::Repeat;
+    WrapMode wrap_v = WrapMode::Repeat;
+    WrapMode wrap_w = WrapMode::Repeat;
 };
 
 uint32_t calculate_mip_levels(uint32_t width, uint32_t height, uint32_t depth);
@@ -31,6 +44,12 @@ class ITexture {
     [[nodiscard]] uint32_t depth() const;
     [[nodiscard]] uint32_t mip_levels() const;
     [[nodiscard]] uint32_t array_layers() const;
+    [[nodiscard]] FilterMode min_filter() const;
+    [[nodiscard]] FilterMode mag_filter() const;
+    [[nodiscard]] MipmapMode mipmap_mode() const;
+    [[nodiscard]] WrapMode wrap_u() const;
+    [[nodiscard]] WrapMode wrap_v() const;
+    [[nodiscard]] WrapMode wrap_w() const;
 
     virtual void set_data(void *data,
                           size_t size,

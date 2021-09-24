@@ -228,6 +228,7 @@ void load_nodes(const tinygltf::Model &gltf, Model &model) {
     model.nodes.reserve(gltf.nodes.size());
     for (auto &gltf_node : gltf.nodes) {
         Model::Node node{};
+
         node.name = gltf_node.name;
         if (gltf_node.camera >= 0) {
             node.camera = gltf_node.camera;
@@ -285,8 +286,8 @@ void load_scenes(const tinygltf::Model &gltf, Model &model) {
     model.scenes.reserve(gltf.scenes.size());
     for (auto &gltf_scene : gltf.scenes) {
         Model::Scene scene{};
-        scene.name = gltf_scene.name;
 
+        scene.name = gltf_scene.name;
         scene.nodes.reserve(gltf_scene.nodes.size());
         for (auto node : gltf_scene.nodes) {
             scene.nodes.push_back(node);
@@ -296,7 +297,61 @@ void load_scenes(const tinygltf::Model &gltf, Model &model) {
     }
 }
 
-void load_cameras(const tinygltf::Model &gltf, Model &model) {
+void load_cameras(const std::filesystem::path &path,
+                  const tinygltf::Model &gltf,
+                  Model &model) {
+    model.cameras.reserve(gltf.cameras.size());
+    for (auto &gltf_camera : gltf.cameras) {
+        Model::Camera camera{};
+
+        camera.name = gltf_camera.name;
+
+        if (gltf_camera.type == "perspective") {
+            Model::Camera::PerspectiveData pers{};
+            const auto &gltf_pers = gltf_camera.perspective;
+
+            pers.has_z_far = gltf_pers.zfar > 0.0;
+            pers.y_fov = static_cast<float>(gltf_pers.yfov);
+            pers.z_near = static_cast<float>(gltf_pers.znear);
+            pers.z_far = static_cast<float>(gltf_pers.zfar);
+
+            camera.data = pers;
+        } else if (gltf_camera.type == "orthographic") {
+            Model::Camera::OrthographicData ortho{};
+            const auto &gltf_ortho = gltf_camera.orthographic;
+
+            ortho.z_far = static_cast<float>(gltf_ortho.zfar);
+            ortho.z_near = static_cast<float>(gltf_ortho.znear);
+            ortho.y_mag = static_cast<float>(gltf_ortho.ymag);
+
+            camera.data = ortho;
+        } else {
+            Model::Camera::PerspectiveData pers{};
+
+            pers.has_z_far = true;
+            pers.y_fov = glm::radians(45.0f);
+            pers.z_near = 0.1f;
+            pers.z_far = 100.0f;
+
+            camera.data = pers;
+
+            std::stringstream ss;
+            ss << "Invalid camera type " << std::quoted(gltf_camera.type)
+               << " at index " << model.cameras.size()
+               << ", use default perspective camera { y_fov = " << pers.y_fov
+               << ", z_near = " << pers.z_near << ", z_far = " << pers.z_far
+               << " }";
+
+            gltf_warn(path, ss.str());
+        }
+
+        model.cameras.emplace_back(std::move(camera));
+    }
+}
+
+void load_textures(IContext *context,
+                   const tinygltf::Model &gltf,
+                   Model &model) {
     // TODO
 }
 
@@ -314,7 +369,8 @@ Model load_gltf(IContext *context,
     load_meshes(context, path, gltf, model);
     load_nodes(gltf, model);
     load_scenes(gltf, model);
-    load_cameras(gltf, model);
+    load_cameras(path, gltf, model);
+    load_textures(context, gltf, model);
     load_materials(context, gltf, model);
 
     return model;
@@ -364,15 +420,23 @@ Model load_gltf(IContext *context, const std::filesystem::path &path) {
         return Model{};
     }
 
+    auto mid = high_resolution_clock::now();
+
+    auto model = load_gltf(context, path, gltf);
+
     auto stop = high_resolution_clock::now();
-    auto decode_duration = duration_cast<milliseconds>(stop - start);
+
+    auto total_duration = duration_cast<milliseconds>(stop - start);
+    auto decode_duration = duration_cast<milliseconds>(mid - start);
+    auto upload_duration = duration_cast<milliseconds>(stop - mid);
     {
         std::stringstream ss;
-        ss << "Load gltf file: " << path << " takes " << decode_duration.count()
-           << "ms";
+        ss << "Load gltf file " << path << " takes " << total_duration.count()
+           << "ms, tinygltf decode takes " << decode_duration.count()
+           << "ms, upload takes " << upload_duration.count() << "ms";
         log_info(ss.str());
     }
 
-    return load_gltf(context, path, gltf);
+    return model;
 }
 } // namespace ars::render

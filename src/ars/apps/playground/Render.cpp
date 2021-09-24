@@ -31,7 +31,7 @@ class Application : public ars::engine::IApplication {
 
         ars::math::XformTRS<float> t(glm::identity<glm::mat4>());
 
-        int window_num = 4;
+        int window_num = 3;
         for (int i = 0; i < window_num; i++) {
             auto title = "Playground Render " + std::to_string(i);
             WindowInfo info{};

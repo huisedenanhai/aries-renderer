@@ -63,6 +63,11 @@ struct Model {
         [[nodiscard]] glm::mat4 projection_matrix(float aspect) const;
     };
 
+    struct Texture {
+        std::string name;
+        std::shared_ptr<ITexture> texture;
+    };
+
     struct Material {
         std::string name;
         std::shared_ptr<IMaterial> material;
@@ -73,6 +78,7 @@ struct Model {
     std::vector<Mesh> meshes{};
     std::vector<Scene> scenes{};
     std::vector<Camera> cameras{};
+    std::vector<Texture> textures{};
     std::vector<Material> materials{};
 };
 

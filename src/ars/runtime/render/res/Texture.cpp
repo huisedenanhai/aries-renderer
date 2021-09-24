@@ -23,7 +23,7 @@ Format get_8_bit_texture_format(uint32_t channels, bool need_srgb) {
     return formats[(channels - 1) * 2 + (need_srgb ? 0 : 1)];
 }
 
-std::unique_ptr<ITexture> load_texture(IContext *context,
+std::shared_ptr<ITexture> load_texture(IContext *context,
                                        const std::filesystem::path &path) {
 
     using namespace std::chrono;

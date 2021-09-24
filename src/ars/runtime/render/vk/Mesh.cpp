@@ -63,7 +63,7 @@ void Mesh::set_indices(glm::u32vec3 *indices,
     _index_buffer->set_data(indices, elem_offset, elem_count);
 }
 
-Mesh *upcast(IMesh *mesh) {
-    return reinterpret_cast<Mesh *>(mesh);
+std::shared_ptr<Mesh> upcast(const std::shared_ptr<IMesh> &mesh) {
+    return std::reinterpret_pointer_cast<Mesh>(mesh);
 }
 } // namespace ars::render::vk

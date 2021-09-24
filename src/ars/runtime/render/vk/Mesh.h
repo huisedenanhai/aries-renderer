@@ -47,5 +47,5 @@ class Mesh : public IMesh {
     size_t _triangle_count = 0;
 };
 
-Mesh *upcast(IMesh *mesh);
+std::shared_ptr<Mesh> upcast(const std::shared_ptr<IMesh> &mesh);
 } // namespace ars::render::vk

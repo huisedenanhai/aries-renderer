@@ -284,12 +284,12 @@ std::unique_ptr<IScene> Context::create_scene() {
     return std::make_unique<Scene>();
 }
 
-std::unique_ptr<IMesh> Context::create_mesh(const MeshInfo &info) {
-    return std::make_unique<Mesh>(this, info);
+std::shared_ptr<IMesh> Context::create_mesh(const MeshInfo &info) {
+    return std::make_shared<Mesh>(this, info);
 }
 
-std::unique_ptr<IMaterial> Context::create_material() {
-    return std::make_unique<Material>();
+std::shared_ptr<IMaterial> Context::create_material() {
+    return std::make_shared<Material>();
 }
 
 namespace {
@@ -595,10 +595,10 @@ Context::create_window_and_surface(const WindowInfo *info) {
     return {window, create_surface(window)};
 }
 
-std::unique_ptr<ITexture>
+std::shared_ptr<ITexture>
 Context::create_texture_impl(const TextureInfo &info) {
     auto tex = create_texture(translate(info));
-    return std::make_unique<TextureAdapter>(info, std::move(tex));
+    return std::make_shared<TextureAdapter>(info, std::move(tex));
 }
 
 bool Context::begin_frame() {

@@ -12,7 +12,8 @@ class Scene : public IScene {
     std::unique_ptr<IDirectionalLight> create_directional_light() override;
     std::unique_ptr<IView> create_view() override;
 
-    using RenderObjects = SoA<glm::mat4, Mesh *, IMaterial *>;
+    using RenderObjects =
+        SoA<glm::mat4, std::shared_ptr<Mesh>, std::shared_ptr<IMaterial>>;
     RenderObjects render_objects{};
 
     using DirectionalLights = SoA<glm::mat4>;
@@ -57,10 +58,10 @@ class RenderObject : public IRenderObject {
     math::XformTRS<float> get_xform() override;
     void set_xform(const math::XformTRS<float> &xform) override;
     IScene *get_scene() override;
-    IMesh *get_mesh() override;
-    void set_mesh(IMesh *mesh) override;
-    IMaterial *get_material() override;
-    void set_material(IMaterial *material) override;
+    std::shared_ptr<IMesh> get_mesh() override;
+    void set_mesh(std::shared_ptr<IMesh> mesh) override;
+    std::shared_ptr<IMaterial> get_material() override;
+    void set_material(std::shared_ptr<IMaterial> material) override;
 
   private:
     template <typename T> T &get() {

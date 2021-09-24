@@ -70,11 +70,11 @@ class Context : public IContext {
     ~Context() override;
 
     std::unique_ptr<IWindow> create_window(const WindowInfo &info) override;
-    std::unique_ptr<ITexture>
-    create_texture_impl(const TextureInfo &info) override;
     std::unique_ptr<IScene> create_scene() override;
-    std::unique_ptr<IMesh> create_mesh(const MeshInfo &info) override;
-    std::unique_ptr<IMaterial> create_material() override;
+    std::shared_ptr<ITexture>
+    create_texture_impl(const TextureInfo &info) override;
+    std::shared_ptr<IMesh> create_mesh(const MeshInfo &info) override;
+    std::shared_ptr<IMaterial> create_material() override;
 
     [[nodiscard]] Instance *instance() const;
     [[nodiscard]] Device *device() const;

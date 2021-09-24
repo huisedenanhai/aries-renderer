@@ -65,7 +65,7 @@ class Application : public ars::engine::IApplication {
     void destroy() override {}
 
   private:
-    std::unique_ptr<ITexture> _texture{};
+    std::shared_ptr<ITexture> _texture{};
     std::set<std::unique_ptr<IWindow>> _windows{};
 };
 

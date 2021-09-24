@@ -19,11 +19,11 @@ class IRenderObject {
 
     virtual IScene *get_scene() = 0;
 
-    virtual IMesh *get_mesh() = 0;
-    virtual void set_mesh(IMesh *mesh) = 0;
+    virtual std::shared_ptr<IMesh> get_mesh() = 0;
+    virtual void set_mesh(std::shared_ptr<IMesh> mesh) = 0;
 
-    virtual IMaterial *get_material() = 0;
-    virtual void set_material(IMaterial *material) = 0;
+    virtual std::shared_ptr<IMaterial> get_material() = 0;
+    virtual void set_material(std::shared_ptr<IMaterial> material) = 0;
 };
 
 class IDirectionalLight {

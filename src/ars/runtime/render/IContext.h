@@ -50,18 +50,19 @@ class IContext {
 
     // This method returns nullptr if window creation fails
     virtual std::unique_ptr<IWindow> create_window(const WindowInfo &info) = 0;
+    virtual std::unique_ptr<IScene> create_scene() = 0;
 
-    std::unique_ptr<ITexture> create_texture(const TextureInfo &info);
-
-    std::unique_ptr<ITexture>
+    // Texture/Mesh/Material generally requires multiple ownership. return a
+    // shared_ptr by default.
+    std::shared_ptr<ITexture> create_texture(const TextureInfo &info);
+    std::shared_ptr<ITexture>
     create_texture_2d(Format format,
                       uint32_t width,
                       uint32_t height,
                       uint32_t mip_levels = MAX_MIP_LEVELS);
 
-    virtual std::unique_ptr<IScene> create_scene() = 0;
-    virtual std::unique_ptr<IMesh> create_mesh(const MeshInfo &info) = 0;
-    virtual std::unique_ptr<IMaterial> create_material() = 0;
+    virtual std::shared_ptr<IMesh> create_mesh(const MeshInfo &info) = 0;
+    virtual std::shared_ptr<IMaterial> create_material() = 0;
 
     // Call this method when a frame begins. If this method returns false,
     // the backend refuse to begin a new frame and no render work should be
@@ -79,7 +80,7 @@ class IContext {
     virtual void end_frame() = 0;
 
   protected:
-    virtual std::unique_ptr<ITexture>
+    virtual std::shared_ptr<ITexture>
     create_texture_impl(const TextureInfo &info) = 0;
 };
 

@@ -63,20 +63,20 @@ IScene *RenderObject::get_scene() {
     return _scene;
 }
 
-IMesh *RenderObject::get_mesh() {
-    return get<Mesh *>();
+std::shared_ptr<IMesh> RenderObject::get_mesh() {
+    return get<std::shared_ptr<Mesh>>();
 }
 
-void RenderObject::set_mesh(IMesh *mesh) {
-    get<Mesh *>() = upcast(mesh);
+void RenderObject::set_mesh(std::shared_ptr<IMesh> mesh) {
+    get<std::shared_ptr<Mesh>>() = upcast(mesh);
 }
 
-IMaterial *RenderObject::get_material() {
-    return get<IMaterial *>();
+std::shared_ptr<IMaterial> RenderObject::get_material() {
+    return get<std::shared_ptr<IMaterial>>();
 }
 
-void RenderObject::set_material(IMaterial *material) {
-    get<IMaterial *>() = material;
+void RenderObject::set_material(std::shared_ptr<IMaterial> material) {
+    get<std::shared_ptr<IMaterial>>() = std::move(material);
 }
 
 RenderObject::RenderObject(Scene *scene) : _scene(scene) {

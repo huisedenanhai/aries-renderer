@@ -10,44 +10,44 @@ class IMaterial {
   public:
     enum Mode { Opaque, Blend };
     Mode alpha_mode() const;
-    void set_alpha_mode(Mode alphaMode);
+    void set_alpha_mode(Mode alpha_mode);
 
     bool double_sided() const;
-    void set_double_sided(bool doubleSided);
+    void set_double_sided(bool double_sided);
 
     const glm::vec4 &base_color_factor() const;
-    void set_base_color_factor(const glm::vec4 &baseColorFactor);
+    void set_base_color_factor(const glm::vec4 &base_color_factor);
 
     const std::shared_ptr<ITexture> &base_color_tex() const;
-    void set_base_color_tex(const std::shared_ptr<ITexture> &baseColorTex);
+    void set_base_color_tex(const std::shared_ptr<ITexture> &base_color_tex);
 
     float metallic_factor() const;
-    void set_metallic_factor(float metallicFactor);
+    void set_metallic_factor(float metallic_factor);
 
     float roughness_factor() const;
-    void set_roughness_factor(float roughnessFactor);
+    void set_roughness_factor(float roughness_factor);
 
     const std::shared_ptr<ITexture> &metallic_roughness_tex() const;
     void set_metallic_roughness_tex(
-        const std::shared_ptr<ITexture> &metallicRoughnessTex);
+        const std::shared_ptr<ITexture> &metallic_roughness_tex);
 
     const std::shared_ptr<ITexture> &normal_tex() const;
-    void set_normal_tex(const std::shared_ptr<ITexture> &normalTex);
+    void set_normal_tex(const std::shared_ptr<ITexture> &normal_tex);
 
     float normal_scale() const;
-    void set_normal_scale(float normalScale);
+    void set_normal_scale(float normal_scale);
 
     const std::shared_ptr<ITexture> &occlusion_tex() const;
-    void set_occlusion_tex(const std::shared_ptr<ITexture> &occlusionTex);
+    void set_occlusion_tex(const std::shared_ptr<ITexture> &occlusion_tex);
 
     float occlusion_strength() const;
-    void set_occlusion_strength(float occlusionStrength);
+    void set_occlusion_strength(float occlusion_strength);
 
     const std::shared_ptr<ITexture> &emission_tex() const;
-    void set_emission_tex(const std::shared_ptr<ITexture> &emissionTex);
+    void set_emission_tex(const std::shared_ptr<ITexture> &emission_tex);
 
     const glm::vec3 &emission_factor() const;
-    void set_emission_factor(const glm::vec3 &emissionFactor);
+    void set_emission_factor(const glm::vec3 &emission_factor);
 
     virtual ~IMaterial() = default;
 

@@ -12,6 +12,7 @@ namespace ars::render {
 class IMesh;
 class IMaterial;
 class IContext;
+class ITexture;
 
 struct Model {
     using Index = uint32_t;

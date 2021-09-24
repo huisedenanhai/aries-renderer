@@ -1,6 +1,8 @@
 #include "Model.h"
 #include "../IContext.h"
 #include "../IMesh.h"
+#include "../ITexture.h"
+#include "Texture.h"
 #include <ars/runtime/core/Log.h>
 #include <ars/runtime/core/misc/Visitor.h>
 #include <chrono>
@@ -349,10 +351,74 @@ void load_cameras(const std::filesystem::path &path,
     }
 }
 
+std::shared_ptr<ITexture> load_texture(IContext *context,
+                                       const std::filesystem::path &path,
+                                       const tinygltf::Model &gltf,
+                                       const tinygltf::Texture &gltf_tex,
+                                       bool need_srgb) {
+    auto &image = gltf.images[gltf_tex.source];
+    int width = image.width;
+    int height = image.height;
+    int channels = image.component;
+    if (image.bits != 8 ||
+        image.pixel_type != TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE) {
+        std::stringstream ss;
+        ss << "Only supports 8bit texture, ignore texture "
+           << std::quoted(gltf_tex.name);
+        gltf_warn(path, ss.str());
+        return nullptr;
+    }
+
+    // TODO take sampler into account.
+    auto texture = context->create_texture_2d(
+        get_8_bit_texture_format(channels, need_srgb), width, height);
+
+    texture->set_data((void *)image.image.data(),
+                      width * height * channels,
+                      0,
+                      0,
+                      0,
+                      0,
+                      0,
+                      width,
+                      height,
+                      1);
+    texture->generate_mipmap();
+
+    return texture;
+}
+
 void load_textures(IContext *context,
+                   const std::filesystem::path &path,
                    const tinygltf::Model &gltf,
                    Model &model) {
-    // TODO
+    std::vector<bool> need_srgb{};
+    need_srgb.resize(gltf.textures.size());
+
+    for (auto &gltf_mat : gltf.materials) {
+        auto base_color = gltf_mat.pbrMetallicRoughness.baseColorTexture.index;
+        if (base_color >= 0) {
+            need_srgb[base_color] = true;
+        }
+
+        auto emission = gltf_mat.emissiveTexture.index;
+        if (emission >= 0) {
+            need_srgb[emission] = true;
+        }
+    }
+
+    model.textures.reserve(gltf.textures.size());
+    for (int index = 0; index < gltf.textures.size(); index++) {
+        const auto &gltf_tex = gltf.textures[index];
+
+        Model::Texture tex{};
+
+        tex.name = gltf_tex.name;
+        tex.texture =
+            load_texture(context, path, gltf, gltf_tex, need_srgb[index]);
+
+        model.textures.emplace_back(std::move(tex));
+    }
 }
 
 void load_materials(IContext *context,
@@ -370,7 +436,7 @@ Model load_gltf(IContext *context,
     load_nodes(gltf, model);
     load_scenes(gltf, model);
     load_cameras(path, gltf, model);
-    load_textures(context, gltf, model);
+    load_textures(context, path, gltf, model);
     load_materials(context, gltf, model);
 
     return model;

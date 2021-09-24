@@ -8,6 +8,21 @@
 #include <stb_image.h>
 
 namespace ars::render {
+Format get_8_bit_texture_format(uint32_t channels, bool need_srgb) {
+    Format formats[8] = {
+        Format::R8_SRGB,
+        Format::R8_UNORM,
+        Format::R8G8_SRGB,
+        Format::R8G8_UNORM,
+        Format::R8G8B8_SRGB,
+        Format::R8G8B8_UNORM,
+        Format::R8G8B8A8_SRGB,
+        Format::R8G8B8A8_UNORM,
+    };
+
+    return formats[(channels - 1) * 2 + (need_srgb ? 0 : 1)];
+}
+
 std::unique_ptr<ITexture> load_texture(IContext *context,
                                        const std::filesystem::path &path) {
 
@@ -16,8 +31,11 @@ std::unique_ptr<ITexture> load_texture(IContext *context,
     int width, height, channels;
 
     auto path_str = path.string();
+    // Only loads image as R8G8B8A8_SRGB for simplicity. Other formats may not
+    // be supported on some devices.
     unsigned char *data =
         stbi_load(path_str.c_str(), &width, &height, &channels, 4);
+    channels = 4;
 
     if (!data) {
         std::stringstream ss;
@@ -25,13 +43,13 @@ std::unique_ptr<ITexture> load_texture(IContext *context,
         panic(ss.str());
     }
 
-    auto texture =
-        context->create_texture_2d(Format::R8G8B8A8_SRGB, width, height);
+    auto texture = context->create_texture_2d(
+        get_8_bit_texture_format(channels, true), width, height);
 
     auto mid = high_resolution_clock::now();
 
     texture->set_data(
-        data, width * height * 4, 0, 0, 0, 0, 0, width, height, 1);
+        data, width * height * channels, 0, 0, 0, 0, 0, width, height, 1);
     texture->generate_mipmap();
 
     stbi_image_free(data);

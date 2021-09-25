@@ -25,37 +25,23 @@ class Application : public ars::engine::IApplication {
         }
 
         auto ctx = ars::engine::render_context();
-
-        ars::math::XformTRS<float> trans{};
-        auto m = trans.matrix();
-
-        ars::math::XformTRS<float> t(glm::identity<glm::mat4>());
+        auto tex = load_texture(ctx, "test.jpg");
 
         int window_num = 3;
         for (int i = 0; i < window_num; i++) {
             auto title = "Playground Render " + std::to_string(i);
-            WindowInfo info{};
-            info.title = title;
-            auto window = ctx->create_window(info);
-            _windows.insert(std::move(window));
+            ars::engine::create_window(
+                title.c_str(),
+                tex->width() / 2,
+                tex->height() / 2,
+                [tex](IWindow *window) { window->present(tex.get()); });
         }
 
-        _texture = load_texture(ctx, "test.jpg");
         auto model = load_gltf(ctx, "FlightHelmet/FlightHelmet.gltf");
     }
 
-    void update() override {
-        for (auto it = _windows.begin(); it != _windows.end();) {
-            if (it->get()->should_close()) {
-                it = _windows.erase(it);
-            } else {
-                ++it;
-            }
-        }
-
-        for (auto &w : _windows) {
-            w->present(_texture.get());
-        }
+    void update(IWindow *window) override {
+        window->present(nullptr);
     }
 
     void on_imgui() override {
@@ -65,8 +51,7 @@ class Application : public ars::engine::IApplication {
     void destroy() override {}
 
   private:
-    std::shared_ptr<ITexture> _texture{};
-    std::set<std::unique_ptr<IWindow>> _windows{};
+    std::vector<std::shared_ptr<IRenderObject>> objects{};
 };
 
 int main() {

@@ -17,7 +17,7 @@ class IApplication {
     [[nodiscard]] virtual std::string get_name() const;
 
     virtual void start() {}
-    virtual void update() {}
+    virtual void update(render::IWindow *window) {}
     virtual void on_imgui() {}
     virtual void destroy() {}
 };
@@ -30,7 +30,13 @@ class IApplication {
 // header that frequently triggers full rebuild and slow down further iteration.
 void start_engine(std::unique_ptr<IApplication> app);
 
-render::IWindow *main_window();
+using WindowRenderCallback = std::function<void(render::IWindow *)>;
+
+void create_window(const char *title,
+                   uint32_t logical_width,
+                   uint32_t logical_height,
+                   WindowRenderCallback render);
+
 render::IContext *render_context();
 } // namespace engine
 } // namespace ars

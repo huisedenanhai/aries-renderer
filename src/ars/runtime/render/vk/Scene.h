@@ -24,12 +24,21 @@ class View : public IView {
   public:
     explicit View(Scene *scene);
 
-    IScene *get_scene() override;
+    math::XformTRS<float> xform() override;
+    void set_xform(const math::XformTRS<float> &xform) override;
+
+    void set_camera(const CameraData &camera) override;
+    CameraData camera() override;
+
+    IScene *scene() override;
     void render() override;
+
     ITexture *get_color_texture() override;
 
   private:
     Scene *_scene = nullptr;
+    math::XformTRS<float> _xform{};
+    CameraData _camera = Perspective{};
 };
 
 class DirectionalLight : public IDirectionalLight {
@@ -37,9 +46,9 @@ class DirectionalLight : public IDirectionalLight {
     explicit DirectionalLight(Scene *scene);
     ~DirectionalLight() override;
 
-    math::XformTRS<float> get_xform() override;
+    math::XformTRS<float> xform() override;
     void set_xform(const math::XformTRS<float> &xform) override;
-    IScene *get_scene() override;
+    IScene *scene() override;
 
   private:
     template <typename T> T &get() {
@@ -55,12 +64,12 @@ class RenderObject : public IRenderObject {
     explicit RenderObject(Scene *scene);
     ~RenderObject() override;
 
-    math::XformTRS<float> get_xform() override;
+    math::XformTRS<float> xform() override;
     void set_xform(const math::XformTRS<float> &xform) override;
-    IScene *get_scene() override;
-    std::shared_ptr<IMesh> get_mesh() override;
+    IScene *scene() override;
+    std::shared_ptr<IMesh> mesh() override;
     void set_mesh(std::shared_ptr<IMesh> mesh) override;
-    std::shared_ptr<IMaterial> get_material() override;
+    std::shared_ptr<IMaterial> material() override;
     void set_material(std::shared_ptr<IMaterial> material) override;
 
   private:

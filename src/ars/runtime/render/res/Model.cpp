@@ -11,26 +11,6 @@
 #include <tiny_gltf.h>
 
 namespace ars::render {
-Model::Camera::Type Model::Camera::type() const {
-    if (std::holds_alternative<PerspectiveData>(data)) {
-        return Model::Camera::Perspective;
-    }
-    return Model::Camera::Orthographic;
-}
-
-glm::mat4 Model::Camera::projection_matrix(float aspect) const {
-    return std::visit(make_visitor(
-                          [](const PerspectiveData &pers) {
-                              // TODO
-                              return glm::identity<glm::mat4>();
-                          },
-                          [](const OrthographicData &ortho) {
-                              // TODO
-                              return glm::identity<glm::mat4>();
-                          }),
-                      data);
-}
-
 namespace {
 void gltf_warn(const std::filesystem::path &path, const std::string &info) {
     std::stringstream ss;
@@ -310,17 +290,16 @@ void load_cameras(const std::filesystem::path &path,
         camera.name = gltf_camera.name;
 
         if (gltf_camera.type == "perspective") {
-            Model::Camera::PerspectiveData pers{};
+            Perspective pers{};
             const auto &gltf_pers = gltf_camera.perspective;
 
-            pers.has_z_far = gltf_pers.zfar > 0.0;
             pers.y_fov = static_cast<float>(gltf_pers.yfov);
             pers.z_near = static_cast<float>(gltf_pers.znear);
             pers.z_far = static_cast<float>(gltf_pers.zfar);
 
             camera.data = pers;
         } else if (gltf_camera.type == "orthographic") {
-            Model::Camera::OrthographicData ortho{};
+            Orthographic ortho{};
             const auto &gltf_ortho = gltf_camera.orthographic;
 
             ortho.z_far = static_cast<float>(gltf_ortho.zfar);
@@ -329,9 +308,8 @@ void load_cameras(const std::filesystem::path &path,
 
             camera.data = ortho;
         } else {
-            Model::Camera::PerspectiveData pers{};
+            Perspective pers{};
 
-            pers.has_z_far = true;
             pers.y_fov = glm::radians(45.0f);
             pers.z_near = 0.1f;
             pers.z_far = 100.0f;

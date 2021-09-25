@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../IScene.h"
 #include <ars/runtime/core/math/Transform.h>
 #include <filesystem>
 #include <memory>
@@ -41,27 +42,8 @@ struct Model {
     };
 
     struct Camera {
-        struct PerspectiveData {
-            float y_fov;
-            bool has_z_far;
-            float z_far;
-            float z_near;
-        };
-
-        struct OrthographicData {
-            float y_mag;
-            float z_far;
-            float z_near;
-        };
-
-        enum Type { Perspective, Orthographic };
-
         std::string name;
-
-        std::variant<PerspectiveData, OrthographicData> data;
-
-        [[nodiscard]] Type type() const;
-        [[nodiscard]] glm::mat4 projection_matrix(float aspect) const;
+        CameraData data;
     };
 
     struct Texture {

@@ -14,7 +14,7 @@ std::unique_ptr<IView> Scene::create_view() {
     return std::make_unique<View>(this);
 }
 
-IScene *View::get_scene() {
+IScene *View::scene() {
     return _scene;
 }
 
@@ -31,7 +31,23 @@ View::View(Scene *scene) : _scene(scene) {
     // TODO
 }
 
-math::XformTRS<float> DirectionalLight::get_xform() {
+math::XformTRS<float> View::xform() {
+    return _xform;
+}
+
+void View::set_xform(const math::XformTRS<float> &xform) {
+    _xform = xform;
+}
+
+void View::set_camera(const CameraData &camera) {
+    _camera = camera;
+}
+
+CameraData View::camera() {
+    return _camera;
+}
+
+math::XformTRS<float> DirectionalLight::xform() {
     return math::XformTRS<float>(get<glm::mat4>());
 }
 
@@ -39,7 +55,7 @@ void DirectionalLight::set_xform(const math::XformTRS<float> &xform) {
     get<glm::mat4>() = xform.matrix();
 }
 
-IScene *DirectionalLight::get_scene() {
+IScene *DirectionalLight::scene() {
     return _scene;
 }
 
@@ -51,7 +67,7 @@ DirectionalLight::~DirectionalLight() {
     _scene->directional_lights.free(_id);
 }
 
-math::XformTRS<float> RenderObject::get_xform() {
+math::XformTRS<float> RenderObject::xform() {
     return math::XformTRS<float>(get<glm::mat4>());
 }
 
@@ -59,11 +75,11 @@ void RenderObject::set_xform(const math::XformTRS<float> &xform) {
     get<glm::mat4>() = xform.matrix();
 }
 
-IScene *RenderObject::get_scene() {
+IScene *RenderObject::scene() {
     return _scene;
 }
 
-std::shared_ptr<IMesh> RenderObject::get_mesh() {
+std::shared_ptr<IMesh> RenderObject::mesh() {
     return get<std::shared_ptr<Mesh>>();
 }
 
@@ -71,7 +87,7 @@ void RenderObject::set_mesh(std::shared_ptr<IMesh> mesh) {
     get<std::shared_ptr<Mesh>>() = upcast(mesh);
 }
 
-std::shared_ptr<IMaterial> RenderObject::get_material() {
+std::shared_ptr<IMaterial> RenderObject::material() {
     return get<std::shared_ptr<IMaterial>>();
 }
 

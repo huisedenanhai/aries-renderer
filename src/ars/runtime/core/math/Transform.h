@@ -43,6 +43,10 @@ template <typename T> struct XformTRS {
                glm::scale(ident, _scale);
     }
 
+    friend XformTRS operator*(const XformTRS &lhs, const XformTRS &rhs) {
+        return XformTRS(lhs.matrix() * rhs.matrix());
+    }
+
   private:
     Vec3 _translation{0, 0, 0};
     Quat _rotation{1, 0, 0, 0};

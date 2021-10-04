@@ -7,13 +7,18 @@
 #include <ars/runtime/render/res/Texture.h>
 #include <chrono>
 #include <imgui/imgui.h>
-#include <set>
 #include <string>
 
 using namespace ars::render;
 
 class Application : public ars::engine::IApplication {
   public:
+    ~Application() override {
+        _objects.clear();
+        _view.reset();
+        _scene.reset();
+    }
+
     [[nodiscard]] std::string get_name() const override {
         return "Playground Render";
     }
@@ -38,10 +43,52 @@ class Application : public ars::engine::IApplication {
         }
 
         auto model = load_gltf(ctx, "FlightHelmet/FlightHelmet.gltf");
+        _scene = ctx->create_scene();
+        _view = _scene->create_view();
+
+        load_render_objects(model);
+    }
+
+    void load_render_objects(const Model &model) {
+        if (model.scenes.empty()) {
+            return;
+        }
+        auto &scene = model.scenes[model.default_scene.value_or(0)];
+        for (auto n : scene.nodes) {
+            load_render_objects(model, n, {});
+        }
+    }
+
+    void
+    load_render_objects(const Model &model,
+                        Model::Index node,
+                        const ars::math::XformTRS<float> &parent_to_world) {
+        auto &n = model.nodes[node];
+        auto xform = parent_to_world * n.local_to_parent;
+        if (n.mesh.has_value()) {
+            auto &m = model.meshes[n.mesh.value()];
+            for (auto &p : m.primitives) {
+                auto rd_obj = _scene->create_render_object();
+                rd_obj->set_xform(xform);
+                rd_obj->set_mesh(p.mesh);
+
+                if (p.material.has_value()) {
+                    auto &mat = model.materials[p.material.value()];
+                    rd_obj->set_material(mat.material);
+                }
+
+                _objects.emplace_back(std::move(rd_obj));
+            }
+        }
+
+        for (auto child : n.children) {
+            load_render_objects(model, child, xform);
+        }
     }
 
     void update(IWindow *window) override {
-        window->present(nullptr);
+        _view->render();
+        window->present(_view->get_color_texture());
     }
 
     void on_imgui() override {
@@ -51,7 +98,9 @@ class Application : public ars::engine::IApplication {
     void destroy() override {}
 
   private:
-    std::vector<std::shared_ptr<IRenderObject>> objects{};
+    std::vector<std::unique_ptr<IRenderObject>> _objects{};
+    std::unique_ptr<IView> _view{};
+    std::unique_ptr<IScene> _scene{};
 };
 
 int main() {

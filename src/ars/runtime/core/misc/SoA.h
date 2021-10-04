@@ -51,6 +51,12 @@ template <typename T> struct IndexOfType<T> {
     static constexpr size_t value = 0;
 };
 
+template <typename Func, typename Tp>
+void tuple_for_each(Func &&func, Tp &&tp) {
+    std::apply([&](auto &&...v) { (func(std::forward<decltype(v)>(v)), ...); },
+               std::forward<Tp>(tp));
+}
+
 template <typename... Ts> struct SoA {
   public:
     struct Id {
@@ -68,7 +74,7 @@ template <typename... Ts> struct SoA {
     Id alloc() {
         auto id = _indices.alloc();
         _indices.set_value(id, static_cast<uint64_t>(size()));
-        std::apply([&](auto &&v...) { v.emplace_back(); }, _soa);
+        tuple_for_each([&](auto &&v) { v.emplace_back(); }, _soa);
         get_inverse_id().back().value = id;
         return Id{id};
     }
@@ -76,8 +82,8 @@ template <typename... Ts> struct SoA {
     void free(Id id) {
         auto soa_index = _indices.get_value(id._value);
         auto moved_id = get_inverse_id().back().value;
-        std::apply(
-            [&](auto &&v...) {
+        tuple_for_each(
+            [&](auto &&v) {
                 std::swap(v[soa_index], v.back());
                 v.pop_back();
             },

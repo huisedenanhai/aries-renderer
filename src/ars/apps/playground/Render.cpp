@@ -13,12 +13,6 @@ using namespace ars::render;
 
 class Application : public ars::engine::IApplication {
   public:
-    ~Application() override {
-        _objects.clear();
-        _view.reset();
-        _scene.reset();
-    }
-
     [[nodiscard]] std::string get_name() const override {
         return "Playground Render";
     }
@@ -44,7 +38,7 @@ class Application : public ars::engine::IApplication {
 
         auto model = load_gltf(ctx, "FlightHelmet/FlightHelmet.gltf");
         _scene = ctx->create_scene();
-        _view = _scene->create_view();
+        _view = _scene->create_view(window()->physical_size());
 
         load_render_objects(model);
     }
@@ -86,16 +80,21 @@ class Application : public ars::engine::IApplication {
         }
     }
 
-    void update(IWindow *window) override {
+    void update() override {
+        _view->set_size(window()->physical_size());
         _view->render();
-        window->present(_view->get_color_texture());
+        window()->present(_view->get_color_texture());
     }
 
     void on_imgui() override {
         ImGui::ShowDemoWindow();
     }
 
-    void destroy() override {}
+    void destroy() override {
+        _objects.clear();
+        _view.reset();
+        _scene.reset();
+    }
 
   private:
     std::vector<std::unique_ptr<IRenderObject>> _objects{};

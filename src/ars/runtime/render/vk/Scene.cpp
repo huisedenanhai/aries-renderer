@@ -10,8 +10,8 @@ std::unique_ptr<IDirectionalLight> Scene::create_directional_light() {
     return std::make_unique<DirectionalLight>(this);
 }
 
-std::unique_ptr<IView> Scene::create_view() {
-    return std::make_unique<View>(this);
+std::unique_ptr<IView> Scene::create_view(const Extent2D &size) {
+    return std::make_unique<View>(this, size);
 }
 
 IScene *View::scene() {
@@ -27,7 +27,7 @@ ITexture *View::get_color_texture() {
     return nullptr;
 }
 
-View::View(Scene *scene) : _scene(scene) {
+View::View(Scene *scene, const Extent2D &size) : _scene(scene), _size(size) {
     // TODO
 }
 
@@ -45,6 +45,14 @@ void View::set_camera(const CameraData &camera) {
 
 CameraData View::camera() {
     return _camera;
+}
+
+Extent2D View::size() {
+    return _size;
+}
+
+void View::set_size(const Extent2D &size) {
+    _size = size;
 }
 
 math::XformTRS<float> DirectionalLight::xform() {

@@ -15,12 +15,19 @@ class IApplication {
   public:
     virtual ~IApplication() = default;
 
+    void init(render::IWindow *window);
+    render::IWindow *window() const;
+
     [[nodiscard]] virtual std::string get_name() const;
 
+    // Callbacks to override
     virtual void start() {}
-    virtual void update(render::IWindow *window) {}
+    virtual void update() {}
     virtual void on_imgui() {}
     virtual void destroy() {}
+
+  private:
+    render::IWindow *_window = nullptr;
 };
 
 // Engine is the runtime, the singleton that manages the life-time of all

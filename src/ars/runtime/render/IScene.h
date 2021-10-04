@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../core/math/Transform.h"
+#include "Common.h"
 #include <memory>
 #include <variant>
 
@@ -62,8 +63,11 @@ class IView {
     virtual void set_xform(const math::XformTRS<float> &xform) = 0;
 
     // by default a view holds a perspective camera with default values
-    virtual void set_camera(const CameraData &camera) = 0;
     virtual CameraData camera() = 0;
+    virtual void set_camera(const CameraData &camera) = 0;
+
+    virtual Extent2D size() = 0;
+    virtual void set_size(const Extent2D &size) = 0;
 
     // Render and update the texture
     virtual void render() = 0;
@@ -76,6 +80,6 @@ class IScene {
 
     virtual std::unique_ptr<IRenderObject> create_render_object() = 0;
     virtual std::unique_ptr<IDirectionalLight> create_directional_light() = 0;
-    virtual std::unique_ptr<IView> create_view() = 0;
+    virtual std::unique_ptr<IView> create_view(const Extent2D &size) = 0;
 };
 } // namespace ars::render

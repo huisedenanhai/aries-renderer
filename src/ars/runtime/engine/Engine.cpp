@@ -1,4 +1,5 @@
 #include "Engine.h"
+#include <ars/runtime/core/Log.h>
 #include <ars/runtime/render/IContext.h>
 #include <ars/runtime/render/IScene.h>
 #include <ars/runtime/render/ITexture.h>
@@ -10,6 +11,19 @@
 namespace ars::engine {
 std::string engine::IApplication::get_name() const {
     return "";
+}
+
+void IApplication::init(render::IWindow *window) {
+    if (_window != nullptr) {
+        log_error("Should not init the application twice.");
+        return;
+    }
+    _window = window;
+    _window->set_imgui_callback([this]() { on_imgui(); });
+}
+
+render::IWindow *IApplication::window() const {
+    return _window;
 }
 
 namespace {
@@ -57,13 +71,14 @@ class Engine {
     void run() {
         init_render();
 
+        _application->init(_main_window.get());
         _application->start();
 
         while (!_main_window->should_close()) {
             check_secondary_windows_should_close();
 
             if (_render_context->begin_frame()) {
-                _application->update(_main_window.get());
+                _application->update();
 
                 for (auto &w : _secondary_windows) {
                     w->update();
@@ -116,9 +131,6 @@ class Engine {
 
         _render_context = std::move(ctx);
         _main_window = std::move(window);
-
-        _main_window->set_imgui_callback(
-            [this]() { _application->on_imgui(); });
     }
 
     void destroy_render() {

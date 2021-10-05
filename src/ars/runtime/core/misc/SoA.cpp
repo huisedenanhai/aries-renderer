@@ -43,11 +43,11 @@ void IndexPool::set_value(uint64_t index, uint64_t value) {
     _indices[index].set_alloc(value);
 }
 
-uint64_t IndexPool::get_value(uint64_t index) {
+uint64_t IndexPool::get_value(uint64_t index) const {
     return _indices[index].get_alloc().value();
 }
 
-std::optional<uint64_t> IndexPool::IndexSlot::get_alloc() {
+std::optional<uint64_t> IndexPool::IndexSlot::get_alloc() const {
     if (!is_free()) {
         return _value;
     }

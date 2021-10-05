@@ -59,6 +59,8 @@ class Texture {
     [[nodiscard]] VkImageLayout layout() const;
     [[nodiscard]] VkImageView image_view() const;
 
+    [[nodiscard]] const TextureCreateInfo &info() const;
+
   private:
     // Transfer all subresources to the target layout and set the _layout field.
     // This method assumes all layers and levels of the image are in the same

@@ -1,4 +1,6 @@
 aries_target_sources(render PRIVATE
+        RenderTarget.cpp
+        RenderTarget.h
         Descriptor.cpp
         Descriptor.h
         ImGui.cpp

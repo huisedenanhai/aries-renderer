@@ -136,7 +136,7 @@ void Texture::set_data(void *data,
         region.bufferOffset = 0;
         region.bufferRowLength = 0;
         region.bufferImageHeight = 0;
-        region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        region.imageSubresource.aspectMask = _info.aspect_mask;
         region.imageSubresource.mipLevel = mip_level;
         region.imageSubresource.baseArrayLayer = layer;
         region.imageSubresource.layerCount = 1;
@@ -343,6 +343,10 @@ VkImageLayout Texture::layout() const {
 
 VkImageView Texture::image_view() const {
     return _image_view;
+}
+
+const TextureCreateInfo &Texture::info() const {
+    return _info;
 }
 
 TextureCreateInfo TextureCreateInfo::sampled_2d(VkFormat format,

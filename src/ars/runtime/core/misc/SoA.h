@@ -14,14 +14,14 @@ class IndexPool {
 
     void set_value(uint64_t index, uint64_t value);
 
-    uint64_t get_value(uint64_t index);
+    [[nodiscard]] uint64_t get_value(uint64_t index) const;
 
   private:
     struct IndexSlot {
       public:
         static constexpr uint64_t FREE_BIT = 1ULL << 63;
 
-        std::optional<uint64_t> get_alloc();
+        [[nodiscard]] std::optional<uint64_t> get_alloc() const;
 
         [[nodiscard]] std::optional<uint64_t> get_free() const;
 
@@ -62,6 +62,10 @@ template <typename... Ts> struct SoA {
     struct Id {
       public:
         Id() = default;
+
+        bool operator==(const Id &rhs) const {
+            return _value == rhs._value;
+        }
 
       private:
         friend SoA;
@@ -112,6 +116,14 @@ template <typename... Ts> struct SoA {
     template <typename T> const T &get(Id id) const {
         auto soa_index = _indices.get_value(id._value);
         return get_array<T>()[soa_index];
+    }
+
+    template <typename Func> void for_each_id(Func &&func) {
+        auto count = size();
+        for (size_t i = 0; i < count; i++) {
+            auto id = Id(get_inverse_id()[i].value);
+            func(id);
+        }
     }
 
   private:

@@ -63,6 +63,26 @@ void Mesh::set_indices(glm::u32vec3 *indices,
     _index_buffer->set_data(indices, elem_offset, elem_count);
 }
 
+Handle<Buffer> Mesh::position_buffer() const {
+    return _position_buffer;
+}
+
+Handle<Buffer> Mesh::normal_buffer() const {
+    return _normal_buffer;
+}
+
+Handle<Buffer> Mesh::tangent_buffer() const {
+    return _tangent_buffer;
+}
+
+Handle<Buffer> Mesh::tex_coord_buffer() const {
+    return _tex_coord_buffer;
+}
+
+Handle<Buffer> Mesh::index_buffer() const {
+    return _index_buffer;
+}
+
 std::shared_ptr<Mesh> upcast(const std::shared_ptr<IMesh> &mesh) {
     return std::reinterpret_pointer_cast<Mesh>(mesh);
 }

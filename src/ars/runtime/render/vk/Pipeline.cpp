@@ -300,7 +300,7 @@ void GraphicsPipeline::init_pipeline(const GraphicsPipelineInfo &info) {
     if (_context->device()->Create(
             _context->pipeline_cache(), 1, &create_info, &_pipeline) !=
         VK_SUCCESS) {
-        panic("Failed to create pipeline for swapchain present");
+        panic("Failed to create graphics pipeline");
     }
 }
 

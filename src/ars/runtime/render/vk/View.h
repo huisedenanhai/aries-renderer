@@ -6,6 +6,7 @@
 namespace ars::render::vk {
 class Scene;
 class TextureAdapter;
+class GraphicsPipeline;
 
 class View : public IView {
   public:
@@ -26,8 +27,11 @@ class View : public IView {
 
     ITexture *get_color_texture() override;
 
+    Context *context() const;
+
   private:
     void init_render_pass();
+    void init_pipeline();
     void alloc_render_targets();
     void update_color_tex_adapter();
     TextureInfo color_tex_info() const;
@@ -43,5 +47,6 @@ class View : public IView {
     std::unique_ptr<TextureAdapter> _color_tex_adapter{};
 
     VkRenderPass _render_pass = VK_NULL_HANDLE;
+    std::unique_ptr<GraphicsPipeline> _base_color_pipeline{};
 };
 } // namespace ars::render::vk

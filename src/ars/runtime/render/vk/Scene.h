@@ -43,7 +43,7 @@ class DirectionalLight : public IDirectionalLight {
     }
 
     Scene *_scene = nullptr;
-    Scene::DirectionalLights ::Id _id{};
+    Scene::DirectionalLights::Id _id{};
 };
 
 class RenderObject : public IRenderObject {

@@ -1,5 +1,8 @@
 #include "View.h"
 #include "Context.h"
+#include "Material.h"
+#include "Mesh.h"
+#include "Pipeline.h"
 #include "Scene.h"
 #include <ars/runtime/core/Log.h>
 
@@ -11,7 +14,7 @@ VkExtent2D translate(const Extent2D &size) {
 } // namespace
 
 void View::render() {
-    auto context = _scene->context();
+    auto ctx = context();
     _rt_manager->update(translate(_size));
     auto color_rt = _rt_manager->get(_color_rt_id);
     VkExtent2D extent{
@@ -29,8 +32,8 @@ void View::render() {
     fb_info.attachmentCount = static_cast<uint32_t>(std::size(attachments));
     fb_info.pAttachments = attachments;
 
-    auto fb = context->create_tmp_framebuffer(&fb_info);
-    context->queue()->submit_once([&](CommandBuffer *cmd) {
+    auto fb = ctx->create_tmp_framebuffer(&fb_info);
+    ctx->queue()->submit_once([&](CommandBuffer *cmd) {
         VkClearValue clear_value{};
         auto &clear_color = clear_value.color.float32;
         clear_color[0] = 1.0f;
@@ -47,6 +50,64 @@ void View::render() {
         rp_begin.renderArea = {{0, 0}, extent};
 
         cmd->BeginRenderPass(&rp_begin, VK_SUBPASS_CONTENTS_INLINE);
+
+        cmd->BindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS,
+                          _base_color_pipeline->pipeline());
+
+        VkViewport viewport;
+        viewport.x = 0;
+        viewport.y = 0;
+        viewport.width = (float)extent.width;
+        viewport.height = (float)extent.height;
+        viewport.minDepth = 0.0f;
+        viewport.maxDepth = 1.0f;
+        cmd->SetViewport(0, 1, &viewport);
+
+        VkRect2D scissor{{0, 0}, extent};
+        cmd->SetScissor(0, 1, &scissor);
+
+        auto &rd_objs = _scene->render_objects;
+        rd_objs.for_each_id([&](Scene::RenderObjects::Id id) {
+            auto &matrix = rd_objs.get<glm::mat4>(id);
+            auto &mesh = rd_objs.get<std::shared_ptr<Mesh>>(id);
+            auto &material = rd_objs.get<std::shared_ptr<IMaterial>>(id);
+            auto base_color = upcast(material->base_color_tex().get());
+
+            auto desc_set = _base_color_pipeline->alloc_desc_set(0);
+            VkWriteDescriptorSet write{};
+            VkDescriptorImageInfo image_info{};
+            fill_combined_image_sampler(
+                &write, &image_info, desc_set, 0, base_color.get());
+
+            ctx->device()->UpdateDescriptorSets(1, &write, 0, nullptr);
+
+            cmd->BindDescriptorSets(VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                    _base_color_pipeline->pipeline_layout(),
+                                    0,
+                                    1,
+                                    &desc_set,
+                                    0,
+                                    nullptr);
+
+            auto mvp = matrix;
+            cmd->PushConstants(_base_color_pipeline->pipeline_layout(),
+                               VK_SHADER_STAGE_VERTEX_BIT,
+                               0,
+                               sizeof(glm::mat4),
+                               &mvp);
+
+            VkBuffer vertex_buffers[2] = {
+                mesh->position_buffer()->buffer(),
+                mesh->tex_coord_buffer()->buffer(),
+            };
+            VkDeviceSize vertex_offsets[2] = {0, 0};
+            cmd->BindVertexBuffers(0, 2, vertex_buffers, vertex_offsets);
+            cmd->BindIndexBuffer(
+                mesh->index_buffer()->buffer(), 0, VK_INDEX_TYPE_UINT32);
+
+            cmd->DrawIndexed(mesh->triangle_count() * 3, 1, 0, 0, 0);
+        });
+
         cmd->EndRenderPass();
 
         color_rt->assure_layout(VK_IMAGE_LAYOUT_GENERAL);
@@ -65,6 +126,7 @@ View::View(Scene *scene, const Extent2D &size) : _scene(scene), _size(size) {
 
     alloc_render_targets();
     init_render_pass();
+    init_pipeline();
 }
 
 math::XformTRS<float> View::xform() {
@@ -121,7 +183,7 @@ void View::alloc_render_targets() {
 }
 
 View::~View() {
-    auto device = _scene->context()->device();
+    auto device = context()->device();
     if (_render_pass != VK_NULL_HANDLE) {
         device->Destroy(_render_pass);
     }
@@ -153,9 +215,58 @@ void View::init_render_pass() {
     info.subpassCount = 1;
     info.pSubpasses = &subpass;
 
-    auto device = _scene->context()->device();
+    auto device = context()->device();
     if (device->Create(&info, &_render_pass) != VK_NULL_HANDLE) {
         panic("Failed to create render pass for view");
     }
+}
+
+void View::init_pipeline() {
+    auto ctx = context();
+    auto vert_shader = std::make_unique<Shader>(ctx, "BaseColor.vert");
+    auto frag_shader = std::make_unique<Shader>(ctx, "BaseColor.frag");
+
+    VkPipelineVertexInputStateCreateInfo vertex_input{
+        VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
+
+    VkVertexInputBindingDescription vert_bindings[2] = {
+        {0,
+         static_cast<uint32_t>(sizeof(glm::vec3)),
+         VK_VERTEX_INPUT_RATE_VERTEX},
+        {1,
+         static_cast<uint32_t>(sizeof(glm::vec2)),
+         VK_VERTEX_INPUT_RATE_VERTEX},
+    };
+
+    VkVertexInputAttributeDescription vert_attrs[2] = {
+        {0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0},
+        {1, 1, VK_FORMAT_R32G32_SFLOAT, 0},
+    };
+
+    vertex_input.vertexAttributeDescriptionCount =
+        static_cast<uint32_t>(std::size(vert_attrs));
+    vertex_input.pVertexAttributeDescriptions = vert_attrs;
+    vertex_input.vertexBindingDescriptionCount =
+        static_cast<uint32_t>(std::size(vert_bindings));
+    vertex_input.pVertexBindingDescriptions = vert_bindings;
+
+    VkPushConstantRange push_constant_range{
+        VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4)};
+
+    GraphicsPipelineInfo info{};
+    info.shaders.push_back(vert_shader.get());
+    info.shaders.push_back(frag_shader.get());
+    info.render_pass = _render_pass;
+    info.subpass = 0;
+
+    info.push_constant_range_count = 1;
+    info.push_constant_ranges = &push_constant_range;
+    info.vertex_input = &vertex_input;
+
+    _base_color_pipeline = std::make_unique<GraphicsPipeline>(ctx, info);
+}
+
+Context *View::context() const {
+    return _scene->context();
 }
 } // namespace ars::render::vk

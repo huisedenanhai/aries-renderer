@@ -3,6 +3,8 @@
     "Blit.vert",
     "Blit.frag",
     "ImGui.vert",
-    "ImGui.frag"
+    "ImGui.frag",
+    "BaseColor.vert",
+    "BaseColor.frag"
   ]
 }

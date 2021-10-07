@@ -35,6 +35,12 @@ class Mesh : public IMesh {
                      size_t elem_offset,
                      size_t elem_count) override;
 
+    Handle<Buffer> position_buffer() const;
+    Handle<Buffer> normal_buffer() const;
+    Handle<Buffer> tangent_buffer() const;
+    Handle<Buffer> tex_coord_buffer() const;
+    Handle<Buffer> index_buffer() const;
+
   private:
     Context *_context = nullptr;
 

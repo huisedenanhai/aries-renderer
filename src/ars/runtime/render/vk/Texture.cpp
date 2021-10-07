@@ -349,6 +349,10 @@ const TextureCreateInfo &Texture::info() const {
     return _info;
 }
 
+void Texture::assure_layout(VkImageLayout layout) {
+    _layout = layout;
+}
+
 TextureCreateInfo TextureCreateInfo::sampled_2d(VkFormat format,
                                                 uint32_t width,
                                                 uint32_t height,

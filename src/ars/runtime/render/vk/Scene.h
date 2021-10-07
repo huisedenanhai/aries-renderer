@@ -5,12 +5,17 @@
 
 namespace ars::render::vk {
 class Mesh;
+class Context;
 
 class Scene : public IScene {
   public:
+    explicit Scene(Context *context);
+
     std::unique_ptr<IRenderObject> create_render_object() override;
     std::unique_ptr<IDirectionalLight> create_directional_light() override;
     std::unique_ptr<IView> create_view(const Extent2D &size) override;
+
+    Context *context() const;
 
     using RenderObjects =
         SoA<glm::mat4, std::shared_ptr<Mesh>, std::shared_ptr<IMaterial>>;
@@ -18,31 +23,9 @@ class Scene : public IScene {
 
     using DirectionalLights = SoA<glm::mat4>;
     DirectionalLights directional_lights{};
-};
-
-class View : public IView {
-  public:
-    View(Scene *scene, const Extent2D &size);
-
-    math::XformTRS<float> xform() override;
-    void set_xform(const math::XformTRS<float> &xform) override;
-
-    CameraData camera() override;
-    void set_camera(const CameraData &camera) override;
-
-    Extent2D size() override;
-    void set_size(const Extent2D &size) override;
-
-    IScene *scene() override;
-    void render() override;
-
-    ITexture *get_color_texture() override;
 
   private:
-    Scene *_scene = nullptr;
-    math::XformTRS<float> _xform{};
-    CameraData _camera = Perspective{};
-    Extent2D _size{};
+    Context *_context = nullptr;
 };
 
 class DirectionalLight : public IDirectionalLight {

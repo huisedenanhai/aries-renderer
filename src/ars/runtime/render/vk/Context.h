@@ -107,6 +107,9 @@ class Context : public IContext {
     Handle<Buffer> create_buffer(VkDeviceSize size,
                                  VkBufferUsageFlags buffer_usage,
                                  VmaMemoryUsage memory_usage);
+
+    VkFramebuffer create_tmp_framebuffer(VkFramebufferCreateInfo *info);
+
     std::unique_ptr<Swapchain> create_swapchain(GLFWwindow *window,
                                                 bool owns_window);
 
@@ -146,6 +149,8 @@ class Context : public IContext {
     std::vector<std::shared_ptr<Texture>> _textures{};
     std::vector<std::shared_ptr<CommandBuffer>> _command_buffers{};
     std::vector<std::shared_ptr<Buffer>> _buffers{};
+
+    std::vector<VkFramebuffer> _tmp_framebuffers{};
 
     ContextProperties _properties{};
 };

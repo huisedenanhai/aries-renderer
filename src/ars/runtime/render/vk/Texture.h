@@ -61,6 +61,8 @@ class Texture {
 
     [[nodiscard]] const TextureCreateInfo &info() const;
 
+    void assure_layout(VkImageLayout layout);
+
   private:
     // Transfer all subresources to the target layout and set the _layout field.
     // This method assumes all layers and levels of the image are in the same
@@ -90,7 +92,7 @@ class TextureAdapter : public ITexture {
   public:
     TextureAdapter(const TextureInfo &info, Handle<Texture> texture);
 
-    ARS_NO_COPY_MOVE(TextureAdapter);
+    ARS_DEFAULT_COPY_MOVE(TextureAdapter);
 
     void set_data(void *data,
                   size_t size,

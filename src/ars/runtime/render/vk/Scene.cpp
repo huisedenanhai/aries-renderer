@@ -1,5 +1,6 @@
 #include "Scene.h"
 #include "Mesh.h"
+#include "View.h"
 
 namespace ars::render::vk {
 std::unique_ptr<IRenderObject> Scene::create_render_object() {
@@ -14,45 +15,14 @@ std::unique_ptr<IView> Scene::create_view(const Extent2D &size) {
     return std::make_unique<View>(this, size);
 }
 
+Scene::Scene(Context *context) : _context(context) {}
+
+Context *Scene::context() const {
+    return _context;
+}
+
 IScene *View::scene() {
     return _scene;
-}
-
-void View::render() {
-    // TODO
-}
-
-ITexture *View::get_color_texture() {
-    // TODO
-    return nullptr;
-}
-
-View::View(Scene *scene, const Extent2D &size) : _scene(scene), _size(size) {
-    // TODO
-}
-
-math::XformTRS<float> View::xform() {
-    return _xform;
-}
-
-void View::set_xform(const math::XformTRS<float> &xform) {
-    _xform = xform;
-}
-
-void View::set_camera(const CameraData &camera) {
-    _camera = camera;
-}
-
-CameraData View::camera() {
-    return _camera;
-}
-
-Extent2D View::size() {
-    return _size;
-}
-
-void View::set_size(const Extent2D &size) {
-    _size = size;
 }
 
 math::XformTRS<float> DirectionalLight::xform() {

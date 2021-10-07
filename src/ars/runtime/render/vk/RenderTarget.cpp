@@ -58,6 +58,9 @@ void RenderTargetManager::update_rt(const RenderTargetManager::Id &id) {
     auto &scale_func = _render_targets.get<ScaleFunc>(id);
 
     auto desired_size = scale_func(_reference_size);
+    desired_size.width = std::max(desired_size.width, 1u);
+    desired_size.height = std::max(desired_size.height, 1u);
+
     auto tex_info = info.texture;
     tex_info.extent.width = desired_size.width;
     tex_info.extent.height = desired_size.height;

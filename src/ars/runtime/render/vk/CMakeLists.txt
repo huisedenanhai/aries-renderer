@@ -1,4 +1,6 @@
 aries_target_sources(render PRIVATE
+        View.cpp
+        View.h
         RenderTarget.cpp
         RenderTarget.h
         Descriptor.cpp
@@ -32,3 +34,5 @@ add_dependencies(render shaders)
 
 target_include_directories(render PRIVATE
         ${CMAKE_BINARY_DIR}/spv)
+
+add_subdirectory(features)

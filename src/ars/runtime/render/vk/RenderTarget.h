@@ -36,7 +36,6 @@ class RenderTargetManager {
 
     [[nodiscard]] Handle<Texture> get(const Id &id) const;
 
-    // If width or height of reference size is 0, no texture will be reallocated
     void update(VkExtent2D reference_size);
 
     Id alloc(const RenderTargetInfo &info, float scale = 1.0f);
@@ -52,4 +51,6 @@ class RenderTargetManager {
     Container _render_targets{};
     VkExtent2D _reference_size{};
 };
+
+using RenderTargetId = RenderTargetManager::Id;
 } // namespace ars::render::vk

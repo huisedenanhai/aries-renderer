@@ -191,9 +191,11 @@ void load_meshes(IContext *context,
             while (indices.size() % 3 != 0) {
                 indices.push_back(0);
             }
+            auto triangle_count = indices.size() / 3;
             m->set_indices(reinterpret_cast<glm::u32vec3 *>(indices.data()),
                            0,
-                           indices.size() / 3);
+                           triangle_count);
+            m->set_triangle_count(triangle_count);
 
             Model::Primitive prim{};
             prim.mesh = std::move(m);

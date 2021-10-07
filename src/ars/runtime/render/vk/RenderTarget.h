@@ -2,6 +2,7 @@
 
 #include "Texture.h"
 #include "Vulkan.h"
+#include <array>
 #include <ars/runtime/core/misc/SoA.h>
 #include <functional>
 

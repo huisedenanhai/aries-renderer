@@ -43,6 +43,7 @@ class View : public IView {
 
     std::unique_ptr<RenderTargetManager> _rt_manager{};
     RenderTargetId _color_rt_id{};
+    RenderTargetId _depth_rt_id{};
 
     std::unique_ptr<TextureAdapter> _color_tex_adapter{};
 

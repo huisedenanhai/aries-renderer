@@ -268,7 +268,12 @@ void GraphicsPipeline::init_pipeline(const GraphicsPipelineInfo &info) {
 
     create_info.pMultisampleState = &multisample;
 
-    create_info.pDepthStencilState = nullptr;
+    VkPipelineDepthStencilStateCreateInfo depth_stencil{
+        VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO};
+    create_info.pDepthStencilState = &depth_stencil;
+    if (info.depth_stencil != nullptr) {
+        create_info.pDepthStencilState = info.depth_stencil;
+    }
 
     VkPipelineColorBlendStateCreateInfo blend{
         VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO};
@@ -332,5 +337,16 @@ create_attachment_blend_state(VkBlendFactor src_factor,
     blend.dstAlphaBlendFactor = dst_factor;
 
     return blend;
+}
+
+VkPipelineDepthStencilStateCreateInfo
+enabled_depth_stencil_state(bool depth_write) {
+    VkPipelineDepthStencilStateCreateInfo info{
+        VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO};
+    info.depthTestEnable = VK_TRUE;
+    info.depthWriteEnable = depth_write ? VK_TRUE : VK_FALSE;
+    info.depthCompareOp = VK_COMPARE_OP_GREATER_OR_EQUAL;
+
+    return info;
 }
 } // namespace ars::render::vk

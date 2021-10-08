@@ -26,7 +26,7 @@ class Application : public ars::engine::IApplication {
         auto ctx = ars::engine::render_context();
         auto tex = load_texture(ctx, "test.jpg");
 
-        int window_num = 3;
+        int window_num = 0;
         for (int i = 0; i < window_num; i++) {
             auto title = "Playground Render " + std::to_string(i);
             ars::engine::create_window(

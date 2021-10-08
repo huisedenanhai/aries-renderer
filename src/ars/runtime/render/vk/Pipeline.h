@@ -50,6 +50,10 @@ class Shader {
     VkShaderModule _module = VK_NULL_HANDLE;
 };
 
+// Use reversed-Z by default
+VkPipelineDepthStencilStateCreateInfo
+enabled_depth_stencil_state(bool depth_write = true);
+
 struct GraphicsPipelineInfo {
     std::vector<Shader *> shaders{};
     VkRenderPass render_pass = VK_NULL_HANDLE;
@@ -62,6 +66,7 @@ struct GraphicsPipelineInfo {
 
     VkPipelineVertexInputStateCreateInfo *vertex_input = nullptr;
     VkPipelineColorBlendStateCreateInfo *blend = nullptr;
+    VkPipelineDepthStencilStateCreateInfo *depth_stencil = nullptr;
 };
 
 class GraphicsPipeline {

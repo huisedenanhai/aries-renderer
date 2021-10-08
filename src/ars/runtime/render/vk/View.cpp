@@ -17,6 +17,7 @@ void View::render() {
     auto ctx = context();
     _rt_manager->update(translate(_size));
     auto color_rt = _rt_manager->get(_color_rt_id);
+    auto depth_rt = _rt_manager->get(_depth_rt_id);
     VkExtent2D extent{
         color_rt->info().extent.width,
         color_rt->info().extent.height,
@@ -28,25 +29,30 @@ void View::render() {
     fb_info.renderPass = _render_pass;
     fb_info.layers = 1;
 
-    VkImageView attachments[1] = {color_rt->image_view()};
+    VkImageView attachments[2] = {color_rt->image_view(),
+                                  depth_rt->image_view()};
     fb_info.attachmentCount = static_cast<uint32_t>(std::size(attachments));
     fb_info.pAttachments = attachments;
 
     auto fb = ctx->create_tmp_framebuffer(&fb_info);
     ctx->queue()->submit_once([&](CommandBuffer *cmd) {
-        VkClearValue clear_value{};
-        auto &clear_color = clear_value.color.float32;
+        VkClearValue clear_values[2]{};
+        auto &clear_color = clear_values[0].color.float32;
         clear_color[0] = 1.0f;
         clear_color[1] = 0.0f;
         clear_color[2] = 0.0f;
         clear_color[3] = 1.0f;
 
+        auto &clear_depth_stencil = clear_values[1].depthStencil;
+        clear_depth_stencil.depth = 0.0f;
+
         VkRenderPassBeginInfo rp_begin{
             VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
         rp_begin.renderPass = _render_pass;
         rp_begin.framebuffer = fb;
-        rp_begin.clearValueCount = 1;
-        rp_begin.pClearValues = &clear_value;
+        rp_begin.clearValueCount =
+            static_cast<uint32_t>(std::size(clear_values));
+        rp_begin.pClearValues = clear_values;
         rp_begin.renderArea = {{0, 0}, extent};
 
         cmd->BeginRenderPass(&rp_begin, VK_SUBPASS_CONTENTS_INLINE);
@@ -174,12 +180,22 @@ TextureInfo View::color_tex_info() const {
 }
 
 void View::alloc_render_targets() {
-    RenderTargetInfo color_info{};
-    auto &tex = color_info.texture = translate(color_tex_info());
-    tex.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    color_info.multi_buffer_count = 1;
+    {
+        RenderTargetInfo color_info{};
+        auto &tex = color_info.texture = translate(color_tex_info());
+        tex.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-    _color_rt_id = _rt_manager->alloc(color_info);
+        _color_rt_id = _rt_manager->alloc(color_info);
+    }
+    {
+        RenderTargetInfo depth_info{};
+        auto &tex = depth_info.texture =
+            TextureCreateInfo::sampled_2d(VK_FORMAT_D32_SFLOAT, 1, 1, 1);
+        tex.aspect_mask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        tex.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+
+        _depth_rt_id = _rt_manager->alloc(depth_info);
+    }
 }
 
 View::~View() {
@@ -192,7 +208,9 @@ View::~View() {
 void View::init_render_pass() {
     auto color_info = translate(color_tex_info());
 
-    VkAttachmentDescription color_attachment{};
+    VkAttachmentDescription attachments[2]{};
+
+    auto &color_attachment = attachments[0];
     color_attachment.format = color_info.format;
     color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
     color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -200,18 +218,31 @@ void View::init_render_pass() {
     color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     color_attachment.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
 
+    auto &depth_attachment = attachments[1];
+    depth_attachment.format = VK_FORMAT_D32_SFLOAT;
+    depth_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    depth_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    depth_attachment.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
+
     VkAttachmentReference color_ref{};
     color_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     color_ref.attachment = 0;
+
+    VkAttachmentReference depth_ref{};
+    depth_ref.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    depth_ref.attachment = 1;
 
     VkSubpassDescription subpass{};
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpass.colorAttachmentCount = 1;
     subpass.pColorAttachments = &color_ref;
+    subpass.pDepthStencilAttachment = &depth_ref;
 
     VkRenderPassCreateInfo info{VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO};
-    info.attachmentCount = 1;
-    info.pAttachments = &color_attachment;
+    info.attachmentCount = static_cast<uint32_t>(std::size(attachments));
+    info.pAttachments = attachments;
     info.subpassCount = 1;
     info.pSubpasses = &subpass;
 
@@ -253,6 +284,8 @@ void View::init_pipeline() {
     VkPushConstantRange push_constant_range{
         VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4)};
 
+    auto depth_stencil = enabled_depth_stencil_state();
+
     GraphicsPipelineInfo info{};
     info.shaders.push_back(vert_shader.get());
     info.shaders.push_back(frag_shader.get());
@@ -262,6 +295,7 @@ void View::init_pipeline() {
     info.push_constant_range_count = 1;
     info.push_constant_ranges = &push_constant_range;
     info.vertex_input = &vertex_input;
+    info.depth_stencil = &depth_stencil;
 
     _base_color_pipeline = std::make_unique<GraphicsPipeline>(ctx, info);
 }

@@ -75,8 +75,8 @@ void View::render() {
         auto &rd_objs = _scene->render_objects;
         auto w_div_h = static_cast<float>(extent.width) /
                        static_cast<float>(extent.height);
-        auto vp_matrix =
-            _camera.projection_matrix(w_div_h) * glm::inverse(_xform.matrix());
+        auto vp_matrix = _camera.projection_matrix(w_div_h) *
+                         glm::inverse(_xform.matrix_no_scale());
         rd_objs.for_each_id([&](Scene::RenderObjects::Id id) {
             auto &matrix = rd_objs.get<glm::mat4>(id);
             auto &mesh = rd_objs.get<std::shared_ptr<Mesh>>(id);

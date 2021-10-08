@@ -55,6 +55,11 @@ template <typename T> struct XformTRS {
                glm::scale(ident, _scale);
     }
 
+    Mat4 matrix_no_scale() const {
+        auto ident = glm::identity<Mat4>();
+        return glm::translate(ident, _translation) * glm::mat4_cast(_rotation);
+    }
+
     friend XformTRS operator*(const XformTRS &lhs, const XformTRS &rhs) {
         return XformTRS(lhs.matrix() * rhs.matrix());
     }

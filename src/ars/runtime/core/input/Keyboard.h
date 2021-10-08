@@ -139,8 +139,8 @@ class IKeyBoard {
   public:
     virtual ~IKeyBoard() = default;
 
-    virtual bool hold(Key key) = 0;
-    virtual bool press(Key key) = 0;
-    virtual bool release(Key key) = 0;
+    virtual bool is_holding(Key key) = 0;
+    virtual bool is_pressed(Key key) = 0;
+    virtual bool is_released(Key key) = 0;
 };
 } // namespace ars::input

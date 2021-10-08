@@ -256,15 +256,15 @@ int translate(input::Key key) {
 
 class Swapchain::KeyBoard : public input::IKeyBoard {
   public:
-    bool hold(input::Key key) override {
+    bool is_holding(input::Key key) override {
         return read_status(_hold, key);
     }
 
-    bool press(input::Key key) override {
+    bool is_pressed(input::Key key) override {
         return read_status(_press, key);
     }
 
-    bool release(input::Key key) override {
+    bool is_released(input::Key key) override {
         return read_status(_release, key);
     }
 

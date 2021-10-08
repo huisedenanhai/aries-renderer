@@ -38,10 +38,12 @@ class Swapchain : public IWindow {
     bool should_close() override;
     void
     set_imgui_callback(std::optional<std::function<void()>> callback) override;
+    input::IKeyBoard *keyboard() override;
 
     // The present render pass has already begun when the callback is triggered
     void set_present_additional_draw_callback(
         std::optional<std::function<void(CommandBuffer *cmd)>> callback);
+    void on_frame_ends();
 
     // The render pass for present
     [[nodiscard]] VkRenderPass render_pass() const;
@@ -49,6 +51,9 @@ class Swapchain : public IWindow {
     [[nodiscard]] GLFWwindow *window() const;
 
   private:
+    static void glfw_key_callback(
+        GLFWwindow *window, int key, int scancode, int action, int mods);
+
     [[nodiscard]] VkExtent2D get_target_extent() const;
     [[nodiscard]] bool need_recreate() const;
 
@@ -87,5 +92,8 @@ class Swapchain : public IWindow {
     std::optional<std::function<void()>> _imgui_callback{};
     std::optional<std::function<void(CommandBuffer *cmd)>>
         _present_additional_draw_callback{};
+
+    class KeyBoard;
+    std::unique_ptr<KeyBoard> _keyboard{};
 };
 } // namespace ars::render::vk

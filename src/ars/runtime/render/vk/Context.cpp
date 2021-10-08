@@ -610,7 +610,11 @@ bool Context::begin_frame() {
     return true;
 }
 
-void Context::end_frame() {}
+void Context::end_frame() {
+    for (auto swapchain : _registered_swapchains) {
+        swapchain->on_frame_ends();
+    }
+}
 
 Context::~Context() {
     gc();
@@ -857,6 +861,14 @@ VkFramebuffer Context::create_tmp_framebuffer(VkFramebufferCreateInfo *info) {
     }
     _tmp_framebuffers.push_back(framebuffer);
     return framebuffer;
+}
+
+void Context::register_swapchain(Swapchain *swapchain) {
+    _registered_swapchains.insert(swapchain);
+}
+
+void Context::unregister_swapchain(Swapchain *swapchain) {
+    _registered_swapchains.erase(swapchain);
 }
 
 } // namespace ars::render::vk

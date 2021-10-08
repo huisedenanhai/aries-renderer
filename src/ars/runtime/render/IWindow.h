@@ -6,6 +6,10 @@
 #include <optional>
 #include <string>
 
+namespace ars::input {
+class IKeyBoard;
+}
+
 namespace ars::render {
 class ITexture;
 
@@ -28,6 +32,8 @@ class IWindow {
     // Usually the callback will be set on the main window of the application.
     virtual void
     set_imgui_callback(std::optional<std::function<void()>> callback) = 0;
+
+    virtual input::IKeyBoard *keyboard() = 0;
 
     virtual ~IWindow() = default;
 };

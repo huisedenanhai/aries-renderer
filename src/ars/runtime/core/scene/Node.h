@@ -1,5 +1,5 @@
 #pragma once
 
-namespace ars::core {
+namespace ars::scene {
 class Node {};
-} // namespace ars::core
+} // namespace ars::scene

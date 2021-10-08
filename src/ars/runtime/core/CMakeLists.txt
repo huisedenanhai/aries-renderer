@@ -10,3 +10,4 @@ target_link_libraries(core PUBLIC
 add_subdirectory(math)
 add_subdirectory(misc)
 add_subdirectory(scene)
+add_subdirectory(input)

@@ -6,6 +6,7 @@
 #include "Texture.h"
 #include "Vulkan.h"
 
+#include <set>
 #include <vector>
 
 struct GLFWwindow;
@@ -113,6 +114,12 @@ class Context : public IContext {
     std::unique_ptr<Swapchain> create_swapchain(GLFWwindow *window,
                                                 bool owns_window);
 
+    // The context need to notify swapchains on frame ends so the swapchain can
+    // do some necessary cleanup for cached input events
+    // These two method are called by constructor and destructor of Swapchain
+    void register_swapchain(Swapchain *swapchain);
+    void unregister_swapchain(Swapchain *swapchain);
+
   private:
     // This method init device if not
     std::tuple<GLFWwindow *, VkSurfaceKHR>
@@ -151,6 +158,8 @@ class Context : public IContext {
     std::vector<std::shared_ptr<Buffer>> _buffers{};
 
     std::vector<VkFramebuffer> _tmp_framebuffers{};
+
+    std::set<Swapchain *> _registered_swapchains{};
 
     ContextProperties _properties{};
 };

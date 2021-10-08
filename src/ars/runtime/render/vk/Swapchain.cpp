@@ -5,9 +5,308 @@
 #include <GLFW/glfw3.h>
 #include <algorithm>
 #include <ars/runtime/core/Log.h>
+#include <ars/runtime/core/input/Keyboard.h>
 #include <cassert>
 
 namespace ars::render::vk {
+namespace {
+int translate(input::Key key) {
+    using namespace input;
+    switch (key) {
+    case Key::Space:
+        return GLFW_KEY_SPACE;
+    case Key::Apostrophe:
+        return GLFW_KEY_APOSTROPHE;
+    case Key::Comma:
+        return GLFW_KEY_COMMA;
+    case Key::Minus:
+        return GLFW_KEY_MINUS;
+    case Key::Period:
+        return GLFW_KEY_PERIOD;
+    case Key::Slash:
+        return GLFW_KEY_SLASH;
+    case Key::Semicolon:
+        return GLFW_KEY_SEMICOLON;
+    case Key::Equal:
+        return GLFW_KEY_EQUAL;
+    case Key::LeftBracket:
+        return GLFW_KEY_LEFT_BRACKET;
+    case Key::BackSlash:
+        return GLFW_KEY_BACKSLASH;
+    case Key::RightBracket:
+        return GLFW_KEY_RIGHT_BRACKET;
+    case Key::GraveAccent:
+        return GLFW_KEY_GRAVE_ACCENT;
+    case Key::N0:
+        return GLFW_KEY_0;
+    case Key::N1:
+        return GLFW_KEY_1;
+    case Key::N2:
+        return GLFW_KEY_2;
+    case Key::N3:
+        return GLFW_KEY_3;
+    case Key::N4:
+        return GLFW_KEY_4;
+    case Key::N5:
+        return GLFW_KEY_5;
+    case Key::N6:
+        return GLFW_KEY_6;
+    case Key::N7:
+        return GLFW_KEY_7;
+    case Key::N8:
+        return GLFW_KEY_8;
+    case Key::N9:
+        return GLFW_KEY_9;
+    case Key::A:
+        return GLFW_KEY_A;
+    case Key::B:
+        return GLFW_KEY_B;
+    case Key::C:
+        return GLFW_KEY_C;
+    case Key::D:
+        return GLFW_KEY_D;
+    case Key::E:
+        return GLFW_KEY_E;
+    case Key::F:
+        return GLFW_KEY_F;
+    case Key::G:
+        return GLFW_KEY_G;
+    case Key::H:
+        return GLFW_KEY_H;
+    case Key::I:
+        return GLFW_KEY_I;
+    case Key::J:
+        return GLFW_KEY_J;
+    case Key::K:
+        return GLFW_KEY_K;
+    case Key::L:
+        return GLFW_KEY_L;
+    case Key::M:
+        return GLFW_KEY_M;
+    case Key::N:
+        return GLFW_KEY_N;
+    case Key::O:
+        return GLFW_KEY_O;
+    case Key::P:
+        return GLFW_KEY_P;
+    case Key::Q:
+        return GLFW_KEY_Q;
+    case Key::R:
+        return GLFW_KEY_R;
+    case Key::S:
+        return GLFW_KEY_S;
+    case Key::T:
+        return GLFW_KEY_T;
+    case Key::U:
+        return GLFW_KEY_U;
+    case Key::V:
+        return GLFW_KEY_V;
+    case Key::W:
+        return GLFW_KEY_W;
+    case Key::X:
+        return GLFW_KEY_X;
+    case Key::Y:
+        return GLFW_KEY_Y;
+    case Key::Z:
+        return GLFW_KEY_Z;
+    case Key::Escape:
+        return GLFW_KEY_ESCAPE;
+    case Key::Enter:
+        return GLFW_KEY_ENTER;
+    case Key::Tab:
+        return GLFW_KEY_TAB;
+    case Key::Backspace:
+        return GLFW_KEY_BACKSPACE;
+    case Key::Insert:
+        return GLFW_KEY_INSERT;
+    case Key::Delete:
+        return GLFW_KEY_DELETE;
+    case Key::PageUp:
+        return GLFW_KEY_PAGE_UP;
+    case Key::PageDown:
+        return GLFW_KEY_PAGE_DOWN;
+    case Key::Home:
+        return GLFW_KEY_HOME;
+    case Key::End:
+        return GLFW_KEY_END;
+    case Key::CapsLock:
+        return GLFW_KEY_CAPS_LOCK;
+    case Key::ScrollLock:
+        return GLFW_KEY_SCROLL_LOCK;
+    case Key::NumLock:
+        return GLFW_KEY_NUM_LOCK;
+    case Key::PrintScreen:
+        return GLFW_KEY_PRINT_SCREEN;
+    case Key::Pause:
+        return GLFW_KEY_PAUSE;
+    case Key::Right:
+        return GLFW_KEY_RIGHT;
+    case Key::Left:
+        return GLFW_KEY_LEFT;
+    case Key::Down:
+        return GLFW_KEY_DOWN;
+    case Key::Up:
+        return GLFW_KEY_UP;
+    case Key::F1:
+        return GLFW_KEY_F1;
+    case Key::F2:
+        return GLFW_KEY_F2;
+    case Key::F3:
+        return GLFW_KEY_F3;
+    case Key::F4:
+        return GLFW_KEY_F4;
+    case Key::F5:
+        return GLFW_KEY_F5;
+    case Key::F6:
+        return GLFW_KEY_F6;
+    case Key::F7:
+        return GLFW_KEY_F7;
+    case Key::F8:
+        return GLFW_KEY_F8;
+    case Key::F9:
+        return GLFW_KEY_F9;
+    case Key::F10:
+        return GLFW_KEY_F10;
+    case Key::F11:
+        return GLFW_KEY_F11;
+    case Key::F12:
+        return GLFW_KEY_F12;
+    case Key::F13:
+        return GLFW_KEY_F13;
+    case Key::F14:
+        return GLFW_KEY_F14;
+    case Key::F15:
+        return GLFW_KEY_F15;
+    case Key::F16:
+        return GLFW_KEY_F16;
+    case Key::F17:
+        return GLFW_KEY_F17;
+    case Key::F18:
+        return GLFW_KEY_F18;
+    case Key::F19:
+        return GLFW_KEY_F19;
+    case Key::F20:
+        return GLFW_KEY_F20;
+    case Key::F21:
+        return GLFW_KEY_F21;
+    case Key::F22:
+        return GLFW_KEY_F22;
+    case Key::F23:
+        return GLFW_KEY_F23;
+    case Key::F24:
+        return GLFW_KEY_F24;
+    case Key::F25:
+        return GLFW_KEY_F25;
+    case Key::KeyPad0:
+        return GLFW_KEY_KP_0;
+    case Key::KeyPad1:
+        return GLFW_KEY_KP_1;
+    case Key::KeyPad2:
+        return GLFW_KEY_KP_2;
+    case Key::KeyPad3:
+        return GLFW_KEY_KP_3;
+    case Key::KeyPad4:
+        return GLFW_KEY_KP_4;
+    case Key::KeyPad5:
+        return GLFW_KEY_KP_5;
+    case Key::KeyPad6:
+        return GLFW_KEY_KP_6;
+    case Key::KeyPad7:
+        return GLFW_KEY_KP_7;
+    case Key::KeyPad8:
+        return GLFW_KEY_KP_8;
+    case Key::KeyPad9:
+        return GLFW_KEY_KP_9;
+    case Key::KeyPadDecimal:
+        return GLFW_KEY_KP_DECIMAL;
+    case Key::KeyPadDivide:
+        return GLFW_KEY_KP_DIVIDE;
+    case Key::KeyPadMultiply:
+        return GLFW_KEY_KP_MULTIPLY;
+    case Key::KeyPadSubtract:
+        return GLFW_KEY_KP_SUBTRACT;
+    case Key::KeyPadAdd:
+        return GLFW_KEY_KP_ADD;
+    case Key::KeyPadEnter:
+        return GLFW_KEY_KP_ENTER;
+    case Key::KeyPadEqual:
+        return GLFW_KEY_KP_EQUAL;
+    case Key::LeftShift:
+        return GLFW_KEY_LEFT_SHIFT;
+    case Key::LeftControl:
+        return GLFW_KEY_LEFT_CONTROL;
+    case Key::LeftAlt:
+        return GLFW_KEY_LEFT_ALT;
+    case Key::LeftSuper:
+        return GLFW_KEY_LEFT_SUPER;
+    case Key::RightShift:
+        return GLFW_KEY_RIGHT_SHIFT;
+    case Key::RightControl:
+        return GLFW_KEY_RIGHT_CONTROL;
+    case Key::RightAlt:
+        return GLFW_KEY_RIGHT_ALT;
+    case Key::RightSuper:
+        return GLFW_KEY_RIGHT_SUPER;
+    case Key::Menu:
+        return GLFW_KEY_MENU;
+    }
+    return GLFW_KEY_UNKNOWN;
+}
+} // namespace
+
+class Swapchain::KeyBoard : public input::IKeyBoard {
+  public:
+    bool hold(input::Key key) override {
+        return read_status(_hold, key);
+    }
+
+    bool press(input::Key key) override {
+        return read_status(_press, key);
+    }
+
+    bool release(input::Key key) override {
+        return read_status(_release, key);
+    }
+
+    void process_event(int key,
+                       [[maybe_unused]] int scancode,
+                       int action,
+                       [[maybe_unused]] int mods) {
+        if (key < 0 || key >= MAX_KEY_COUNT) {
+            return;
+        }
+
+        if (action == GLFW_PRESS) {
+            _hold[key] = true;
+            _press[key] = true;
+        }
+
+        if (action == GLFW_RELEASE) {
+            _hold[key] = false;
+            _release[key] = true;
+        }
+    }
+
+    void on_frame_ends() {
+        std::fill(_press.begin(), _press.end(), false);
+        std::fill(_release.begin(), _release.end(), false);
+    }
+
+  private:
+    static constexpr size_t MAX_KEY_COUNT = 512;
+    using Status = std::array<bool, MAX_KEY_COUNT>;
+
+    static bool read_status(const Status &status, input::Key key) {
+        auto glfw_key = translate(key);
+        assert(glfw_key >= 0 && glfw_key < MAX_KEY_COUNT);
+        return status[glfw_key];
+    }
+
+    Status _hold{};
+    Status _press{};
+    Status _release{};
+};
+
 Swapchain::Swapchain(Context *context,
                      VkSurfaceKHR surface,
                      GLFWwindow *window,
@@ -19,10 +318,17 @@ Swapchain::Swapchain(Context *context,
     assert(window != nullptr);
 
     recreate_swapchain();
+    _keyboard = std::make_unique<KeyBoard>();
+
+    _context->register_swapchain(this);
+    glfwSetWindowUserPointer(_window, this);
+    glfwSetKeyCallback(_window, glfw_key_callback);
 }
 
 Swapchain::~Swapchain() {
     _context->queue()->flush();
+    glfwSetWindowUserPointer(_window, nullptr);
+    _context->unregister_swapchain(this);
 
     _imgui.reset();
 
@@ -489,4 +795,21 @@ void Swapchain::set_present_additional_draw_callback(
     _present_additional_draw_callback = std::move(callback);
 }
 
+input::IKeyBoard *Swapchain::keyboard() {
+    return _keyboard.get();
+}
+
+void Swapchain::on_frame_ends() {
+    _keyboard->on_frame_ends();
+}
+
+void Swapchain::glfw_key_callback(
+    GLFWwindow *window, int key, int scancode, int action, int mods) {
+    auto swapchain =
+        reinterpret_cast<Swapchain *>(glfwGetWindowUserPointer(window));
+    if (swapchain == nullptr) {
+        return;
+    }
+    swapchain->_keyboard->process_event(key, scancode, action, mods);
+}
 } // namespace ars::render::vk

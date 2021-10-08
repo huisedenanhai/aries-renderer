@@ -203,7 +203,10 @@ void View::alloc_render_targets() {
 }
 
 View::~View() {
-    auto device = context()->device();
+    auto ctx = context();
+    ctx->queue()->flush();
+
+    auto device = ctx->device();
     if (_render_pass != VK_NULL_HANDLE) {
         device->Destroy(_render_pass);
     }

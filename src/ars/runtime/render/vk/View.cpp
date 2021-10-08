@@ -73,6 +73,10 @@ void View::render() {
         cmd->SetScissor(0, 1, &scissor);
 
         auto &rd_objs = _scene->render_objects;
+        auto w_div_h = static_cast<float>(extent.width) /
+                       static_cast<float>(extent.height);
+        auto vp_matrix =
+            _camera.projection_matrix(w_div_h) * glm::inverse(_xform.matrix());
         rd_objs.for_each_id([&](Scene::RenderObjects::Id id) {
             auto &matrix = rd_objs.get<glm::mat4>(id);
             auto &mesh = rd_objs.get<std::shared_ptr<Mesh>>(id);
@@ -95,7 +99,7 @@ void View::render() {
                                     0,
                                     nullptr);
 
-            auto mvp = matrix;
+            auto mvp = vp_matrix * matrix;
             cmd->PushConstants(_base_color_pipeline->pipeline_layout(),
                                VK_SHADER_STAGE_VERTEX_BIT,
                                0,

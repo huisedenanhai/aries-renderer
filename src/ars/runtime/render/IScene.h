@@ -5,6 +5,8 @@
 #include <memory>
 #include <variant>
 
+// Aries uses right hand coordinates, with Y points up, the same as the
+// convention of GLTF
 namespace ars::render {
 class IMesh;
 class ITexture;
@@ -42,15 +44,29 @@ struct Perspective {
     float y_fov = glm::radians(45.0f);
     float z_far = 100.0f; // z_far == 0 means infinity z_far
     float z_near = 0.1f;  // must > 0
+
+    glm::mat4 projection_matrix(float w_div_h) const;
 };
 
 struct Orthographic {
     float y_mag = 1.0f;
     float z_far = 100.0f; // must > 0
     float z_near = 0.1f;  // must > 0
+
+    glm::mat4 projection_matrix(float w_div_h) const;
 };
 
-using CameraData = std::variant<Perspective, Orthographic>;
+struct CameraData : std::variant<Perspective, Orthographic> {
+  private:
+    using Base = std::variant<Perspective, Orthographic>;
+
+  public:
+    using Base::Base;
+
+    // reversed-Z in range [0, 1], with -z_near mapped to 1.0 and -z_far mapped
+    // to 0.0 output follows Vulkan spec with +Y axis point down
+    glm::mat4 projection_matrix(float w_div_h) const;
+};
 
 // A rect to render to.
 class IView {

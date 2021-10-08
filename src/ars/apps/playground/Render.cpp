@@ -39,6 +39,7 @@ class Application : public ars::engine::IApplication {
         auto model = load_gltf(ctx, "FlightHelmet/FlightHelmet.gltf");
         _scene = ctx->create_scene();
         _view = _scene->create_view(window()->physical_size());
+        _camera_transform.set_translation({0, 0.3f, 2.0f});
 
         load_render_objects(model);
     }
@@ -82,6 +83,7 @@ class Application : public ars::engine::IApplication {
 
     void update() override {
         _view->set_size(window()->physical_size());
+        _view->set_xform(_camera_transform);
         _view->render();
         window()->present(_view->get_color_texture());
     }
@@ -97,6 +99,7 @@ class Application : public ars::engine::IApplication {
     }
 
   private:
+    ars::math::XformTRS<float> _camera_transform{};
     std::vector<std::unique_ptr<IRenderObject>> _objects{};
     std::unique_ptr<IView> _view{};
     std::unique_ptr<IScene> _scene{};

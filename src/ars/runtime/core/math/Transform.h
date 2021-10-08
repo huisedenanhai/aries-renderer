@@ -29,12 +29,24 @@ template <typename T> struct XformTRS {
         return _translation;
     }
 
+    void set_translation(const Vec3 &t) {
+        _translation = t;
+    }
+
     Quat rotation() const {
         return _rotation;
     }
 
+    void set_rotation(const Quat &r) {
+        _rotation = r;
+    }
+
     Vec3 scale() const {
         return _scale;
+    }
+
+    void set_scale(const Vec3 &s) {
+        _scale = s;
     }
 
     Mat4 matrix() const {
@@ -45,6 +57,12 @@ template <typename T> struct XformTRS {
 
     friend XformTRS operator*(const XformTRS &lhs, const XformTRS &rhs) {
         return XformTRS(lhs.matrix() * rhs.matrix());
+    }
+
+    static XformTRS from_translation(const Vec3 &t) {
+        XformTRS xform{};
+        xform.set_translation(t);
+        return xform;
     }
 
   private:

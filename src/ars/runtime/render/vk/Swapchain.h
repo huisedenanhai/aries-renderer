@@ -53,6 +53,7 @@ class Swapchain : public IWindow {
   private:
     static void glfw_key_callback(
         GLFWwindow *window, int key, int scancode, int action, int mods);
+    using GLFWKeyCallback = decltype(glfw_key_callback) *;
 
     [[nodiscard]] VkExtent2D get_target_extent() const;
     [[nodiscard]] bool need_recreate() const;
@@ -95,5 +96,6 @@ class Swapchain : public IWindow {
 
     class KeyBoard;
     std::unique_ptr<KeyBoard> _keyboard{};
+    GLFWKeyCallback _prev_key_callback = nullptr;
 };
 } // namespace ars::render::vk

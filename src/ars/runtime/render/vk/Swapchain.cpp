@@ -322,11 +322,12 @@ Swapchain::Swapchain(Context *context,
 
     _context->register_swapchain(this);
     glfwSetWindowUserPointer(_window, this);
-    glfwSetKeyCallback(_window, glfw_key_callback);
+    _prev_key_callback = glfwSetKeyCallback(_window, glfw_key_callback);
 }
 
 Swapchain::~Swapchain() {
     _context->queue()->flush();
+    glfwSetKeyCallback(_window, _prev_key_callback);
     glfwSetWindowUserPointer(_window, nullptr);
     _context->unregister_swapchain(this);
 
@@ -809,6 +810,9 @@ void Swapchain::glfw_key_callback(
         reinterpret_cast<Swapchain *>(glfwGetWindowUserPointer(window));
     if (swapchain == nullptr) {
         return;
+    }
+    if (swapchain->_prev_key_callback != nullptr) {
+        swapchain->_prev_key_callback(window, key, scancode, action, mods);
     }
     swapchain->_keyboard->process_event(key, scancode, action, mods);
 }

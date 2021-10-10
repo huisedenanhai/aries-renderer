@@ -18,6 +18,9 @@ class IApplication {
     void init(render::IWindow *window);
     render::IWindow *window() const;
 
+    void quit();
+    bool want_to_quit() const;
+
     [[nodiscard]] virtual std::string get_name() const;
 
     // Callbacks to override
@@ -28,6 +31,7 @@ class IApplication {
 
   private:
     render::IWindow *_window = nullptr;
+    bool _want_to_quit = false;
 };
 
 // Engine is the runtime, the singleton that manages the life-time of all

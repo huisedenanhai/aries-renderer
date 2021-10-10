@@ -117,6 +117,11 @@ class Application : public ars::engine::IApplication {
     }
 
     void update(double dt) override {
+        if (window()->keyboard()->is_released(ars::input::Key::Escape)) {
+            quit();
+            return;
+        }
+
         _smooth_dt = _smooth_dt + 0.2 * (dt - _smooth_dt);
         _fly_camera.handle_input(window(), _smooth_dt);
         _view->set_size(window()->physical_size());

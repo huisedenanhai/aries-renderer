@@ -26,6 +26,14 @@ render::IWindow *IApplication::window() const {
     return _window;
 }
 
+void IApplication::quit() {
+    _want_to_quit = true;
+}
+
+bool IApplication::want_to_quit() const {
+    return _want_to_quit;
+}
+
 namespace {
 class Engine;
 
@@ -77,7 +85,7 @@ class Engine {
         auto start_time = std::chrono::high_resolution_clock::now();
         auto current_time = start_time;
 
-        while (!_main_window->should_close()) {
+        while (!_application->want_to_quit() && !_main_window->should_close()) {
             check_secondary_windows_should_close();
 
             if (_render_context->begin_frame()) {

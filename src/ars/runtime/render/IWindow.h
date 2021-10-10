@@ -8,7 +8,8 @@
 
 namespace ars::input {
 class IKeyBoard;
-}
+class IMouse;
+} // namespace ars::input
 
 namespace ars::render {
 class ITexture;
@@ -33,7 +34,10 @@ class IWindow {
     virtual void
     set_imgui_callback(std::optional<std::function<void()>> callback) = 0;
 
+    // Should always return a valid pointer for input devices.
+    // A dummy device should be returned if the physical device is not present.
     virtual input::IKeyBoard *keyboard() = 0;
+    virtual input::IMouse *mouse() = 0;
 
     virtual ~IWindow() = default;
 };

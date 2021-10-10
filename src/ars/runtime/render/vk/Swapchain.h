@@ -39,6 +39,7 @@ class Swapchain : public IWindow {
     void
     set_imgui_callback(std::optional<std::function<void()>> callback) override;
     input::IKeyBoard *keyboard() override;
+    input::IMouse *mouse() override;
 
     // The present render pass has already begun when the callback is triggered
     void set_present_additional_draw_callback(
@@ -96,6 +97,9 @@ class Swapchain : public IWindow {
 
     class KeyBoard;
     std::unique_ptr<KeyBoard> _keyboard{};
+    class Mouse;
+    std::unique_ptr<Mouse> _mouse{};
+
     GLFWKeyCallback _prev_key_callback = nullptr;
 };
 } // namespace ars::render::vk

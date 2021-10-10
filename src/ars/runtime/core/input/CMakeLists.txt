@@ -1,2 +1,3 @@
 aries_target_sources(core PRIVATE
-        Keyboard.h)
+        Keyboard.h
+        Mouse.h)

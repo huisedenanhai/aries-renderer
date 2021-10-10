@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <ars/runtime/core/Log.h>
 #include <ars/runtime/core/input/Keyboard.h>
+#include <ars/runtime/core/input/Mouse.h>
 #include <cassert>
 
 namespace ars::render::vk {
@@ -307,6 +308,29 @@ class Swapchain::KeyBoard : public input::IKeyBoard {
     Status _release{};
 };
 
+class Swapchain::Mouse : public input::IMouse {
+  public:
+    bool is_holding(input::MouseButton button) override {
+        return false;
+    }
+
+    bool is_pressed(input::MouseButton button) override {
+        return false;
+    }
+
+    bool is_released(input::MouseButton button) override {
+        return false;
+    }
+
+    glm::dvec2 cursor_position() override {
+        return {};
+    }
+
+    glm::dvec2 scroll_delta() override {
+        return {};
+    }
+};
+
 Swapchain::Swapchain(Context *context,
                      VkSurfaceKHR surface,
                      GLFWwindow *window,
@@ -319,8 +343,10 @@ Swapchain::Swapchain(Context *context,
 
     recreate_swapchain();
     _keyboard = std::make_unique<KeyBoard>();
+    _mouse = std::make_unique<Mouse>();
 
     _context->register_swapchain(this);
+
     glfwSetWindowUserPointer(_window, this);
     _prev_key_callback = glfwSetKeyCallback(_window, glfw_key_callback);
 }
@@ -815,5 +841,9 @@ void Swapchain::glfw_key_callback(
         swapchain->_prev_key_callback(window, key, scancode, action, mods);
     }
     swapchain->_keyboard->process_event(key, scancode, action, mods);
+}
+
+input::IMouse *Swapchain::mouse() {
+    return _mouse.get();
 }
 } // namespace ars::render::vk

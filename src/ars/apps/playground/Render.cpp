@@ -18,6 +18,12 @@ struct FlyCamera {
     glm::vec3 euler{};
 
     void handle_input(IWindow *window, double dt) {
+        handle_translation(window, dt);
+        handle_rotation(window, dt);
+    }
+
+  private:
+    void handle_translation(IWindow *window, double dt) {
         using namespace ars::input;
         auto keyboard = window->keyboard();
         auto delta_pos = glm::vec3(0.0f);
@@ -43,7 +49,9 @@ struct FlyCamera {
 
         auto pos = xform.translation();
         xform.set_translation(pos + delta_pos);
+    }
 
+    void handle_rotation(IWindow *window, double dt) {
         auto mouse = window->mouse();
         float d_rot = 0.5f * static_cast<float>(dt);
         auto cursor_delta = glm::vec2(mouse->cursor_position_delta());

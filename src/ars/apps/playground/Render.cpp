@@ -1,3 +1,4 @@
+#include <ars/runtime/core/input/Keyboard.h>
 #include <ars/runtime/engine/Engine.h>
 #include <ars/runtime/render/IContext.h>
 #include <ars/runtime/render/IScene.h>
@@ -11,7 +12,37 @@
 
 using namespace ars::render;
 
-struct FlyCamera {};
+struct FlyCamera {
+    ars::math::XformTRS<float> xform{};
+
+    void handle_input(IWindow *window) {
+        using namespace ars::input;
+        auto keyboard = window->keyboard();
+        auto delta_pos = glm::vec3(0.0f);
+        float d = 0.2f;
+        if (keyboard->is_holding(Key::W)) {
+            delta_pos += d * xform.forward();
+        }
+        if (keyboard->is_holding(Key::S)) {
+            delta_pos += -d * xform.forward();
+        }
+        if (keyboard->is_holding(Key::A)) {
+            delta_pos += -d * xform.right();
+        }
+        if (keyboard->is_holding(Key::D)) {
+            delta_pos += d * xform.right();
+        }
+        if (keyboard->is_holding(Key::Q)) {
+            delta_pos += -d * xform.up();
+        }
+        if (keyboard->is_holding(Key::E)) {
+            delta_pos += d * xform.up();
+        }
+
+        auto pos = xform.translation();
+        xform.set_translation(pos + delta_pos);
+    }
+};
 
 class Application : public ars::engine::IApplication {
   public:
@@ -41,7 +72,7 @@ class Application : public ars::engine::IApplication {
         auto model = load_gltf(ctx, "FlightHelmet/FlightHelmet.gltf");
         _scene = ctx->create_scene();
         _view = _scene->create_view(window()->physical_size());
-        _camera_transform.set_translation({0, 0.3f, 2.0f});
+        _fly_camera.xform.set_translation({0, 0.3f, 2.0f});
 
         load_render_objects(model);
     }
@@ -84,8 +115,9 @@ class Application : public ars::engine::IApplication {
     }
 
     void update() override {
+        _fly_camera.handle_input(window());
         _view->set_size(window()->physical_size());
-        _view->set_xform(_camera_transform);
+        _view->set_xform(_fly_camera.xform);
         _view->render();
         window()->present(_view->get_color_texture());
     }
@@ -101,7 +133,7 @@ class Application : public ars::engine::IApplication {
     }
 
   private:
-    ars::math::XformTRS<float> _camera_transform{};
+    FlyCamera _fly_camera{};
     std::vector<std::unique_ptr<IRenderObject>> _objects{};
     std::unique_ptr<IView> _view{};
     std::unique_ptr<IScene> _scene{};

@@ -15,11 +15,11 @@ using namespace ars::render;
 struct FlyCamera {
     ars::math::XformTRS<float> xform{};
 
-    void handle_input(IWindow *window) {
+    void handle_input(IWindow *window, double dt) {
         using namespace ars::input;
         auto keyboard = window->keyboard();
         auto delta_pos = glm::vec3(0.0f);
-        float d = 0.2f;
+        float d = 1.0f * static_cast<float>(dt);
         if (keyboard->is_holding(Key::W)) {
             delta_pos += d * xform.forward();
         }
@@ -66,7 +66,9 @@ class Application : public ars::engine::IApplication {
                 title.c_str(),
                 tex->width() / 2,
                 tex->height() / 2,
-                [tex](IWindow *window) { window->present(tex.get()); });
+                [tex](IWindow *window, [[maybe_unused]] double dt) {
+                    window->present(tex.get());
+                });
         }
 
         auto model = load_gltf(ctx, "FlightHelmet/FlightHelmet.gltf");
@@ -114,8 +116,9 @@ class Application : public ars::engine::IApplication {
         }
     }
 
-    void update() override {
-        _fly_camera.handle_input(window());
+    void update(double dt) override {
+        _smooth_dt = _smooth_dt + 0.2 * (dt - _smooth_dt);
+        _fly_camera.handle_input(window(), _smooth_dt);
         _view->set_size(window()->physical_size());
         _view->set_xform(_fly_camera.xform);
         _view->render();
@@ -133,6 +136,7 @@ class Application : public ars::engine::IApplication {
     }
 
   private:
+    double _smooth_dt = 0.0f;
     FlyCamera _fly_camera{};
     std::vector<std::unique_ptr<IRenderObject>> _objects{};
     std::unique_ptr<IView> _view{};

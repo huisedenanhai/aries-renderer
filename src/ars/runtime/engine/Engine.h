@@ -22,7 +22,7 @@ class IApplication {
 
     // Callbacks to override
     virtual void start() {}
-    virtual void update() {}
+    virtual void update(double dt) {}
     virtual void on_imgui() {}
     virtual void destroy() {}
 
@@ -38,7 +38,7 @@ class IApplication {
 // header that frequently triggers full rebuild and slow down further iteration.
 void start_engine(std::unique_ptr<IApplication> app);
 
-using WindowRenderCallback = std::function<void(render::IWindow *)>;
+using WindowRenderCallback = std::function<void(render::IWindow *, double dt)>;
 
 void create_window(const char *title,
                    uint32_t logical_width,

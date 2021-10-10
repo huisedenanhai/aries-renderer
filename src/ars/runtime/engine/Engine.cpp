@@ -37,8 +37,8 @@ class SecondaryWindow {
                     WindowRenderCallback render)
         : _window(std::move(window)), _render(std::move(render)) {}
 
-    void update() {
-        _render(_window.get());
+    void update(double dt) {
+        _render(_window.get(), dt);
     }
 
     bool should_close() const {
@@ -74,14 +74,23 @@ class Engine {
         _application->init(_main_window.get());
         _application->start();
 
+        auto start_time = std::chrono::high_resolution_clock::now();
+        auto current_time = start_time;
+
         while (!_main_window->should_close()) {
             check_secondary_windows_should_close();
 
             if (_render_context->begin_frame()) {
-                _application->update();
+                auto last_time = current_time;
+                current_time = std::chrono::high_resolution_clock::now();
+                auto delta_time =
+                    std::chrono::duration<double>(current_time - last_time)
+                        .count();
+
+                _application->update(delta_time);
 
                 for (auto &w : _secondary_windows) {
-                    w->update();
+                    w->update(delta_time);
                 }
 
                 _render_context->end_frame();

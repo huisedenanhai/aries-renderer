@@ -19,6 +19,12 @@ struct WindowInfo {
     Extent2D logical_size{800, 600};
 };
 
+enum class CursorMode {
+    Normal,
+    Hidden,
+    HiddenCaptured,
+};
+
 class IWindow {
   public:
     // Blit a 2d texture to screen and swap buffer.
@@ -38,6 +44,9 @@ class IWindow {
     // A dummy device should be returned if the physical device is not present.
     virtual input::IKeyBoard *keyboard() = 0;
     virtual input::IMouse *mouse() = 0;
+
+    virtual CursorMode cursor_mode() = 0;
+    virtual void set_cursor_mode(CursorMode mode) = 0;
 
     virtual ~IWindow() = default;
 };

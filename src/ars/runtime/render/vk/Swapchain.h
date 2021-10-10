@@ -40,6 +40,8 @@ class Swapchain : public IWindow {
     set_imgui_callback(std::optional<std::function<void()>> callback) override;
     input::IKeyBoard *keyboard() override;
     input::IMouse *mouse() override;
+    CursorMode cursor_mode() override;
+    void set_cursor_mode(CursorMode mode) override;
 
     // The present render pass has already begun when the callback is triggered
     void set_present_additional_draw_callback(
@@ -55,6 +57,21 @@ class Swapchain : public IWindow {
     static void glfw_key_callback(
         GLFWwindow *window, int key, int scancode, int action, int mods);
     using GLFWKeyCallback = decltype(glfw_key_callback) *;
+
+    static void glfw_mouse_button_callback(GLFWwindow *window,
+                                           int button,
+                                           int action,
+                                           int mods);
+    using GLFWMouseButtonCallback = decltype(glfw_mouse_button_callback) *;
+
+    static void
+    glfw_scroll_callback(GLFWwindow *window, double xoffset, double yoffset);
+    using GLFWScrollCallback = decltype(glfw_scroll_callback) *;
+
+    static void
+    glfw_cursor_position_callback(GLFWwindow *window, double xpos, double ypos);
+    using GLFWCursorPositionCallback =
+        decltype(glfw_cursor_position_callback) *;
 
     [[nodiscard]] VkExtent2D get_target_extent() const;
     [[nodiscard]] bool need_recreate() const;
@@ -101,5 +118,10 @@ class Swapchain : public IWindow {
     std::unique_ptr<Mouse> _mouse{};
 
     GLFWKeyCallback _prev_key_callback = nullptr;
+    GLFWMouseButtonCallback _prev_mouse_button_callback = nullptr;
+    GLFWScrollCallback _prev_scroll_callback = nullptr;
+    GLFWCursorPositionCallback _prev_cursor_position_callback = nullptr;
+
+    CursorMode _cursor_mode = CursorMode::Normal;
 };
 } // namespace ars::render::vk

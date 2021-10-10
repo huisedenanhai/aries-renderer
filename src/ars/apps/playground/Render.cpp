@@ -1,4 +1,5 @@
 #include <ars/runtime/core/input/Keyboard.h>
+#include <ars/runtime/core/input/Mouse.h>
 #include <ars/runtime/engine/Engine.h>
 #include <ars/runtime/render/IContext.h>
 #include <ars/runtime/render/IScene.h>
@@ -14,6 +15,7 @@ using namespace ars::render;
 
 struct FlyCamera {
     ars::math::XformTRS<float> xform{};
+    glm::vec3 euler{};
 
     void handle_input(IWindow *window, double dt) {
         using namespace ars::input;
@@ -41,6 +43,13 @@ struct FlyCamera {
 
         auto pos = xform.translation();
         xform.set_translation(pos + delta_pos);
+
+        auto mouse = window->mouse();
+        float d_rot = 0.5f * static_cast<float>(dt);
+        auto cursor_delta = glm::vec2(mouse->cursor_position_delta());
+        euler.x -= d_rot * cursor_delta.y;
+        euler.y -= d_rot * cursor_delta.x;
+        xform.set_rotation(euler);
     }
 };
 
@@ -122,8 +131,13 @@ class Application : public ars::engine::IApplication {
             return;
         }
 
-        _smooth_dt = _smooth_dt + 0.2 * (dt - _smooth_dt);
-        _fly_camera.handle_input(window(), _smooth_dt);
+        if (window()->mouse()->is_holding(ars::input::MouseButton::Right)) {
+            window()->set_cursor_mode(CursorMode::HiddenCaptured);
+            _fly_camera.handle_input(window(), dt);
+        } else {
+            window()->set_cursor_mode(CursorMode::Normal);
+        }
+
         _view->set_size(window()->physical_size());
         _view->set_xform(_fly_camera.xform);
         _view->render();
@@ -141,7 +155,6 @@ class Application : public ars::engine::IApplication {
     }
 
   private:
-    double _smooth_dt = 0.0f;
     FlyCamera _fly_camera{};
     std::vector<std::unique_ptr<IRenderObject>> _objects{};
     std::unique_ptr<IView> _view{};

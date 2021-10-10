@@ -13,8 +13,10 @@ class IMouse {
     virtual bool is_pressed(MouseButton button) = 0;
     virtual bool is_released(MouseButton button) = 0;
 
-    // Relative to the window
+    // In the screen space coordinate of the associating window.
+    // The origin is at the upper left point.
     virtual glm::dvec2 cursor_position() = 0;
+    virtual glm::dvec2 cursor_position_delta() = 0;
     virtual glm::dvec2 scroll_delta() = 0;
 };
 } // namespace ars::input

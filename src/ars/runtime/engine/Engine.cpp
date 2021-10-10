@@ -5,6 +5,7 @@
 #include <ars/runtime/render/ITexture.h>
 #include <ars/runtime/render/IWindow.h>
 #include <cassert>
+#include <chrono>
 #include <set>
 #include <utility>
 

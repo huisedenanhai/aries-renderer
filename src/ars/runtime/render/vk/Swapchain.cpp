@@ -253,6 +253,58 @@ int translate(input::Key key) {
     }
     return GLFW_KEY_UNKNOWN;
 }
+
+int translate(input::MouseButton button) {
+    switch (button) {
+    case input::MouseButton::Left:
+        return GLFW_MOUSE_BUTTON_LEFT;
+    case input::MouseButton::Middle:
+        return GLFW_MOUSE_BUTTON_MIDDLE;
+    case input::MouseButton::Right:
+        return GLFW_MOUSE_BUTTON_RIGHT;
+    }
+    return -1;
+}
+
+int translate(CursorMode mode) {
+    switch (mode) {
+    case CursorMode::Normal:
+        return GLFW_CURSOR_NORMAL;
+    case CursorMode::Hidden:
+        return GLFW_CURSOR_HIDDEN;
+    case CursorMode::HiddenCaptured:
+        return GLFW_CURSOR_DISABLED;
+    }
+    return GLFW_CURSOR_NORMAL;
+}
+
+template <typename Status, typename Code>
+bool read_status(const Status &status, Code code) {
+    auto glfw_index = translate(code);
+    if (glfw_index >= 0 && glfw_index < std::size(status)) {
+        return status[glfw_index];
+    }
+    return false;
+}
+
+template <typename Status>
+void update_status(
+    Status &hold, Status &press, Status &release, int code, int action) {
+    if (code < 0 || code >= std::size(hold)) {
+        return;
+    }
+
+    if (action == GLFW_PRESS) {
+        hold[code] = true;
+        press[code] = true;
+    }
+
+    if (action == GLFW_RELEASE) {
+        hold[code] = false;
+        release[code] = true;
+    }
+}
+
 } // namespace
 
 class Swapchain::KeyBoard : public input::IKeyBoard {
@@ -273,19 +325,7 @@ class Swapchain::KeyBoard : public input::IKeyBoard {
                        [[maybe_unused]] int scancode,
                        int action,
                        [[maybe_unused]] int mods) {
-        if (key < 0 || key >= MAX_KEY_COUNT) {
-            return;
-        }
-
-        if (action == GLFW_PRESS) {
-            _hold[key] = true;
-            _press[key] = true;
-        }
-
-        if (action == GLFW_RELEASE) {
-            _hold[key] = false;
-            _release[key] = true;
-        }
+        update_status(_hold, _press, _release, key, action);
     }
 
     void on_frame_ends() {
@@ -297,12 +337,6 @@ class Swapchain::KeyBoard : public input::IKeyBoard {
     static constexpr size_t MAX_KEY_COUNT = 512;
     using Status = std::array<bool, MAX_KEY_COUNT>;
 
-    static bool read_status(const Status &status, input::Key key) {
-        auto glfw_key = translate(key);
-        assert(glfw_key >= 0 && glfw_key < MAX_KEY_COUNT);
-        return status[glfw_key];
-    }
-
     Status _hold{};
     Status _press{};
     Status _release{};
@@ -311,24 +345,66 @@ class Swapchain::KeyBoard : public input::IKeyBoard {
 class Swapchain::Mouse : public input::IMouse {
   public:
     bool is_holding(input::MouseButton button) override {
-        return false;
+        return read_status(_hold, button);
     }
 
     bool is_pressed(input::MouseButton button) override {
-        return false;
+        return read_status(_press, button);
     }
 
     bool is_released(input::MouseButton button) override {
-        return false;
+        return read_status(_release, button);
     }
 
     glm::dvec2 cursor_position() override {
-        return {};
+        return _curr_cursor_position;
+    }
+
+    glm::dvec2 cursor_position_delta() override {
+        if (_is_first_frame) {
+            return {};
+        }
+        return _curr_cursor_position - _prev_cursor_position;
     }
 
     glm::dvec2 scroll_delta() override {
-        return {};
+        return _scroll_delta;
     }
+
+    void on_frame_ends() {
+        std::fill(_press.begin(), _press.end(), false);
+        std::fill(_release.begin(), _release.end(), false);
+        _scroll_delta = glm::dvec2(0.0);
+        _is_first_frame = false;
+        _prev_cursor_position = _curr_cursor_position;
+    }
+
+    void process_mouse_button_event(int button,
+                                    int action,
+                                    [[maybe_unused]] int mods) {
+        update_status(_hold, _press, _release, button, action);
+    }
+
+    void process_scroll_event(double xoffset, double yoffset) {
+        _scroll_delta += glm::dvec2(xoffset, yoffset);
+    }
+
+    void process_cursor_position_event(double xpos, double ypos) {
+        _curr_cursor_position = glm::dvec2(xpos, ypos);
+    }
+
+  private:
+    static constexpr size_t MAX_BUTTON_COUNT = 8;
+    using ButtonStatus = std::array<bool, MAX_BUTTON_COUNT>;
+
+    ButtonStatus _hold{};
+    ButtonStatus _press{};
+    ButtonStatus _release{};
+
+    glm::dvec2 _scroll_delta{};
+    glm::dvec2 _curr_cursor_position{};
+    glm::dvec2 _prev_cursor_position{};
+    bool _is_first_frame = true;
 };
 
 Swapchain::Swapchain(Context *context,
@@ -349,11 +425,21 @@ Swapchain::Swapchain(Context *context,
 
     glfwSetWindowUserPointer(_window, this);
     _prev_key_callback = glfwSetKeyCallback(_window, glfw_key_callback);
+    _prev_mouse_button_callback =
+        glfwSetMouseButtonCallback(_window, glfw_mouse_button_callback);
+    _prev_scroll_callback =
+        glfwSetScrollCallback(_window, glfw_scroll_callback);
+    _prev_cursor_position_callback =
+        glfwSetCursorPosCallback(_window, glfw_cursor_position_callback);
 }
 
 Swapchain::~Swapchain() {
     _context->queue()->flush();
     glfwSetKeyCallback(_window, _prev_key_callback);
+    glfwSetMouseButtonCallback(_window, _prev_mouse_button_callback);
+    glfwSetScrollCallback(_window, _prev_scroll_callback);
+    glfwSetCursorPosCallback(_window, _prev_cursor_position_callback);
+
     glfwSetWindowUserPointer(_window, nullptr);
     _context->unregister_swapchain(this);
 
@@ -828,6 +914,7 @@ input::IKeyBoard *Swapchain::keyboard() {
 
 void Swapchain::on_frame_ends() {
     _keyboard->on_frame_ends();
+    _mouse->on_frame_ends();
 }
 
 void Swapchain::glfw_key_callback(
@@ -845,5 +932,60 @@ void Swapchain::glfw_key_callback(
 
 input::IMouse *Swapchain::mouse() {
     return _mouse.get();
+}
+
+void Swapchain::glfw_mouse_button_callback(GLFWwindow *window,
+                                           int button,
+                                           int action,
+                                           int mods) {
+    auto swapchain =
+        reinterpret_cast<Swapchain *>(glfwGetWindowUserPointer(window));
+    if (swapchain == nullptr) {
+        return;
+    }
+    if (swapchain->_prev_mouse_button_callback != nullptr) {
+        swapchain->_prev_mouse_button_callback(window, button, action, mods);
+    }
+    swapchain->_mouse->process_mouse_button_event(button, action, mods);
+}
+
+void Swapchain::glfw_scroll_callback(GLFWwindow *window,
+                                     double xoffset,
+                                     double yoffset) {
+    auto swapchain =
+        reinterpret_cast<Swapchain *>(glfwGetWindowUserPointer(window));
+    if (swapchain == nullptr) {
+        return;
+    }
+    if (swapchain->_prev_scroll_callback != nullptr) {
+        swapchain->_prev_scroll_callback(window, xoffset, yoffset);
+    }
+    swapchain->_mouse->process_scroll_event(xoffset, yoffset);
+}
+
+void Swapchain::glfw_cursor_position_callback(GLFWwindow *window,
+                                              double xpos,
+                                              double ypos) {
+    auto swapchain =
+        reinterpret_cast<Swapchain *>(glfwGetWindowUserPointer(window));
+    if (swapchain == nullptr) {
+        return;
+    }
+    if (swapchain->_prev_cursor_position_callback != nullptr) {
+        swapchain->_prev_cursor_position_callback(window, xpos, ypos);
+    }
+    swapchain->_mouse->process_cursor_position_event(xpos, ypos);
+}
+
+CursorMode Swapchain::cursor_mode() {
+    return _cursor_mode;
+}
+
+void Swapchain::set_cursor_mode(CursorMode mode) {
+    if (mode == _cursor_mode) {
+        return;
+    }
+    _cursor_mode = mode;
+    glfwSetInputMode(_window, GLFW_CURSOR, translate(mode));
 }
 } // namespace ars::render::vk

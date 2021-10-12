@@ -57,6 +57,16 @@ struct FlyCamera {
         auto cursor_delta = glm::vec2(mouse->cursor_position_delta());
         euler.x -= d_rot * cursor_delta.y;
         euler.y -= d_rot * cursor_delta.x;
+
+        euler.x =
+            std::clamp(euler.x, -glm::radians(89.0f), glm::radians(89.0f));
+        auto pi = glm::pi<float>();
+        while (euler.y >= pi) {
+            euler.y -= 2.0f * pi;
+        }
+        while (euler.y < -pi) {
+            euler.y += 2.0f * pi;
+        }
         xform.set_rotation(euler);
     }
 };

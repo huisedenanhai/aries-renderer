@@ -7,6 +7,18 @@ namespace ars::render::vk {
 class Scene;
 class TextureAdapter;
 class GraphicsPipeline;
+class Renderer;
+
+enum NamedRT {
+    NamedRT_GBuffer0, // for base color
+    NamedRT_GBuffer1, // for normal
+    NamedRT_GBuffer2, // for material
+    NamedRT_GBuffer3, // for emission
+    NamedRT_Depth,
+    NamedRT_FinalColor,
+
+    NamedRT_Count
+};
 
 class View : public IView {
   public:
@@ -27,14 +39,18 @@ class View : public IView {
 
     ITexture *get_color_texture() override;
 
-    Context *context() const;
+    [[nodiscard]] Context *context() const;
+    [[nodiscard]] Scene *vk_scene() const;
+
+    [[nodiscard]] Handle<Texture> render_target(NamedRT name) const;
+    [[nodiscard]] RenderTargetManager *rt_manager() const;
+    [[nodiscard]] RenderTargetId rt_id(NamedRT name) const;
+    [[nodiscard]] RenderTargetInfo rt_info(NamedRT name) const;
 
   private:
-    void init_render_pass();
-    void init_pipeline();
     void alloc_render_targets();
     void update_color_tex_adapter();
-    TextureInfo color_tex_info() const;
+    [[nodiscard]] TextureInfo color_tex_info() const;
 
     Scene *_scene = nullptr;
     math::XformTRS<float> _xform{};
@@ -42,12 +58,10 @@ class View : public IView {
     Extent2D _size{};
 
     std::unique_ptr<RenderTargetManager> _rt_manager{};
-    RenderTargetId _color_rt_id{};
-    RenderTargetId _depth_rt_id{};
+    RenderTargetId _rt_ids[NamedRT_Count]{};
 
     std::unique_ptr<TextureAdapter> _color_tex_adapter{};
 
-    VkRenderPass _render_pass = VK_NULL_HANDLE;
-    std::unique_ptr<GraphicsPipeline> _base_color_pipeline{};
+    std::unique_ptr<Renderer> _renderer{};
 };
 } // namespace ars::render::vk

@@ -2,6 +2,7 @@
 #include "Context.h"
 #include "Descriptor.h"
 #include <ars/runtime/core/Log.h>
+#include <cassert>
 #include <sstream>
 #include <vulkan/spirv_reflect.h>
 
@@ -275,14 +276,19 @@ void GraphicsPipeline::init_pipeline(const GraphicsPipelineInfo &info) {
         create_info.pDepthStencilState = info.depth_stencil;
     }
 
+    assert(info.render_pass != nullptr);
+    auto &subpass = info.render_pass->subpasses()[info.subpass];
+
+    std::vector<VkPipelineColorBlendAttachmentState> attachments{};
+    attachments.resize(subpass.colorAttachmentCount);
+    for (auto &attach : attachments) {
+        attach.colorWriteMask = 0xF; // RGBA
+    }
+
     VkPipelineColorBlendStateCreateInfo blend{
         VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO};
-
-    VkPipelineColorBlendAttachmentState attachment{};
-    attachment.colorWriteMask = 0xF; // RGBA
-
-    blend.attachmentCount = 1;
-    blend.pAttachments = &attachment;
+    blend.attachmentCount = static_cast<uint32_t>(attachments.size());
+    blend.pAttachments = attachments.data();
 
     create_info.pColorBlendState = &blend;
     if (info.blend != nullptr) {
@@ -299,7 +305,7 @@ void GraphicsPipeline::init_pipeline(const GraphicsPipelineInfo &info) {
     create_info.pDynamicState = &dynamic_state;
 
     create_info.layout = _pipeline_layout;
-    create_info.renderPass = info.render_pass;
+    create_info.renderPass = info.render_pass->render_pass();
     create_info.subpass = info.subpass;
 
     if (_context->device()->Create(

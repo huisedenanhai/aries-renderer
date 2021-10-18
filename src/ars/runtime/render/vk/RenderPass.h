@@ -18,8 +18,11 @@ class RenderPass {
     RenderPass(Context *context, const VkRenderPassCreateInfo &info);
     ~RenderPass();
 
-    VkRenderPass render_pass() const;
-    Context *context() const;
+    [[nodiscard]] VkRenderPass render_pass() const;
+    [[nodiscard]] Context *context() const;
+    [[nodiscard]] const std::vector<VkAttachmentDescription> &
+    attachments() const;
+    [[nodiscard]] const std::vector<VkSubpassDescription> &subpasses() const;
 
     // clear value size must match with framebuffer attachment count
     RenderPassExecution begin(CommandBuffer *cmd,
@@ -32,6 +35,7 @@ class RenderPass {
     Context *_context = nullptr;
     VkRenderPass _render_pass = VK_NULL_HANDLE;
     std::vector<VkAttachmentDescription> _attachments{};
+    std::vector<VkSubpassDescription> _subpasses{};
 };
 
 class Framebuffer {
@@ -40,16 +44,17 @@ class Framebuffer {
                 std::vector<Handle<Texture>> attachments);
     ~Framebuffer();
 
-    const std::vector<Handle<Texture>> &attachments() const;
-    VkExtent2D extent() const;
-    VkFramebuffer framebuffer() const;
+    [[nodiscard]] const std::vector<Handle<Texture>> &attachments() const;
+    [[nodiscard]] VkExtent2D extent() const;
+    [[nodiscard]] VkFramebuffer framebuffer() const;
 
     void set_viewport_scissor(CommandBuffer *cmd) const;
 
   private:
-    void init_framebuffer();
+    void init_framebuffer(VkRenderPass render_pass);
 
-    RenderPass *_render_pass = nullptr;
+    // Cache
+    Context *_context = nullptr;
     VkFramebuffer _framebuffer = VK_NULL_HANDLE;
     VkExtent2D _extent{};
     std::vector<Handle<Texture>> _attachments{};

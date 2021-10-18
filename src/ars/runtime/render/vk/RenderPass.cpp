@@ -1,6 +1,7 @@
 #include "RenderPass.h"
 #include "Context.h"
 #include <ars/runtime/core/Log.h>
+#include <cassert>
 
 namespace ars::render::vk {
 RenderPass::RenderPass(Context *context, const VkRenderPassCreateInfo &info)
@@ -8,9 +9,14 @@ RenderPass::RenderPass(Context *context, const VkRenderPassCreateInfo &info)
     if (_context->device()->Create(&info, &_render_pass) != VK_SUCCESS) {
         panic("Failed to create render pass");
     }
-    _attachments.resize(info.attachmentCount);
+    _attachments.reserve(info.attachmentCount);
     for (int i = 0; i < info.attachmentCount; i++) {
-        _attachments[i] = info.pAttachments[i];
+        _attachments.push_back(info.pAttachments[i]);
+    }
+
+    _subpasses.reserve(info.subpassCount);
+    for (int i = 0; i < info.subpassCount; i++) {
+        _subpasses.push_back(info.pSubpasses[i]);
     }
 }
 
@@ -63,8 +69,16 @@ Context *RenderPass::context() const {
     return _context;
 }
 
+const std::vector<VkAttachmentDescription> &RenderPass::attachments() const {
+    return _attachments;
+}
+
+const std::vector<VkSubpassDescription> &RenderPass::subpasses() const {
+    return _subpasses;
+}
+
 Framebuffer::~Framebuffer() {
-    auto device = _render_pass->context()->device();
+    auto device = _context->device();
     if (_framebuffer != VK_NULL_HANDLE) {
         device->Destroy(_framebuffer);
     }
@@ -72,11 +86,11 @@ Framebuffer::~Framebuffer() {
 
 Framebuffer::Framebuffer(RenderPass *render_pass,
                          std::vector<Handle<Texture>> attachments)
-    : _render_pass(render_pass), _attachments(std::move(attachments)) {
-    init_framebuffer();
+    : _context(render_pass->context()), _attachments(std::move(attachments)) {
+    init_framebuffer(render_pass->render_pass());
 }
 
-void Framebuffer::init_framebuffer() {
+void Framebuffer::init_framebuffer(VkRenderPass render_pass) {
     if (_attachments.empty()) {
         panic("There must be at least one attachment for the framebuffer");
     }
@@ -84,7 +98,7 @@ void Framebuffer::init_framebuffer() {
     VkFramebufferCreateInfo fb_info{VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO};
     fb_info.width = extent.width;
     fb_info.height = extent.height;
-    fb_info.renderPass = _render_pass->render_pass();
+    fb_info.renderPass = render_pass;
     fb_info.layers = 1;
 
     std::vector<VkImageView> attachments{};
@@ -95,7 +109,7 @@ void Framebuffer::init_framebuffer() {
     fb_info.attachmentCount = static_cast<uint32_t>(std::size(attachments));
     fb_info.pAttachments = attachments.data();
 
-    auto device = _render_pass->context()->device();
+    auto device = _context->device();
     if (device->CreateFramebuffer(&fb_info, &_framebuffer) != VK_SUCCESS) {
         panic("Failed to create framebuffer");
     }

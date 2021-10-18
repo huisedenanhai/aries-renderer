@@ -444,14 +444,8 @@ Swapchain::~Swapchain() {
     _context->unregister_swapchain(this);
 
     _imgui.reset();
-
-    auto device = _context->device();
-
     _pipeline.reset();
-
-    if (_render_pass != VK_NULL_HANDLE) {
-        device->Destroy(_render_pass);
-    }
+    _render_pass.reset();
 
     cleanup_swapchain();
 
@@ -670,7 +664,7 @@ void Swapchain::present(ITexture *texture) {
         [&](CommandBuffer *cmd) {
             VkRenderPassBeginInfo rp_info{
                 VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
-            rp_info.renderPass = _render_pass;
+            rp_info.renderPass = _render_pass->render_pass();
             rp_info.framebuffer = _framebuffers[image_index];
             rp_info.renderArea = VkRect2D{{0, 0}, _extent};
 
@@ -798,7 +792,7 @@ void Swapchain::init_framebuffers() {
         info.width = _extent.width;
         info.height = _extent.height;
         info.layers = 1;
-        info.renderPass = _render_pass;
+        info.renderPass = _render_pass->render_pass();
 
         if (device->Create(&info, &_framebuffers[i]) != VK_SUCCESS) {
             panic("Failed to create framebuffers for swapchain images");
@@ -835,9 +829,7 @@ void Swapchain::init_render_pass() {
     info.subpassCount = 1;
     info.pSubpasses = &subpass;
 
-    if (_context->device()->Create(&info, &_render_pass) != VK_SUCCESS) {
-        panic("Failed to create render pass for presentation");
-    }
+    _render_pass = std::make_unique<RenderPass>(_context, info);
 }
 
 void Swapchain::init_semaphores() {
@@ -861,7 +853,7 @@ void Swapchain::init_pipeline() {
     GraphicsPipelineInfo info{};
     info.shaders.push_back(vert_shader.get());
     info.shaders.push_back(frag_shader.get());
-    info.render_pass = _render_pass;
+    info.render_pass = _render_pass.get();
     info.subpass = 0;
 
     _pipeline = std::make_unique<GraphicsPipeline>(_context, info);
@@ -883,8 +875,8 @@ bool Swapchain::should_close() {
     return glfwWindowShouldClose(_window);
 }
 
-VkRenderPass Swapchain::render_pass() const {
-    return _render_pass;
+RenderPass *Swapchain::render_pass() const {
+    return _render_pass.get();
 }
 
 Context *Swapchain::context() const {

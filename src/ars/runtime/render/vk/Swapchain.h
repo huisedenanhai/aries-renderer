@@ -9,6 +9,7 @@ struct GLFWwindow;
 
 namespace ars::render::vk {
 class Context;
+class RenderPass;
 class GraphicsPipeline;
 class ImGuiPass;
 
@@ -49,7 +50,7 @@ class Swapchain : public IWindow {
     void on_frame_ends();
 
     // The render pass for present
-    [[nodiscard]] VkRenderPass render_pass() const;
+    [[nodiscard]] RenderPass *render_pass() const;
     [[nodiscard]] Context *context() const;
     [[nodiscard]] GLFWwindow *window() const;
 
@@ -100,7 +101,7 @@ class Swapchain : public IWindow {
     VkImageSubresourceRange _subresource_range{};
 
     // Blit the image using shader
-    VkRenderPass _render_pass = VK_NULL_HANDLE;
+    std::unique_ptr<RenderPass> _render_pass{};
     std::unique_ptr<GraphicsPipeline> _pipeline{};
     std::vector<VkFramebuffer> _framebuffers{};
 

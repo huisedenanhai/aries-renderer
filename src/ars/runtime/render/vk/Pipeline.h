@@ -8,6 +8,7 @@
 
 namespace ars::render::vk {
 class Context;
+class RenderPass;
 
 constexpr uint32_t MAX_DESC_BINDING_COUNT = 16;
 constexpr uint32_t MAX_DESC_SET_COUNT = 16;
@@ -56,7 +57,7 @@ enabled_depth_stencil_state(bool depth_write = true);
 
 struct GraphicsPipelineInfo {
     std::vector<Shader *> shaders{};
-    VkRenderPass render_pass = VK_NULL_HANDLE;
+    RenderPass *render_pass = nullptr;
     uint32_t subpass = 0;
 
     // Push constant ranges can not be inferred from shader reflection data as

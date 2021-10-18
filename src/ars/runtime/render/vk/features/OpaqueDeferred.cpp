@@ -41,8 +41,8 @@ void OpaqueDeferred::render(CommandBuffer *cmd) {
     auto &rd_objs = _view->vk_scene()->render_objects;
     auto w_div_h =
         static_cast<float>(extent.width) / static_cast<float>(extent.height);
-    auto vp_matrix = _view->camera().projection_matrix(w_div_h) *
-                     glm::inverse(_view->xform().matrix_no_scale());
+    auto v_matrix = glm::inverse(_view->xform().matrix_no_scale());
+    auto p_matrix = _view->camera().projection_matrix(w_div_h);
     rd_objs.for_each_id([&](Scene::RenderObjects::Id id) {
         auto &matrix = rd_objs.get<glm::mat4>(id);
         auto &mesh = rd_objs.get<std::shared_ptr<Mesh>>(id);
@@ -59,6 +59,15 @@ void OpaqueDeferred::render(CommandBuffer *cmd) {
                                             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                                             VMA_MEMORY_USAGE_CPU_TO_GPU);
 
+        trans_buf->map_once([&](void *ptr) {
+            Transform t{};
+            t.MV = v_matrix * matrix;
+            t.I_MV = glm::inverse(t.MV);
+            t.P = p_matrix;
+
+            std::memcpy(ptr, &t, sizeof(Transform));
+        });
+
         struct MaterialParam {
             glm::vec4 base_color_factor;
             float metallic_factor;
@@ -71,6 +80,18 @@ void OpaqueDeferred::render(CommandBuffer *cmd) {
         auto mat_buf = ctx->create_buffer(sizeof(MaterialParam),
                                           VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                                           VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+        mat_buf->map_once([](void *ptr) {
+            MaterialParam m{};
+            m.base_color_factor = glm::vec4(1.0f);
+            m.metallic_factor = 1.0f;
+            m.roughness_factor = 1.0f;
+            m.normal_scale = 1.0f;
+            m.occlusion_strength = 1.0f;
+            m.emission_factor = glm::vec3(1.0f);
+
+            std::memcpy(ptr, &m, sizeof(MaterialParam));
+        });
 
         VkDescriptorSet desc_sets[2]{
             _geometry_pass_pipeline->alloc_desc_set(0),
@@ -183,7 +204,7 @@ void OpaqueDeferred::init_pipeline() {
     GraphicsPipelineInfo info{};
     info.shaders.push_back(vert_shader.get());
     info.shaders.push_back(frag_shader.get());
-    info.render_pass = _render_pass->render_pass();
+    info.render_pass = _render_pass.get();
     info.subpass = 0;
 
     info.vertex_input = &vertex_input;

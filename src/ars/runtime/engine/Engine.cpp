@@ -50,7 +50,7 @@ class SecondaryWindow {
         _render(_window.get(), dt);
     }
 
-    bool should_close() const {
+    [[nodiscard]] bool should_close() const {
         return _window->should_close();
     }
 

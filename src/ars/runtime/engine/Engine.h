@@ -16,10 +16,10 @@ class IApplication {
     virtual ~IApplication() = default;
 
     void init(render::IWindow *window);
-    render::IWindow *window() const;
+    [[nodiscard]] render::IWindow *window() const;
 
     void quit();
-    bool want_to_quit() const;
+    [[nodiscard]] bool want_to_quit() const;
 
     [[nodiscard]] virtual std::string get_name() const;
 

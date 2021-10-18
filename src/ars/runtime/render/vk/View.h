@@ -8,6 +8,7 @@ class Scene;
 class TextureAdapter;
 class GraphicsPipeline;
 class Renderer;
+class RenderPass;
 
 enum NamedRT {
     NamedRT_GBuffer0, // for base color
@@ -46,6 +47,8 @@ class View : public IView {
     [[nodiscard]] RenderTargetManager *rt_manager() const;
     [[nodiscard]] RenderTargetId rt_id(NamedRT name) const;
     [[nodiscard]] RenderTargetInfo rt_info(NamedRT name) const;
+    std::unique_ptr<RenderPass> create_single_pass_render_pass(
+        NamedRT *colors, uint32_t color_count, NamedRT depth_stencil);
 
   private:
     void alloc_render_targets();

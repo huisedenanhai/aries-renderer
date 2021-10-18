@@ -3,6 +3,7 @@
 #include "../IContext.h"
 #include "Buffer.h"
 #include "Descriptor.h"
+#include "RenderPass.h"
 #include "Texture.h"
 #include "Vulkan.h"
 
@@ -109,7 +110,9 @@ class Context : public IContext {
                                  VkBufferUsageFlags buffer_usage,
                                  VmaMemoryUsage memory_usage);
 
-    VkFramebuffer create_tmp_framebuffer(VkFramebufferCreateInfo *info);
+    Framebuffer *
+    create_tmp_framebuffer(RenderPass *render_pass,
+                           std::vector<Handle<Texture>> attachments);
 
     std::unique_ptr<Swapchain> create_swapchain(GLFWwindow *window,
                                                 bool owns_window);
@@ -157,7 +160,7 @@ class Context : public IContext {
     std::vector<std::shared_ptr<CommandBuffer>> _command_buffers{};
     std::vector<std::shared_ptr<Buffer>> _buffers{};
 
-    std::vector<VkFramebuffer> _tmp_framebuffers{};
+    std::vector<std::unique_ptr<Framebuffer>> _tmp_framebuffers{};
 
     std::set<Swapchain *> _registered_swapchains{};
 

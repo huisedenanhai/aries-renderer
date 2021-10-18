@@ -1,24 +1,26 @@
 #pragma once
 
 #include "../Pipeline.h"
+#include "../RenderPass.h"
+#include "../View.h"
 #include "../Vulkan.h"
+#include <array>
 
 namespace ars::render::vk {
-class View;
-
 class OpaqueDeferred {
   public:
     explicit OpaqueDeferred(View *view);
-    ~OpaqueDeferred();
+    ~OpaqueDeferred() = default;
 
     void render(CommandBuffer *cmd);
 
   private:
     void init_render_pass();
     void init_pipeline();
+    std::array<NamedRT, 5> geometry_pass_rts() const;
 
     View *_view = nullptr;
-    VkRenderPass _render_pass = VK_NULL_HANDLE;
-    std::unique_ptr<GraphicsPipeline> _base_color_pipeline{};
+    std::unique_ptr<RenderPass> _render_pass{};
+    std::unique_ptr<GraphicsPipeline> _geometry_pass_pipeline{};
 };
 } // namespace ars::render::vk

@@ -703,7 +703,7 @@ void Swapchain::present(ITexture *texture) {
 
                 VkWriteDescriptorSet write{};
                 VkDescriptorImageInfo image_info{};
-                fill_combined_image_sampler(
+                fill_desc_combined_image_sampler(
                     &write, &image_info, desc_set, 0, upcast(texture).get());
 
                 device->UpdateDescriptorSets(1, &write, 0, nullptr);

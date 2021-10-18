@@ -76,9 +76,17 @@ class DescriptorArena {
     void alloc_new_pool();
 };
 
-void fill_combined_image_sampler(VkWriteDescriptorSet *write,
-                                 VkDescriptorImageInfo *image_info,
-                                 VkDescriptorSet dst_set,
-                                 uint32_t binding,
-                                 Texture *texture);
+void fill_desc_combined_image_sampler(VkWriteDescriptorSet *write,
+                                      VkDescriptorImageInfo *image_info,
+                                      VkDescriptorSet dst_set,
+                                      uint32_t binding,
+                                      Texture *texture);
+
+void fill_desc_uniform_buffer(VkWriteDescriptorSet *write,
+                              VkDescriptorBufferInfo *buffer_info,
+                              VkDescriptorSet dst_set,
+                              uint32_t binding,
+                              VkBuffer buffer,
+                              VkDeviceSize offset,
+                              VkDeviceSize range);
 } // namespace ars::render::vk

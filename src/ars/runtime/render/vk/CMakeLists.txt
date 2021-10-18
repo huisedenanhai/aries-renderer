@@ -1,4 +1,6 @@
 aries_target_sources(render PRIVATE
+        RenderPass.cpp
+        RenderPass.h
         View.cpp
         View.h
         RenderTarget.cpp

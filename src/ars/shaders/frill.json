@@ -5,6 +5,11 @@
     "ImGui.vert",
     "ImGui.frag",
     "BaseColor.vert",
-    "BaseColor.frag"
+    "BaseColor.frag",
+    "GeometryPass.vert",
+    "GeometryPass.frag"
+  ],
+  "includes": [
+    "include"
   ]
 }

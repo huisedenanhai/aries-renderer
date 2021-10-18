@@ -218,11 +218,11 @@ void DescriptorArena::alloc_new_pool() {
         std::make_unique<DescriptorPool>(_device, _pool_sizes, _pool_max_set));
 }
 
-void fill_combined_image_sampler(VkWriteDescriptorSet *write,
-                                 VkDescriptorImageInfo *image_info,
-                                 VkDescriptorSet dst_set,
-                                 uint32_t binding,
-                                 Texture *texture) {
+void fill_desc_combined_image_sampler(VkWriteDescriptorSet *write,
+                                      VkDescriptorImageInfo *image_info,
+                                      VkDescriptorSet dst_set,
+                                      uint32_t binding,
+                                      Texture *texture) {
     write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     write->descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     write->dstSet = dst_set;
@@ -238,4 +238,25 @@ void fill_combined_image_sampler(VkWriteDescriptorSet *write,
     image_info->sampler = texture->sampler();
 }
 
+void fill_desc_uniform_buffer(VkWriteDescriptorSet *write,
+                              VkDescriptorBufferInfo *buffer_info,
+                              VkDescriptorSet dst_set,
+                              uint32_t binding,
+                              VkBuffer buffer,
+                              VkDeviceSize offset,
+                              VkDeviceSize range) {
+    write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write->descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    write->dstSet = dst_set;
+    write->dstBinding = binding;
+    write->dstArrayElement = 0;
+    write->descriptorCount = 1;
+    write->pBufferInfo = buffer_info;
+    write->pImageInfo = nullptr;
+    write->pTexelBufferView = nullptr;
+
+    buffer_info->buffer = buffer;
+    buffer_info->offset = offset;
+    buffer_info->range = range;
+}
 } // namespace ars::render::vk

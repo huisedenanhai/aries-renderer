@@ -12,68 +12,32 @@ OpaqueDeferred::OpaqueDeferred(View *view) : _view(view) {
     init_pipeline();
 }
 
-OpaqueDeferred::~OpaqueDeferred() {
-    auto device = _view->context()->device();
-    if (_render_pass != VK_NULL_HANDLE) {
-        device->Destroy(_render_pass);
-    }
-}
-
 void OpaqueDeferred::render(CommandBuffer *cmd) {
     auto ctx = _view->context();
-    auto color_rt = _view->render_target(NamedRT_FinalColor);
-    auto depth_rt = _view->render_target(NamedRT_Depth);
-    VkExtent2D extent{
-        color_rt->info().extent.width,
-        color_rt->info().extent.height,
-    };
 
-    VkFramebufferCreateInfo fb_info{VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO};
-    fb_info.width = extent.width;
-    fb_info.height = extent.height;
-    fb_info.renderPass = _render_pass;
-    fb_info.layers = 1;
+    Framebuffer *fb = nullptr;
+    {
+        auto rts = geometry_pass_rts();
+        std::vector<Handle<Texture>> render_targets{};
+        render_targets.reserve(rts.size());
+        for (auto rt : rts) {
+            render_targets.push_back(_view->render_target(rt));
+        }
+        fb = ctx->create_tmp_framebuffer(_render_pass.get(),
+                                         std::move(render_targets));
+    }
 
-    VkImageView attachments[2] = {color_rt->image_view(),
-                                  depth_rt->image_view()};
-    fb_info.attachmentCount = static_cast<uint32_t>(std::size(attachments));
-    fb_info.pAttachments = attachments;
-
-    auto fb = ctx->create_tmp_framebuffer(&fb_info);
-    VkClearValue clear_values[2]{};
-    auto &clear_color = clear_values[0].color.float32;
-    clear_color[0] = 1.0f;
-    clear_color[1] = 0.0f;
-    clear_color[2] = 0.0f;
-    clear_color[3] = 1.0f;
-
-    auto &clear_depth_stencil = clear_values[1].depthStencil;
-    clear_depth_stencil.depth = 0.0f;
-
-    VkRenderPassBeginInfo rp_begin{VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
-    rp_begin.renderPass = _render_pass;
-    rp_begin.framebuffer = fb;
-    rp_begin.clearValueCount = static_cast<uint32_t>(std::size(clear_values));
-    rp_begin.pClearValues = clear_values;
-    rp_begin.renderArea = {{0, 0}, extent};
-
-    cmd->BeginRenderPass(&rp_begin, VK_SUBPASS_CONTENTS_INLINE);
+    // clear all rts to zero
+    VkClearValue clear_values[5]{};
+    auto rp_exec =
+        _render_pass->begin(cmd, fb, clear_values, VK_SUBPASS_CONTENTS_INLINE);
 
     cmd->BindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS,
-                      _base_color_pipeline->pipeline());
+                      _geometry_pass_pipeline->pipeline());
 
-    VkViewport viewport;
-    viewport.x = 0;
-    viewport.y = 0;
-    viewport.width = (float)extent.width;
-    viewport.height = (float)extent.height;
-    viewport.minDepth = 0.0f;
-    viewport.maxDepth = 1.0f;
-    cmd->SetViewport(0, 1, &viewport);
+    fb->set_viewport_scissor(cmd);
 
-    VkRect2D scissor{{0, 0}, extent};
-    cmd->SetScissor(0, 1, &scissor);
-
+    auto extent = fb->extent();
     auto &rd_objs = _view->vk_scene()->render_objects;
     auto w_div_h =
         static_cast<float>(extent.width) / static_cast<float>(extent.height);
@@ -85,111 +49,126 @@ void OpaqueDeferred::render(CommandBuffer *cmd) {
         auto &material = rd_objs.get<std::shared_ptr<IMaterial>>(id);
         auto base_color = upcast(material->base_color_tex().get());
 
-        auto desc_set = _base_color_pipeline->alloc_desc_set(0);
-        VkWriteDescriptorSet write{};
-        VkDescriptorImageInfo image_info{};
-        fill_combined_image_sampler(
-            &write, &image_info, desc_set, 0, base_color.get());
+        struct Transform {
+            glm::mat4 MV;
+            glm::mat4 I_MV;
+            glm::mat4 P;
+        };
 
-        ctx->device()->UpdateDescriptorSets(1, &write, 0, nullptr);
+        auto trans_buf = ctx->create_buffer(sizeof(Transform),
+                                            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                                            VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+        struct MaterialParam {
+            glm::vec4 base_color_factor;
+            float metallic_factor;
+            float roughness_factor;
+            float normal_scale;
+            float occlusion_strength;
+            glm::vec3 emission_factor;
+        };
+
+        auto mat_buf = ctx->create_buffer(sizeof(MaterialParam),
+                                          VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                                          VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+        VkDescriptorSet desc_sets[2]{
+            _geometry_pass_pipeline->alloc_desc_set(0),
+            _geometry_pass_pipeline->alloc_desc_set(1)};
+        VkWriteDescriptorSet write[7]{};
+        VkDescriptorImageInfo image_info[5]{};
+        auto image_writes = write + 2;
+        for (int i = 0; i < 5; i++) {
+            fill_desc_combined_image_sampler(&image_writes[i],
+                                             &image_info[i],
+                                             desc_sets[1],
+                                             i + 1,
+                                             base_color.get());
+        }
+
+        VkDescriptorBufferInfo trans_buf_info;
+        fill_desc_uniform_buffer(&write[0],
+                                 &trans_buf_info,
+                                 desc_sets[0],
+                                 0,
+                                 trans_buf->buffer(),
+                                 0,
+                                 trans_buf->size());
+
+        VkDescriptorBufferInfo mat_buf_info;
+        fill_desc_uniform_buffer(&write[1],
+                                 &mat_buf_info,
+                                 desc_sets[1],
+                                 0,
+                                 mat_buf->buffer(),
+                                 0,
+                                 mat_buf->size());
+
+        ctx->device()->UpdateDescriptorSets(
+            static_cast<uint32_t>(std::size(write)), write, 0, nullptr);
 
         cmd->BindDescriptorSets(VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                _base_color_pipeline->pipeline_layout(),
+                                _geometry_pass_pipeline->pipeline_layout(),
                                 0,
-                                1,
-                                &desc_set,
+                                2,
+                                desc_sets,
                                 0,
                                 nullptr);
 
-        auto mvp = vp_matrix * matrix;
-        cmd->PushConstants(_base_color_pipeline->pipeline_layout(),
-                           VK_SHADER_STAGE_VERTEX_BIT,
-                           0,
-                           sizeof(glm::mat4),
-                           &mvp);
-
-        VkBuffer vertex_buffers[2] = {
+        VkBuffer vertex_buffers[] = {
             mesh->position_buffer()->buffer(),
+            mesh->normal_buffer()->buffer(),
+            mesh->tangent_buffer()->buffer(),
             mesh->tex_coord_buffer()->buffer(),
         };
-        VkDeviceSize vertex_offsets[2] = {0, 0};
-        cmd->BindVertexBuffers(0, 2, vertex_buffers, vertex_offsets);
+        VkDeviceSize vertex_offsets[std::size(vertex_buffers)] = {};
+        cmd->BindVertexBuffers(0,
+                               static_cast<uint32_t>(std::size(vertex_buffers)),
+                               vertex_buffers,
+                               vertex_offsets);
         cmd->BindIndexBuffer(
             mesh->index_buffer()->buffer(), 0, VK_INDEX_TYPE_UINT32);
 
         cmd->DrawIndexed(mesh->triangle_count() * 3, 1, 0, 0, 0);
     });
 
-    cmd->EndRenderPass();
-
-    color_rt->assure_layout(VK_IMAGE_LAYOUT_GENERAL);
+    _render_pass->end(rp_exec);
 }
 
 void OpaqueDeferred::init_render_pass() {
-    VkAttachmentDescription attachments[2]{};
-
-    auto &color_attachment = attachments[0];
-    color_attachment.format = _view->rt_info(NamedRT_FinalColor).texture.format;
-    color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    color_attachment.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
-
-    auto &depth_attachment = attachments[1];
-    depth_attachment.format = _view->rt_info(NamedRT_Depth).texture.format;
-    depth_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    depth_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    depth_attachment.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
-
-    VkAttachmentReference color_ref{};
-    color_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    color_ref.attachment = 0;
-
-    VkAttachmentReference depth_ref{};
-    depth_ref.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    depth_ref.attachment = 1;
-
-    VkSubpassDescription subpass{};
-    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount = 1;
-    subpass.pColorAttachments = &color_ref;
-    subpass.pDepthStencilAttachment = &depth_ref;
-
-    VkRenderPassCreateInfo info{VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO};
-    info.attachmentCount = static_cast<uint32_t>(std::size(attachments));
-    info.pAttachments = attachments;
-    info.subpassCount = 1;
-    info.pSubpasses = &subpass;
-
-    auto device = _view->context()->device();
-    if (device->Create(&info, &_render_pass) != VK_NULL_HANDLE) {
-        panic("Failed to create render pass for Opaque Deferred Pass");
-    }
+    auto rts = geometry_pass_rts();
+    _render_pass = _view->create_single_pass_render_pass(
+        rts.data(), static_cast<uint32_t>(std::size(rts) - 1), rts.back());
 }
 
 void OpaqueDeferred::init_pipeline() {
     auto ctx = _view->context();
-    auto vert_shader = std::make_unique<Shader>(ctx, "BaseColor.vert");
-    auto frag_shader = std::make_unique<Shader>(ctx, "BaseColor.frag");
+    auto vert_shader = std::make_unique<Shader>(ctx, "GeometryPass.vert");
+    auto frag_shader = std::make_unique<Shader>(ctx, "GeometryPass.frag");
 
     VkPipelineVertexInputStateCreateInfo vertex_input{
         VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
 
-    VkVertexInputBindingDescription vert_bindings[2] = {
+    VkVertexInputBindingDescription vert_bindings[4] = {
         {0,
          static_cast<uint32_t>(sizeof(glm::vec3)),
          VK_VERTEX_INPUT_RATE_VERTEX},
         {1,
+         static_cast<uint32_t>(sizeof(glm::vec3)),
+         VK_VERTEX_INPUT_RATE_VERTEX},
+        {2,
+         static_cast<uint32_t>(sizeof(glm::vec4)),
+         VK_VERTEX_INPUT_RATE_VERTEX},
+        {3,
          static_cast<uint32_t>(sizeof(glm::vec2)),
          VK_VERTEX_INPUT_RATE_VERTEX},
     };
 
-    VkVertexInputAttributeDescription vert_attrs[2] = {
+    VkVertexInputAttributeDescription vert_attrs[4] = {
         {0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0},
-        {1, 1, VK_FORMAT_R32G32_SFLOAT, 0},
+        {1, 1, VK_FORMAT_R32G32B32_SFLOAT, 0},
+        {2, 2, VK_FORMAT_R32G32B32A32_SFLOAT, 0},
+        {3, 3, VK_FORMAT_R32G32_SFLOAT, 0},
     };
 
     vertex_input.vertexAttributeDescriptionCount =
@@ -199,22 +178,25 @@ void OpaqueDeferred::init_pipeline() {
         static_cast<uint32_t>(std::size(vert_bindings));
     vertex_input.pVertexBindingDescriptions = vert_bindings;
 
-    VkPushConstantRange push_constant_range{
-        VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4)};
-
     auto depth_stencil = enabled_depth_stencil_state();
 
     GraphicsPipelineInfo info{};
     info.shaders.push_back(vert_shader.get());
     info.shaders.push_back(frag_shader.get());
-    info.render_pass = _render_pass;
+    info.render_pass = _render_pass->render_pass();
     info.subpass = 0;
 
-    info.push_constant_range_count = 1;
-    info.push_constant_ranges = &push_constant_range;
     info.vertex_input = &vertex_input;
     info.depth_stencil = &depth_stencil;
 
-    _base_color_pipeline = std::make_unique<GraphicsPipeline>(ctx, info);
+    _geometry_pass_pipeline = std::make_unique<GraphicsPipeline>(ctx, info);
+}
+
+std::array<NamedRT, 5> OpaqueDeferred::geometry_pass_rts() const {
+    return {NamedRT_FinalColor,
+            NamedRT_GBuffer1,
+            NamedRT_GBuffer2,
+            NamedRT_GBuffer3,
+            NamedRT_Depth};
 }
 } // namespace ars::render::vk

@@ -2,6 +2,7 @@
 #include "Descriptor.h"
 #include "Material.h"
 #include "Mesh.h"
+#include "RenderPass.h"
 #include "Scene.h"
 #include "Swapchain.h"
 #include <GLFW/glfw3.h>
@@ -744,13 +745,6 @@ template <typename T> void run_gc(std::vector<std::shared_ptr<T>> &pool) {
                               [](auto &res) { return res.use_count() <= 1; }),
                pool.end());
 }
-
-template <typename T> void clean_tmp(Device *device, std::vector<T> &pool) {
-    for (auto &v : pool) {
-        device->Destroy(v);
-    }
-    pool.clear();
-}
 } // namespace
 
 void Context::gc() {
@@ -758,7 +752,7 @@ void Context::gc() {
     run_gc(_command_buffers);
     run_gc(_buffers);
 
-    clean_tmp(_device.get(), _tmp_framebuffers);
+    _tmp_framebuffers.clear();
 }
 
 VkPipelineCache Context::pipeline_cache() const {
@@ -854,13 +848,15 @@ std::unique_ptr<Swapchain> Context::create_swapchain(GLFWwindow *window,
     return std::make_unique<Swapchain>(this, surface, window, owns_window);
 }
 
-VkFramebuffer Context::create_tmp_framebuffer(VkFramebufferCreateInfo *info) {
-    VkFramebuffer framebuffer = VK_NULL_HANDLE;
-    if (_device->CreateFramebuffer(info, &framebuffer) != VK_SUCCESS) {
-        panic("Failed to create tmp framebuffer");
-    }
-    _tmp_framebuffers.push_back(framebuffer);
-    return framebuffer;
+Framebuffer *
+Context::create_tmp_framebuffer(RenderPass *render_pass,
+                                std::vector<Handle<Texture>> attachments) {
+    auto framebuffer =
+        std::make_unique<Framebuffer>(render_pass, std::move(attachments));
+    auto ptr = framebuffer.get();
+
+    _tmp_framebuffers.emplace_back(std::move(framebuffer));
+    return ptr;
 }
 
 void Context::register_swapchain(Swapchain *swapchain) {

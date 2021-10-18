@@ -371,7 +371,7 @@ void ImGuiPass::draw(CommandBuffer *cmd, ImGuiViewport *viewport) {
 
             VkWriteDescriptorSet write{};
             VkDescriptorImageInfo image_info{};
-            fill_combined_image_sampler(
+            fill_desc_combined_image_sampler(
                 &write, &image_info, desc_set, 0, bd->font_atlas());
 
             swapchain->context()->device()->UpdateDescriptorSets(

@@ -3,8 +3,6 @@
 #include "../Material.h"
 #include "../Mesh.h"
 #include "../Scene.h"
-#include "../View.h"
-#include <ars/runtime/core/Log.h>
 
 namespace ars::render::vk {
 OpaqueDeferred::OpaqueDeferred(View *view) : _view(view) {
@@ -47,7 +45,8 @@ void OpaqueDeferred::render(CommandBuffer *cmd) {
         auto &matrix = rd_objs.get<glm::mat4>(id);
         auto &mesh = rd_objs.get<std::shared_ptr<Mesh>>(id);
         auto &material = rd_objs.get<std::shared_ptr<IMaterial>>(id);
-        auto base_color = upcast(material->base_color_tex().get());
+        //        auto base_color = upcast(material->base_color_tex().get());
+        Handle<Texture> base_color{};
 
         struct Transform {
             glm::mat4 MV;

@@ -1,111 +1,87 @@
 #include "IMaterial.h"
+#include <ars/runtime/core/Log.h>
+#include <sstream>
 
 namespace ars::render {
-IMaterial::Mode IMaterial::alpha_mode() const {
-    return _alpha_mode;
+int IMaterial::str_to_id(const std::string &name) {
+    return static_cast<int>(std::hash<std::string>()(name));
 }
 
-void IMaterial::set_alpha_mode(IMaterial::Mode alpha_mode) {
-    _alpha_mode = alpha_mode;
+IMaterial::IMaterial(IMaterialPrototype *prototype) : _prototype(prototype) {}
+
+MaterialType IMaterial::type() const {
+    return _prototype->type();
 }
 
-bool IMaterial::double_sided() const {
-    return _double_sided;
+IMaterialPrototype *IMaterial::prototype() const {
+    return _prototype;
 }
 
-void IMaterial::set_double_sided(bool double_sided) {
-    _double_sided = double_sided;
+void IMaterial::set_variant(int id, const MaterialPropertyVariant &value) {
+    assert(_prototype != nullptr);
+    for (auto &prop : _prototype->properties()) {
+        if (prop.id == id) {
+            if (value.type() != prop.type) {
+                std::stringstream ss;
+                ss << "material property type mismatch for id " << id;
+                log_warn(ss.str());
+                return;
+            }
+            prop.setter(this, value);
+            return;
+        }
+    }
+    std::stringstream ss;
+    ss << "material property not found with id " << id;
+    log_warn(ss.str());
 }
 
-const glm::vec4 &IMaterial::base_color_factor() const {
-    return _base_color_factor;
+std::optional<MaterialPropertyVariant> IMaterial::get_variant(int id) {
+    assert(_prototype != nullptr);
+    for (auto &prop : _prototype->properties()) {
+        if (prop.id == id) {
+            return prop.getter(this);
+        }
+    }
+    std::stringstream ss;
+    ss << "material property not found with id " << id;
+    log_warn(ss.str());
+    return std::nullopt;
 }
 
-void IMaterial::set_base_color_factor(const glm::vec4 &base_color_factor) {
-    _base_color_factor = base_color_factor;
+MaterialPropertyInfo::MaterialPropertyInfo(const char *name,
+                                           MaterialPropertyType type)
+    : name(name), id(IMaterial::str_to_id(name)), type(type) {}
+
+MaterialType IMaterialPrototype::type() const {
+    return _type;
 }
 
-const std::shared_ptr<ITexture> &IMaterial::base_color_tex() const {
-    return _base_color_tex;
+const std::vector<MaterialPropertyInfo> &
+IMaterialPrototype::properties() const {
+    return _properties;
 }
 
-void IMaterial::set_base_color_tex(
-    const std::shared_ptr<ITexture> &base_color_tex) {
-    _base_color_tex = base_color_tex;
-}
+IMaterialPrototype::IMaterialPrototype(
+    MaterialType type, std::vector<MaterialPropertyInfo> properties)
+    : _type(type), _properties(std::move(properties)) {}
 
-float IMaterial::metallic_factor() const {
-    return _metallic_factor;
-}
-
-void IMaterial::set_metallic_factor(float metallic_factor) {
-    _metallic_factor = metallic_factor;
-}
-
-float IMaterial::roughness_factor() const {
-    return _roughness_factor;
-}
-
-void IMaterial::set_roughness_factor(float roughness_factor) {
-    _roughness_factor = roughness_factor;
-}
-
-const std::shared_ptr<ITexture> &IMaterial::metallic_roughness_tex() const {
-    return _metallic_roughness_tex;
-}
-
-void IMaterial::set_metallic_roughness_tex(
-    const std::shared_ptr<ITexture> &metallic_roughness_tex) {
-    _metallic_roughness_tex = metallic_roughness_tex;
-}
-
-const std::shared_ptr<ITexture> &IMaterial::normal_tex() const {
-    return _normal_tex;
-}
-
-void IMaterial::set_normal_tex(const std::shared_ptr<ITexture> &normal_tex) {
-    _normal_tex = normal_tex;
-}
-
-float IMaterial::normal_scale() const {
-    return _normal_scale;
-}
-
-void IMaterial::set_normal_scale(float normal_scale) {
-    _normal_scale = normal_scale;
-}
-
-const std::shared_ptr<ITexture> &IMaterial::occlusion_tex() const {
-    return _occlusion_tex;
-}
-
-void IMaterial::set_occlusion_tex(
-    const std::shared_ptr<ITexture> &occlusion_tex) {
-    _occlusion_tex = occlusion_tex;
-}
-
-float IMaterial::occlusion_strength() const {
-    return _occlusion_strength;
-}
-
-void IMaterial::set_occlusion_strength(float occlusion_strength) {
-    _occlusion_strength = occlusion_strength;
-}
-
-const std::shared_ptr<ITexture> &IMaterial::emission_tex() const {
-    return _emission_tex;
-}
-
-void IMaterial::set_emission_tex(
-    const std::shared_ptr<ITexture> &emission_tex) {
-    _emission_tex = emission_tex;
-}
-
-const glm::vec3 &IMaterial::emission_factor() const {
-    return _emission_factor;
-}
-
-void IMaterial::set_emission_factor(const glm::vec3 &emission_factor) {
-    _emission_factor = emission_factor;
+MaterialPropertyType MaterialPropertyVariant::type() const {
+    if (std::holds_alternative<std::shared_ptr<ITexture>>(*this)) {
+        return MaterialPropertyType::Texture;
+    }
+    if (std::holds_alternative<int>(*this)) {
+        return MaterialPropertyType::Int;
+    }
+    if (std::holds_alternative<float>(*this)) {
+        return MaterialPropertyType::Float;
+    }
+    if (std::holds_alternative<glm::vec2>(*this)) {
+        return MaterialPropertyType::Float2;
+    }
+    if (std::holds_alternative<glm::vec3>(*this)) {
+        return MaterialPropertyType::Float3;
+    }
+    return MaterialPropertyType::Float4;
 }
 } // namespace ars::render

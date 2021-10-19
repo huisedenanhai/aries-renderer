@@ -16,6 +16,7 @@ namespace ars::render::vk {
 class DescriptorArena;
 class Swapchain;
 class Context;
+class MaterialPrototypeRegistry;
 
 void init_vulkan_backend(const ApplicationInfo &app_info);
 void destroy_vulkan_backend();
@@ -76,7 +77,7 @@ class Context : public IContext {
     std::shared_ptr<ITexture>
     create_texture_impl(const TextureInfo &info) override;
     std::shared_ptr<IMesh> create_mesh(const MeshInfo &info) override;
-    std::shared_ptr<IMaterial> create_material() override;
+    IMaterialPrototype *material_prototype(MaterialType type) override;
 
     [[nodiscard]] Instance *instance() const;
     [[nodiscard]] Device *device() const;
@@ -165,6 +166,7 @@ class Context : public IContext {
     std::set<Swapchain *> _registered_swapchains{};
 
     ContextProperties _properties{};
+    std::unique_ptr<MaterialPrototypeRegistry> _material_prototypes{};
 };
 
 template <typename Func>

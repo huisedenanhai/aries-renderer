@@ -289,10 +289,6 @@ std::shared_ptr<IMesh> Context::create_mesh(const MeshInfo &info) {
     return std::make_shared<Mesh>(this, info);
 }
 
-std::shared_ptr<IMaterial> Context::create_material() {
-    return std::make_shared<Material>();
-}
-
 namespace {
 std::vector<VkExtensionProperties>
 enumerate_device_extensions(Instance *instance,
@@ -562,6 +558,8 @@ Context::Context(const WindowInfo *info,
     if (window != nullptr && surface != VK_NULL_HANDLE) {
         swapchain = std::make_unique<Swapchain>(this, surface, window, true);
     }
+
+    _material_prototypes = std::make_unique<MaterialPrototypeRegistry>(this);
 }
 
 Instance *Context::instance() const {
@@ -618,6 +616,7 @@ void Context::end_frame() {
 }
 
 Context::~Context() {
+    _material_prototypes.reset();
     gc();
     if (_pipeline_cache != VK_NULL_HANDLE) {
         _device->Destroy(_pipeline_cache);
@@ -867,4 +866,7 @@ void Context::unregister_swapchain(Swapchain *swapchain) {
     _registered_swapchains.erase(swapchain);
 }
 
+IMaterialPrototype *Context::material_prototype(MaterialType type) {
+    return _material_prototypes->prototype(type);
+}
 } // namespace ars::render::vk

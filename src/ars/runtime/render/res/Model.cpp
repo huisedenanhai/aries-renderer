@@ -1,6 +1,5 @@
 #include "Model.h"
 #include "../IContext.h"
-#include "../IMaterial.h"
 #include "../IMesh.h"
 #include "../ITexture.h"
 #include "Texture.h"
@@ -473,31 +472,36 @@ void load_materials(IContext *context,
         Model::Material mat{};
 
         mat.name = gltf_mat.name;
-        auto &m = mat.material = context->create_material();
+        auto &m = mat.material =
+            context->material_prototype(MaterialType::MetallicRoughnessPBR)
+                ->create_material();
         auto &pbr = gltf_mat.pbrMetallicRoughness;
 
-        m->set_base_color_tex(tex(pbr.baseColorTexture.index));
-        m->set_base_color_factor(glm::vec4(pbr.baseColorFactor[0],
-                                           pbr.baseColorFactor[1],
-                                           pbr.baseColorFactor[2],
-                                           pbr.baseColorFactor[3]));
-        m->set_metallic_factor((float)pbr.metallicFactor);
-        m->set_roughness_factor((float)pbr.roughnessFactor);
-        m->set_metallic_roughness_tex(tex(pbr.metallicRoughnessTexture.index));
-        m->set_normal_tex(tex(gltf_mat.normalTexture.index));
-        m->set_normal_scale((float)gltf_mat.normalTexture.scale);
-        m->set_occlusion_tex(tex(gltf_mat.occlusionTexture.index));
-        m->set_occlusion_strength((float)gltf_mat.occlusionTexture.strength);
-        m->set_emission_tex(tex(gltf_mat.emissiveTexture.index));
-        m->set_emission_factor(glm::vec3(gltf_mat.emissiveFactor[0],
-                                         gltf_mat.emissiveFactor[1],
-                                         gltf_mat.emissiveFactor[2]));
+        m->set("base_color_tex", tex(pbr.baseColorTexture.index));
+        m->set("base_color_factor",
+               glm::vec4(pbr.baseColorFactor[0],
+                         pbr.baseColorFactor[1],
+                         pbr.baseColorFactor[2],
+                         pbr.baseColorFactor[3]));
+        m->set("metallic_factor", (float)pbr.metallicFactor);
+        m->set("roughness_factor", (float)pbr.roughnessFactor);
+        m->set("metallic_roughness_tex",
+               tex(pbr.metallicRoughnessTexture.index));
+        m->set("normal_tex", tex(gltf_mat.normalTexture.index));
+        m->set("normal_scale", (float)gltf_mat.normalTexture.scale);
+        m->set("occlusion_tex", tex(gltf_mat.occlusionTexture.index));
+        m->set("occlusion_strength", (float)gltf_mat.occlusionTexture.strength);
+        m->set("emission_tex", tex(gltf_mat.emissiveTexture.index));
+        m->set("emission_factor",
+               glm::vec3(gltf_mat.emissiveFactor[0],
+                         gltf_mat.emissiveFactor[1],
+                         gltf_mat.emissiveFactor[2]));
 
-        m->set_double_sided(gltf_mat.doubleSided);
+        m->set("double_sided", gltf_mat.doubleSided);
 
-        m->set_alpha_mode(IMaterial::Opaque);
+        m->set("alpha_mode", MaterialAlphaMode::Opaque);
         if (gltf_mat.alphaMode == "BLEND") {
-            m->set_alpha_mode(IMaterial::Blend);
+            m->set("alpha_mode", MaterialAlphaMode::Blend);
         }
 
         model.materials.emplace_back(std::move(mat));

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Common.h"
+#include "IMaterial.h"
 #include <memory>
 #include <optional>
 #include <string>
@@ -10,7 +11,6 @@ class IWindow;
 class ITexture;
 class IScene;
 class IMesh;
-class IMaterial;
 
 struct TextureInfo;
 struct MeshInfo;
@@ -52,7 +52,7 @@ class IContext {
     virtual std::unique_ptr<IWindow> create_window(const WindowInfo &info) = 0;
     virtual std::unique_ptr<IScene> create_scene() = 0;
 
-    // Texture/Mesh/Material generally requires multiple ownership. return a
+    // Texture/Mesh/IMaterial generally requires multiple ownership. return a
     // shared_ptr by default.
     std::shared_ptr<ITexture> create_texture(const TextureInfo &info);
     std::shared_ptr<ITexture>
@@ -62,7 +62,9 @@ class IContext {
                       uint32_t mip_levels = MAX_MIP_LEVELS);
 
     virtual std::shared_ptr<IMesh> create_mesh(const MeshInfo &info) = 0;
-    virtual std::shared_ptr<IMaterial> create_material() = 0;
+    // Return the prototype for error color material if the material type is not
+    // supported
+    virtual IMaterialPrototype *material_prototype(MaterialType type) = 0;
 
     // Call this method when a frame begins. If this method returns false,
     // the backend refuse to begin a new frame and no render work should be

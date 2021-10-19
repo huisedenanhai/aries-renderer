@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <glm/glm.hpp>
 #include <memory>
 #include <optional>
@@ -12,6 +13,32 @@ class ITexture;
 class IMaterial;
 
 enum class MaterialPropertyType { Texture, Int, Float, Float2, Float3, Float4 };
+
+template <typename T> struct MaterialPropertyTypeTrait;
+
+template <> struct MaterialPropertyTypeTrait<std::shared_ptr<ITexture>> {
+    static constexpr MaterialPropertyType Type = MaterialPropertyType::Texture;
+};
+
+template <> struct MaterialPropertyTypeTrait<int> {
+    static constexpr MaterialPropertyType Type = MaterialPropertyType::Int;
+};
+
+template <> struct MaterialPropertyTypeTrait<float> {
+    static constexpr MaterialPropertyType Type = MaterialPropertyType::Float;
+};
+
+template <> struct MaterialPropertyTypeTrait<glm::vec2> {
+    static constexpr MaterialPropertyType Type = MaterialPropertyType::Float2;
+};
+
+template <> struct MaterialPropertyTypeTrait<glm::vec3> {
+    static constexpr MaterialPropertyType Type = MaterialPropertyType::Float3;
+};
+
+template <> struct MaterialPropertyTypeTrait<glm::vec4> {
+    static constexpr MaterialPropertyType Type = MaterialPropertyType::Float4;
+};
 
 struct MaterialPropertyVariant : std::variant<std::shared_ptr<ITexture>,
                                               int,
@@ -30,18 +57,55 @@ struct MaterialPropertyVariant : std::variant<std::shared_ptr<ITexture>,
   public:
     using Base::Base;
 
-    MaterialPropertyType type() const;
+    [[nodiscard]] MaterialPropertyType type() const;
 };
 
 struct MaterialPropertyInfo {
     std::string name{};
     int id{};
     MaterialPropertyType type{};
-    std::function<void(IMaterial *, const MaterialPropertyVariant &)> setter{};
-    std::function<MaterialPropertyVariant(IMaterial *)> getter{};
+
+    using Setter =
+        std::function<void(IMaterial *, const MaterialPropertyVariant &)>;
+    using Getter = std::function<MaterialPropertyVariant(IMaterial *)>;
+    Setter setter{};
+    Getter getter{};
 
     MaterialPropertyInfo() = default;
-    MaterialPropertyInfo(const char *name, MaterialPropertyType type);
+    MaterialPropertyInfo(const char *name,
+                         MaterialPropertyType type,
+                         Setter setter,
+                         Getter getter);
+
+    template <typename M, typename T>
+    static MaterialPropertyInfo make(const char *name, T M::*mem) {
+        using Type = std::remove_reference_t<T>;
+        if constexpr (std::is_integral_v<Type> || std::is_enum_v<Type>) {
+            return MaterialPropertyInfo(
+                name,
+                MaterialPropertyType::Int,
+                [mem](IMaterial *m, const MaterialPropertyVariant &v) {
+                    auto mat = dynamic_cast<M *>(m);
+                    mat->*mem = static_cast<Type>(std::get<int>(v));
+                },
+                [mem](IMaterial *m) {
+                    auto mat = dynamic_cast<M *>(m);
+                    return static_cast<int>(mat->*mem);
+                });
+        } else {
+            return MaterialPropertyInfo(
+                name,
+                MaterialPropertyTypeTrait<Type>::Type,
+                [mem](IMaterial *m, const MaterialPropertyVariant &v) {
+                    auto mat = dynamic_cast<M *>(m);
+                    mat->*mem = std::get<Type>(v);
+                },
+                [mem](IMaterial *m) {
+                    auto mat = dynamic_cast<M *>(m);
+                    return mat->*mem;
+                });
+        }
+    }
 };
 
 enum class MaterialType { Error, Unlit, MetallicRoughnessPBR };
@@ -58,8 +122,8 @@ class IMaterialPrototype {
 
     virtual std::shared_ptr<IMaterial> create_material() = 0;
 
-    MaterialType type() const;
-    const std::vector<MaterialPropertyInfo> &properties() const;
+    [[nodiscard]] MaterialType type() const;
+    [[nodiscard]] const std::vector<MaterialPropertyInfo> &properties() const;
 
   protected:
     MaterialType _type{};
@@ -77,15 +141,13 @@ class IMaterial {
 
     static int str_to_id(const std::string &id);
 
-    MaterialType type() const;
-    IMaterialPrototype *prototype() const;
+    [[nodiscard]] MaterialType type() const;
+    [[nodiscard]] IMaterialPrototype *prototype() const;
 
     template <typename T> void set(int id, T &&value) {
         using Type = std::remove_cv_t<std::remove_reference_t<T>>;
-        if constexpr (std::is_enum_v<Type>) {
+        if constexpr (std::is_enum_v<Type> || std::is_integral_v<Type>) {
             set_variant(id, static_cast<int>(value));
-        } else if constexpr (std::is_same_v<Type, bool>) {
-            set_variant(id, value ? 1 : 0);
         } else {
             set_variant(id, std::forward<T>(value));
         }

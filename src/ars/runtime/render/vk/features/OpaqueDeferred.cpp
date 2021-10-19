@@ -44,9 +44,13 @@ void OpaqueDeferred::render(CommandBuffer *cmd) {
     rd_objs.for_each_id([&](Scene::RenderObjects::Id id) {
         auto &matrix = rd_objs.get<glm::mat4>(id);
         auto &mesh = rd_objs.get<std::shared_ptr<Mesh>>(id);
-        auto &material = rd_objs.get<std::shared_ptr<IMaterial>>(id);
-        //        auto base_color = upcast(material->base_color_tex().get());
-        Handle<Texture> base_color{};
+        auto &mat_untyped = rd_objs.get<std::shared_ptr<IMaterial>>(id);
+        if (mat_untyped->type() != MaterialType::MetallicRoughnessPBR) {
+            return;
+        }
+        auto material =
+            std::dynamic_pointer_cast<MetallicRoughnessMaterial>(mat_untyped);
+        auto base_color = material->base_color_tex.vk_texture();
 
         struct Transform {
             glm::mat4 MV;

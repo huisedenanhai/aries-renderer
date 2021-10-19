@@ -50,8 +50,11 @@ std::optional<MaterialPropertyVariant> IMaterial::get_variant(int id) {
 }
 
 MaterialPropertyInfo::MaterialPropertyInfo(const char *name,
-                                           MaterialPropertyType type)
-    : name(name), id(IMaterial::str_to_id(name)), type(type) {}
+                                           MaterialPropertyType type,
+                                           Setter setter,
+                                           Getter getter)
+    : name(name), id(IMaterial::str_to_id(name)), type(type),
+      setter(std::move(setter)), getter(std::move(getter)) {}
 
 MaterialType IMaterialPrototype::type() const {
     return _type;
@@ -67,21 +70,11 @@ IMaterialPrototype::IMaterialPrototype(
     : _type(type), _properties(std::move(properties)) {}
 
 MaterialPropertyType MaterialPropertyVariant::type() const {
-    if (std::holds_alternative<std::shared_ptr<ITexture>>(*this)) {
-        return MaterialPropertyType::Texture;
-    }
-    if (std::holds_alternative<int>(*this)) {
-        return MaterialPropertyType::Int;
-    }
-    if (std::holds_alternative<float>(*this)) {
-        return MaterialPropertyType::Float;
-    }
-    if (std::holds_alternative<glm::vec2>(*this)) {
-        return MaterialPropertyType::Float2;
-    }
-    if (std::holds_alternative<glm::vec3>(*this)) {
-        return MaterialPropertyType::Float3;
-    }
-    return MaterialPropertyType::Float4;
+    return std::visit(
+        [](auto &&v) {
+            using T = std::remove_cv_t<std::remove_reference_t<decltype(v)>>;
+            return MaterialPropertyTypeTrait<T>::Type;
+        },
+        *this);
 }
 } // namespace ars::render

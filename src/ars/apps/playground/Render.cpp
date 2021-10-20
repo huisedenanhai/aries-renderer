@@ -80,7 +80,7 @@ class Application : public ars::engine::IApplication {
     void start() override {
         {
             // test if offscreen context runs
-            auto offscreen_context = IContext::create(nullptr);
+//            auto offscreen_context = IContext::create(nullptr);
         }
 
         auto ctx = ars::engine::render_context();

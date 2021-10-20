@@ -108,9 +108,9 @@ struct MaterialPropertyInfo {
     }
 };
 
-enum class MaterialType { Error, Unlit, MetallicRoughnessPBR };
+enum class MaterialType : uint32_t { Error, Unlit, MetallicRoughnessPBR };
 
-enum class MaterialAlphaMode { Opaque, Blend };
+enum class MaterialAlphaMode : uint32_t { Opaque, Blend };
 
 // IMaterial prototype is owned by the context.
 class IMaterialPrototype {

@@ -10,13 +10,15 @@ class Context;
 struct MaterialTextureHandle {
   public:
     [[nodiscard]] std::shared_ptr<ITexture> texture() const;
+    [[nodiscard]] std::shared_ptr<ITexture> default_texture() const;
     [[nodiscard]] Handle<Texture> vk_texture() const;
 
     void set_texture(const std::shared_ptr<ITexture> &tex);
+    void set_default_texture(const std::shared_ptr<ITexture> &tex);
 
   private:
     std::shared_ptr<ITexture> _texture{};
-    Handle<Texture> _vk_texture{};
+    std::shared_ptr<ITexture> _default_texture{};
 };
 
 template <typename MT> class MaterialPrototype : public IMaterialPrototype {

@@ -1,8 +1,6 @@
 #include "Context.h"
-#include "Descriptor.h"
 #include "Material.h"
 #include "Mesh.h"
-#include "RenderPass.h"
 #include "Scene.h"
 #include "Swapchain.h"
 #include <GLFW/glfw3.h>
@@ -554,11 +552,12 @@ Context::Context(const WindowInfo *info,
     init_pipeline_cache();
     init_descriptor_arena();
 
-    // Now context is fully initialized, we can create the swapchain
+    // Now context ready to create the swapchain
     if (window != nullptr && surface != VK_NULL_HANDLE) {
         swapchain = std::make_unique<Swapchain>(this, surface, window, true);
     }
 
+    init_default_textures();
     _material_prototypes = std::make_unique<MaterialPrototypeRegistry>(this);
 }
 
@@ -616,6 +615,7 @@ void Context::end_frame() {
 }
 
 Context::~Context() {
+    _queue->flush();
     _material_prototypes.reset();
     gc();
     if (_pipeline_cache != VK_NULL_HANDLE) {
@@ -852,10 +852,8 @@ Context::create_tmp_framebuffer(RenderPass *render_pass,
                                 std::vector<Handle<Texture>> attachments) {
     auto framebuffer =
         std::make_unique<Framebuffer>(render_pass, std::move(attachments));
-    auto ptr = framebuffer.get();
-
     _tmp_framebuffers.emplace_back(std::move(framebuffer));
-    return ptr;
+    return _tmp_framebuffers.back().get();
 }
 
 void Context::register_swapchain(Swapchain *swapchain) {
@@ -868,5 +866,31 @@ void Context::unregister_swapchain(Swapchain *swapchain) {
 
 IMaterialPrototype *Context::material_prototype(MaterialType type) {
     return _material_prototypes->prototype(type);
+}
+
+std::shared_ptr<ITexture> Context::default_texture(DefaultTexture tex) {
+    assert(tex != DefaultTexture::Count);
+    return _default_textures[static_cast<uint32_t>(tex)];
+}
+
+std::shared_ptr<ITexture>
+Context::create_single_color_texture(glm::vec4 color) {
+    TextureInfo info{};
+    info.format = Format::R32G32B32A32_SFLOAT;
+    info.width = 1;
+    info.height = 1;
+    info.depth = 1;
+    info.mip_levels = 1;
+
+    auto tex = IContext::create_texture(info);
+    tex->set_data(&color, sizeof(glm::vec4), 0, 0, 0, 0, 0, 1, 1, 1);
+    return tex;
+}
+
+void Context::init_default_textures() {
+    _default_textures[static_cast<uint32_t>(DefaultTexture::White)] =
+        create_single_color_texture({1.0f, 1.0f, 1.0f, 1.0f});
+    _default_textures[static_cast<uint32_t>(DefaultTexture::Normal)] =
+        create_single_color_texture({0.0f, 0.0f, 1.0f, 1.0f});
 }
 } // namespace ars::render::vk

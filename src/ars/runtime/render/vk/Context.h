@@ -58,6 +58,8 @@ class Queue {
     VkQueue _queue = VK_NULL_HANDLE;
 };
 
+enum class DefaultTexture : uint32_t { White, Normal, Count };
+
 struct ContextProperties {
     bool anisotropic_sampler_enabled = false;
     float max_sampler_anisotropy = 1.0f;
@@ -105,6 +107,10 @@ class Context : public IContext {
     bool begin_frame() override;
     void end_frame() override;
 
+    std::shared_ptr<ITexture> default_texture(DefaultTexture tex);
+
+    std::shared_ptr<ITexture> create_single_color_texture(glm::vec4 color);
+
     Handle<Texture> create_texture(const TextureCreateInfo &info);
     Handle<CommandBuffer> create_command_buffer(VkCommandBufferLevel level);
     Handle<Buffer> create_buffer(VkDeviceSize size,
@@ -137,6 +143,7 @@ class Context : public IContext {
     void init_command_pool();
     void init_pipeline_cache();
     void init_descriptor_arena();
+    void init_default_textures();
 
     // Clear unused resources
     void gc();
@@ -167,6 +174,10 @@ class Context : public IContext {
 
     ContextProperties _properties{};
     std::unique_ptr<MaterialPrototypeRegistry> _material_prototypes{};
+
+    std::array<std::shared_ptr<ITexture>,
+               static_cast<size_t>(DefaultTexture::Count)>
+        _default_textures{};
 };
 
 template <typename Func>

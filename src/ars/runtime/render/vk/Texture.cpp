@@ -422,6 +422,8 @@ VkFormat translate(render::Format format) {
         return VK_FORMAT_R8G8B8A8_SRGB;
     case Format::R8G8B8A8_UNORM:
         return VK_FORMAT_R8G8B8A8_UNORM;
+    case Format::R32G32B32A32_SFLOAT:
+        return VK_FORMAT_R32G32B32A32_SFLOAT;
     }
     // should not happen
     return VK_FORMAT_UNDEFINED;

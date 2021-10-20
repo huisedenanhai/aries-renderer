@@ -50,7 +50,6 @@ void OpaqueDeferred::render(CommandBuffer *cmd) {
         }
         auto material =
             std::dynamic_pointer_cast<MetallicRoughnessMaterial>(mat_untyped);
-        auto base_color = material->base_color_tex.vk_texture();
 
         struct Transform {
             glm::mat4 MV;
@@ -96,18 +95,26 @@ void OpaqueDeferred::render(CommandBuffer *cmd) {
             std::memcpy(ptr, &m, sizeof(MaterialParam));
         });
 
-        VkDescriptorSet desc_sets[2]{
+        VkDescriptorSet desc_sets[2] = {
             _geometry_pass_pipeline->alloc_desc_set(0),
-            _geometry_pass_pipeline->alloc_desc_set(1)};
+            _geometry_pass_pipeline->alloc_desc_set(1),
+        };
         VkWriteDescriptorSet write[7]{};
         VkDescriptorImageInfo image_info[5]{};
+        Handle<Texture> images[5] = {
+            material->base_color_tex.vk_texture(),
+            material->metallic_roughness_tex.vk_texture(),
+            material->normal_tex.vk_texture(),
+            material->occlusion_tex.vk_texture(),
+            material->emission_tex.vk_texture(),
+        };
         auto image_writes = write + 2;
         for (int i = 0; i < 5; i++) {
             fill_desc_combined_image_sampler(&image_writes[i],
                                              &image_info[i],
                                              desc_sets[1],
                                              i + 1,
-                                             base_color.get());
+                                             images[i].get());
         }
 
         VkDescriptorBufferInfo trans_buf_info;

@@ -1,4 +1,5 @@
 #include "Material.h"
+#include "Context.h"
 
 namespace ars::render::vk {
 std::vector<MaterialPropertyInfo> UnlitMaterial::reflect() {
@@ -59,16 +60,24 @@ MaterialPrototypeRegistry::prototype(MaterialType type) const {
 }
 
 std::shared_ptr<ITexture> MaterialTextureHandle::texture() const {
-    return _texture;
+    return _texture == nullptr ? _default_texture : _texture;
 }
 
 Handle<Texture> MaterialTextureHandle::vk_texture() const {
-    return _vk_texture;
+    return upcast(texture().get());
 }
 
 void MaterialTextureHandle::set_texture(const std::shared_ptr<ITexture> &tex) {
     _texture = tex;
-    _vk_texture = upcast(tex.get());
+}
+
+std::shared_ptr<ITexture> MaterialTextureHandle::default_texture() const {
+    return _default_texture;
+}
+
+void MaterialTextureHandle::set_default_texture(
+    const std::shared_ptr<ITexture> &tex) {
+    _default_texture = tex;
 }
 
 ErrorMaterial::ErrorMaterial(Prototype *prototype) : IMaterial(prototype) {}
@@ -77,8 +86,23 @@ std::vector<MaterialPropertyInfo> ErrorMaterial::reflect() {
     return {};
 }
 
-UnlitMaterial::UnlitMaterial(Prototype *prototype) : IMaterial(prototype) {}
+UnlitMaterial::UnlitMaterial(Prototype *prototype) : IMaterial(prototype) {
+    auto ctx = prototype->context();
+    color_tex.set_default_texture(ctx->default_texture(DefaultTexture::White));
+}
 
 MetallicRoughnessMaterial::MetallicRoughnessMaterial(Prototype *prototype)
-    : IMaterial(prototype) {}
+    : IMaterial(prototype) {
+    auto ctx = prototype->context();
+    base_color_tex.set_default_texture(
+        ctx->default_texture(DefaultTexture::White));
+    metallic_roughness_tex.set_default_texture(
+        ctx->default_texture(DefaultTexture::White));
+    normal_tex.set_default_texture(
+        ctx->default_texture(DefaultTexture::Normal));
+    occlusion_tex.set_default_texture(
+        ctx->default_texture(DefaultTexture::White));
+    emission_tex.set_default_texture(
+        ctx->default_texture(DefaultTexture::White));
+}
 } // namespace ars::render::vk

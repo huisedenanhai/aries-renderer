@@ -13,6 +13,7 @@ enum class Format {
     R8G8B8_UNORM,
     R8G8B8A8_SRGB,
     R8G8B8A8_UNORM,
+    R32G32B32A32_SFLOAT
 };
 
 constexpr uint32_t MAX_MIP_LEVELS = std::numeric_limits<uint32_t>::max();

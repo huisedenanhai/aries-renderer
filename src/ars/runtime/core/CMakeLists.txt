@@ -1,11 +1,12 @@
 add_library(core
-    Log.cpp
-    Log.h
-    )
+        Log.cpp
+        Log.h
+        )
 aries_setup_common_target(core)
 
 target_link_libraries(core PUBLIC
-        glm)
+        glm
+        imgui)
 
 add_subdirectory(math)
 add_subdirectory(misc)

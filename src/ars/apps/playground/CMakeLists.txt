@@ -9,3 +9,10 @@ aries_setup_common_target(playground_render)
 target_link_libraries(playground_render PRIVATE
         engine
         )
+
+add_executable(playground_hierarchy Hierarchy.cpp)
+aries_setup_common_target(playground_hierarchy)
+
+target_link_libraries(playground_hierarchy PRIVATE
+        engine
+        )

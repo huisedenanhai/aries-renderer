@@ -70,7 +70,8 @@ void HierarchyInspector::right_click_pop_up() {
                 _current_selected == nullptr ? _root : _current_selected;
             // Insert at position zero so the mouse needs less movement to be
             // hovered on the new entity.
-            parent->insert_child(create_entity(), 0);
+            auto new_entity = create_entity();
+            new_entity->set_parent(parent, 0);
         }
         if (_current_selected != nullptr && _current_selected != _root) {
             if (ImGui::MenuItem("Delete")) {

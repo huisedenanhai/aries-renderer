@@ -30,20 +30,18 @@ class Scene {
 
 class Entity {
   public:
-    std::string name() const;
+    [[nodiscard]] std::string name() const;
     void set_name(const std::string &name);
 
-    Entity *parent() const;
+    [[nodiscard]] Entity *parent() const;
+    // By default, the entity is inserted at the end of the children list
+    void set_parent(Entity *parent, std::optional<size_t> index = std::nullopt);
 
-    size_t child_count() const;
-    Entity *child(size_t index) const;
-    void remove_child(size_t index);
-    void remove_child(Entity *entity);
-    void insert_child(Entity *entity,
-                      std::optional<size_t> index = std::nullopt);
+    [[nodiscard]] size_t child_count() const;
+    [[nodiscard]] Entity *child(size_t index) const;
 
-    size_t component_count() const;
-    IComponent *component(size_t index) const;
+    [[nodiscard]] size_t component_count() const;
+    [[nodiscard]] IComponent *component(size_t index) const;
     void remove_component(size_t index);
     void insert_component(std::unique_ptr<IComponent> component,
                           std::optional<size_t> index = std::nullopt);

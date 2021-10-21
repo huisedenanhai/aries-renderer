@@ -6,7 +6,7 @@
 
 class HierarchyInspectorApplication : public ars::engine::IApplication {
   public:
-    std::string get_name() const override {
+    [[nodiscard]] std::string get_name() const override {
         return "Hierarchy Inspector";
     }
 

@@ -82,7 +82,7 @@ Entity *Entity::parent() const {
     return _parent;
 }
 
-Entity::Entity(Scene *scene) : _scene(scene) {
+Entity::Entity(Scene *scene, EntityId id) : _scene(scene), _id(id) {
     assert(scene != nullptr);
 }
 
@@ -90,11 +90,37 @@ Scene *Entity::scene() const {
     return _scene;
 }
 
+EntityId Entity::id() const {
+    return _id;
+}
+
+math::XformTRS<float> Entity::local_xform() const {
+    return _local_to_parent;
+}
+
+math::XformTRS<float> Entity::world_xform() const {
+    if (parent() != nullptr) {
+        return parent()->world_xform() * _local_to_parent;
+    }
+    return _local_to_parent;
+}
+
+void Entity::set_local_xform(const math::XformTRS<float> &xform) {
+    _local_to_parent = xform;
+}
+
+void Entity::set_world_xform(const math::XformTRS<float> &xform) {
+    if (parent() != nullptr) {
+        set_local_xform(xform * parent()->world_xform().inverse());
+        return;
+    }
+    set_local_xform(xform);
+}
+
 Entity *Scene::create_entity() {
     auto id = _entities.alloc();
-    auto &entity = _entities.get<std::unique_ptr<EntityDerived>>(id);
-    entity = std::make_unique<EntityDerived>(this);
-    entity->id = id;
+    auto &entity = _entities.get<std::unique_ptr<Entity>>(id);
+    entity = std::make_unique<Entity>(this, id);
     // First call to create_entity happens in Scene construct, root() will
     // return nullptr
     entity->set_parent(root());
@@ -127,8 +153,7 @@ void Scene::destroy_entity(Entity *entity) {
     }
 
     entity->set_parent(nullptr);
-    auto derived = reinterpret_cast<EntityDerived *>(entity);
-    _entities.free(derived->id);
+    _entities.free(entity->id());
 }
 
 Entity *Scene::root() const {

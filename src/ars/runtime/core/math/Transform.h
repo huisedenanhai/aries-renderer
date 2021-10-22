@@ -64,6 +64,10 @@ template <typename T> struct XformTRS {
         return XformTRS(lhs.matrix() * rhs.matrix());
     }
 
+    XformTRS inverse() const {
+        return XformTRS(glm::inverse(matrix()));
+    }
+
     static XformTRS from_translation(const Vec3 &t) {
         XformTRS xform{};
         xform.set_translation(t);

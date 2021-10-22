@@ -5,10 +5,10 @@
 namespace ars::scene::editor {
 class HierarchyInspector {
   public:
-    Scene *scene() const;
+    [[nodiscard]] Scene *scene() const;
     void set_scene(Scene *scene);
 
-    Entity *current_selected() const;
+    [[nodiscard]] Entity *current_selected() const;
 
     void on_imgui();
 
@@ -25,7 +25,7 @@ class HierarchyInspector {
 
 class EntityInspector {
   public:
-    Entity *entity() const;
+    [[nodiscard]] Entity *entity() const;
     void set_entity(Entity *entity);
 
     void on_imgui();

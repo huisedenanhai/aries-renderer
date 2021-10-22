@@ -67,6 +67,10 @@ template <typename... Ts> struct SoA {
             return _value == rhs._value;
         }
 
+        [[nodiscard]] uint64_t value() const {
+            return _value;
+        }
+
       private:
         friend SoA;
 

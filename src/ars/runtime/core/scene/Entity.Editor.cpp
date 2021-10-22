@@ -49,7 +49,8 @@ bool HierarchyInspector::begin_entity_tree_node(Entity *entity) {
     auto is_leaf = entity->child_count() == 0;
     flags |= is_leaf ? ImGuiTreeNodeFlags_Leaf : 0;
 
-    bool opened = ImGui::TreeNodeEx(entity->name().c_str(), flags);
+    bool opened =
+        ImGui::TreeNodeEx(entity, flags, "%s", entity->name().c_str());
 
     if (ImGui::IsItemClicked(ImGuiMouseButton_Left) ||
         ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
@@ -96,6 +97,12 @@ void EntityInspector::on_imgui() {
     auto name = _entity->name();
     if (gui::input_text("Name", name)) {
         _entity->set_name(name);
+    }
+
+    ImGui::Separator();
+    auto xform = _entity->local_xform();
+    if (gui::input_xform("Xform", xform)) {
+        _entity->set_local_xform(xform);
     }
 }
 } // namespace ars::scene::editor

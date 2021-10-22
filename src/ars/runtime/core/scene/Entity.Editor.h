@@ -23,5 +23,14 @@ class HierarchyInspector {
     Entity *_current_selected{};
 };
 
-class EntityInspector {};
+class EntityInspector {
+  public:
+    Entity *entity() const;
+    void set_entity(Entity *entity);
+
+    void on_imgui();
+
+  private:
+    Entity *_entity = nullptr;
+};
 } // namespace ars::scene::editor

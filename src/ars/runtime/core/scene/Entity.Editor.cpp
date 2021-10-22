@@ -1,5 +1,5 @@
 #include "Entity.Editor.h"
-#include <imgui/imgui.h>
+#include "../gui/ImGui.h"
 
 namespace ars::scene::editor {
 Scene *HierarchyInspector::scene() const {
@@ -78,6 +78,24 @@ void HierarchyInspector::right_click_pop_up() {
             }
         }
         ImGui::EndPopup();
+    }
+}
+
+Entity *EntityInspector::entity() const {
+    return _entity;
+}
+
+void EntityInspector::set_entity(Entity *entity) {
+    _entity = entity;
+}
+
+void EntityInspector::on_imgui() {
+    if (_entity == nullptr) {
+        return;
+    }
+    auto name = _entity->name();
+    if (gui::input_text("Name", name)) {
+        _entity->set_name(name);
     }
 }
 } // namespace ars::scene::editor

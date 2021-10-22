@@ -2,12 +2,12 @@
 #include <imgui/imgui.h>
 
 namespace ars::scene::editor {
-Entity *HierarchyInspector::root() const {
-    return _root;
+Scene *HierarchyInspector::scene() const {
+    return _scene;
 }
 
-void HierarchyInspector::set_root(Entity *root) {
-    _root = root;
+void HierarchyInspector::set_scene(Scene *scene) {
+    _scene = scene;
     _current_selected = nullptr;
 }
 
@@ -16,24 +16,21 @@ Entity *HierarchyInspector::current_selected() const {
 }
 
 void HierarchyInspector::on_imgui() {
-    if (_root == nullptr) {
-        if (ImGui::Button("Create Entity")) {
-            _root = create_entity();
-        }
-    } else {
-        draw_entity(_root);
-        if (ImGui::IsWindowHovered() && !ImGui::IsAnyItemHovered()) {
-            if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) ||
-                ImGui::IsMouseReleased(ImGuiMouseButton_Right)) {
-                _current_selected = nullptr;
-            }
-        }
-        right_click_pop_up();
+    if (_scene == nullptr) {
+        return;
     }
+    draw_entity(_scene->root());
+    if (ImGui::IsWindowHovered() && !ImGui::IsAnyItemHovered()) {
+        if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) ||
+            ImGui::IsMouseReleased(ImGuiMouseButton_Right)) {
+            _current_selected = nullptr;
+        }
+    }
+    right_click_pop_up();
 }
 
 Entity *HierarchyInspector::create_entity() {
-    return _scene.create_entity();
+    return _scene->create_entity();
 }
 
 void HierarchyInspector::draw_entity(Entity *entity) {
@@ -63,19 +60,20 @@ bool HierarchyInspector::begin_entity_tree_node(Entity *entity) {
 }
 
 void HierarchyInspector::right_click_pop_up() {
-    assert(_root != nullptr);
+    assert(_scene != nullptr);
     if (ImGui::BeginPopupContextWindow("Entity Popup")) {
         if (ImGui::MenuItem("Create Empty Entity")) {
-            auto parent =
-                _current_selected == nullptr ? _root : _current_selected;
+            auto parent = _current_selected == nullptr ? _scene->root()
+                                                       : _current_selected;
             // Insert at position zero so the mouse needs less movement to be
             // hovered on the new entity.
             auto new_entity = create_entity();
             new_entity->set_parent(parent, 0);
         }
-        if (_current_selected != nullptr && _current_selected != _root) {
+        if (_current_selected != nullptr &&
+            _current_selected != _scene->root()) {
             if (ImGui::MenuItem("Delete")) {
-                _scene.destroy_entity(_current_selected);
+                _scene->destroy_entity(_current_selected);
                 _current_selected = nullptr;
             }
         }

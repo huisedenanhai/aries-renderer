@@ -11,8 +11,10 @@ class HierarchyInspectorApplication : public ars::engine::IApplication {
     }
 
     void start() override {
+        _scene = std::make_unique<ars::scene::Scene>();
         _hierarchy_inspector =
             std::make_unique<ars::scene::editor::HierarchyInspector>();
+        _hierarchy_inspector->set_scene(_scene.get());
     }
 
     void update(double dt) override {
@@ -26,6 +28,7 @@ class HierarchyInspectorApplication : public ars::engine::IApplication {
     }
 
   private:
+    std::unique_ptr<ars::scene::Scene> _scene{};
     std::unique_ptr<ars::scene::editor::HierarchyInspector>
         _hierarchy_inspector{};
 };

@@ -5,8 +5,8 @@
 namespace ars::scene::editor {
 class HierarchyInspector {
   public:
-    Entity *root() const;
-    void set_root(Entity *root);
+    Scene *scene() const;
+    void set_scene(Scene *scene);
 
     Entity *current_selected() const;
 
@@ -19,8 +19,7 @@ class HierarchyInspector {
     bool begin_entity_tree_node(Entity *entity);
     void right_click_pop_up();
 
-    Scene _scene{};
-    Entity *_root;
+    Scene *_scene{};
     Entity *_current_selected{};
 };
 

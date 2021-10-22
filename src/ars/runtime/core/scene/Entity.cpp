@@ -82,20 +82,37 @@ Entity *Entity::parent() const {
     return _parent;
 }
 
+Entity::Entity(Scene *scene) : _scene(scene) {
+    assert(scene != nullptr);
+}
+
+Scene *Entity::scene() const {
+    return _scene;
+}
+
 Entity *Scene::create_entity() {
     auto id = _entities.alloc();
     auto &entity = _entities.get<std::unique_ptr<EntityDerived>>(id);
-    entity = std::make_unique<EntityDerived>();
-    entity->scene = this;
+    entity = std::make_unique<EntityDerived>(this);
     entity->id = id;
+    // First call to create_entity happens in Scene construct, root() will
+    // return nullptr
+    entity->set_parent(root());
 
     return entity.get();
 }
 
 void Scene::destroy_entity(Entity *entity) {
+    if (entity == _root) {
+        log_error("If one what to delete the root of a scene, he should delete "
+                  "the scene itself");
+        return;
+    }
     if (entity == nullptr) {
         return;
     }
+
+    assert(entity->scene() == this);
 
     // Copy children as the destroy_entity method modifies children list of the
     // entity
@@ -110,11 +127,19 @@ void Scene::destroy_entity(Entity *entity) {
     }
 
     entity->set_parent(nullptr);
-
     auto derived = reinterpret_cast<EntityDerived *>(entity);
-    assert(derived->scene == this);
     _entities.free(derived->id);
 }
 
+Entity *Scene::root() const {
+    return _root;
+}
+
+Scene::Scene() {
+    _root = create_entity();
+    _root->set_name("ROOT");
+}
+
 Scene::~Scene() = default;
+
 } // namespace ars::scene

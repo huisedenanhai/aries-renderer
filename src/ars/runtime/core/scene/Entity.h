@@ -3,6 +3,7 @@
 #include "../misc/SoA.h"
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -19,22 +20,30 @@ class Scene {
     using EntityId = Container::Id;
 
   public:
-    Scene() = default;
+    Scene();
     ~Scene();
     Entity *create_entity();
     void destroy_entity(Entity *entity);
 
+    Entity *root() const;
+
   private:
     Container _entities{};
+    Entity *_root{};
 };
 
 class Entity {
   public:
+    explicit Entity(Scene *scene);
+
+    Scene *scene() const;
+
     [[nodiscard]] std::string name() const;
     void set_name(const std::string &name);
 
     [[nodiscard]] Entity *parent() const;
-    // By default, the entity is inserted at the end of the children list
+    // By default, the entity is inserted at the end of the children list.
+    // If parent == nullptr, the node is removed from the tree
     void set_parent(Entity *parent, std::optional<size_t> index = std::nullopt);
 
     [[nodiscard]] size_t child_count() const;
@@ -47,6 +56,7 @@ class Entity {
                           std::optional<size_t> index = std::nullopt);
 
   private:
+    Scene *_scene{};
     std::string _name = "New Entity";
     Entity *_parent{};
     std::vector<Entity *> _children{};
@@ -54,7 +64,8 @@ class Entity {
 };
 
 struct Scene::EntityDerived : public Entity {
-    Scene *scene{};
+    using Entity::Entity;
+
     Scene::EntityId id{};
 };
 

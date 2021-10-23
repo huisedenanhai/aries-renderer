@@ -202,5 +202,4 @@ void register_component_type_entry(
     global_component_registry()->component_types.emplace(name,
                                                          std::move(entry));
 }
-
 } // namespace ars::scene

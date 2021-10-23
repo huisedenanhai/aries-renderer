@@ -29,9 +29,9 @@ class MeshRenderer : public scene::IComponent {
 };
 
 class MyComponent : public scene::IComponent {
-  public:
-    ARS_COMPONENT(MyComponent);
+    ARS_COMPONENT(MyComponent, scene::IComponent);
 
+  public:
     std::string data{};
 };
 

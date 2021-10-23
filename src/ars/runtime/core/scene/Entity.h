@@ -12,6 +12,23 @@
 namespace ars::scene {
 class Entity;
 
+// Almost the same as RTTR_ENABLE, fix warning on some compiler with 'override'
+#define ARS_COMPONENT_RTTR_ENABLE(...)                                         \
+  public:                                                                      \
+    rttr::type get_type() const override {                                     \
+        return rttr::detail::get_type_from_instance(this);                     \
+    }                                                                          \
+    void *get_ptr() override {                                                 \
+        return reinterpret_cast<void *>(this);                                 \
+    }                                                                          \
+    rttr::detail::derived_info get_derived_info() override {                   \
+        return {reinterpret_cast<void *>(this),                                \
+                rttr::detail::get_type_from_instance(this)};                   \
+    }                                                                          \
+    using base_class_list = TYPE_LIST(__VA_ARGS__);                            \
+                                                                               \
+  private:
+
 class IComponent {
   public:
     virtual ~IComponent() = default;
@@ -19,12 +36,16 @@ class IComponent {
 
     virtual void init(Entity *entity) {}
     virtual void on_inspector();
+
+    RTTR_ENABLE();
 };
 
-#define ARS_COMPONENT(ty)                                                      \
+#define ARS_COMPONENT(ty, ...)                                                 \
+  public:                                                                      \
     rttr::type type() override {                                               \
         return rttr::type::get<ty>();                                          \
-    }
+    }                                                                          \
+    ARS_COMPONENT_RTTR_ENABLE(__VA_ARGS__);
 
 class IComponentRegistryEntry {
   public:

@@ -6,7 +6,8 @@ aries_setup_common_target(core)
 
 target_link_libraries(core PUBLIC
         glm
-        imgui)
+        imgui
+        RTTR::Core_Lib)
 
 add_subdirectory(math)
 add_subdirectory(gui)

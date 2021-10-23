@@ -94,15 +94,72 @@ void EntityInspector::on_imgui() {
     if (_entity == nullptr) {
         return;
     }
-    auto name = _entity->name();
-    if (gui::input_text("Name", name)) {
-        _entity->set_name(name);
+
+    int imgui_id = 0;
+    auto group = [&](auto &&func) {
+        ImGui::PushID(imgui_id++);
+        func();
+        ImGui::PopID();
+    };
+    group([&]() {
+        auto name = _entity->name();
+        if (gui::input_text("Name", name)) {
+            _entity->set_name(name);
+        }
+    });
+
+    ImGui::Separator();
+    group([&]() {
+        auto xform = _entity->local_xform();
+        if (gui::input_xform("Xform", xform)) {
+            _entity->set_local_xform(xform);
+        }
+    });
+
+    auto comp_count = _entity->component_count();
+    std::vector<bool> to_remove(comp_count);
+    for (size_t i = 0; i < comp_count; i++) {
+        group([&]() {
+            ImGui::Separator();
+            auto comp = _entity->component(i);
+            auto comp_name = comp->type().get_name().to_string();
+            ImGui::Text("%s", comp_name.c_str());
+            ImGui::SameLine();
+            if (ImGui::Button("Delete")) {
+                to_remove[i] = true;
+            }
+            group([&]() { _entity->component(i)->on_inspector(); });
+        });
+    }
+
+    {
+        size_t i = comp_count;
+        while (i >= 1) {
+            i--;
+            if (to_remove[i]) {
+                _entity->remove_component(i);
+            }
+        }
     }
 
     ImGui::Separator();
-    auto xform = _entity->local_xform();
-    if (gui::input_xform("Xform", xform)) {
-        _entity->set_local_xform(xform);
-    }
+
+    group([&]() {
+        const char *popup_key = "Create_Component_Popup";
+        if (ImGui::Button("Add Component")) {
+            ImGui::OpenPopup(popup_key);
+        }
+        if (ImGui::BeginPopup(popup_key)) {
+            for (const auto &ty :
+                 global_component_registry()->component_types) {
+                auto &[ty_name, comp_reg] = ty;
+                if (ImGui::MenuItem(ty_name.c_str())) {
+                    auto comp = comp_reg->create_instance();
+                    _entity->insert_component(std::move(comp));
+                }
+            }
+            ImGui::EndPopup();
+        }
+    });
 }
 } // namespace ars::scene::editor

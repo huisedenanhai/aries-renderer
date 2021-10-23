@@ -1,6 +1,7 @@
 #include "Entity.h"
 #include "../Log.h"
 #include <cstdlib>
+#include <imgui/imgui.h>
 #include <sstream>
 
 namespace ars::scene {
@@ -117,6 +118,14 @@ void Entity::set_world_xform(const math::XformTRS<float> &xform) {
     set_local_xform(xform);
 }
 
+math::XformTRS<float> Entity::cached_world_xform() const {
+    return _local_to_world_cached;
+}
+
+void Entity::set_cached_world_xform(const math::XformTRS<float> &xform) {
+    _local_to_world_cached = xform;
+}
+
 Entity *Scene::create_entity() {
     auto id = _entities.alloc();
     auto &entity = _entities.get<std::unique_ptr<Entity>>(id);
@@ -165,6 +174,33 @@ Scene::Scene() {
     _root->set_name("ROOT");
 }
 
+void Scene::update_cached_world_xform() {
+    update_cached_world_xform_impl(root(), {});
+}
+
+void Scene::update_cached_world_xform_impl(
+    Entity *entity, const math::XformTRS<float> &parent_xform) {
+    auto w_xform = parent_xform * entity->local_xform();
+    entity->set_cached_world_xform(w_xform);
+
+    for (size_t i = 0; i < entity->child_count(); i++) {
+        update_cached_world_xform_impl(entity->child(i), w_xform);
+    }
+}
+
 Scene::~Scene() = default;
+
+void IComponent::on_inspector() {}
+
+ComponentRegistry *global_component_registry() {
+    static ComponentRegistry reg{};
+    return &reg;
+}
+
+void register_component_type_entry(
+    const std::string &name, std::unique_ptr<IComponentRegistryEntry> entry) {
+    global_component_registry()->component_types.emplace(name,
+                                                         std::move(entry));
+}
 
 } // namespace ars::scene

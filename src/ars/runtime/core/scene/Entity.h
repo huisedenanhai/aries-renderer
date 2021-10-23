@@ -4,14 +4,67 @@
 #include "../misc/SoA.h"
 #include <memory>
 #include <optional>
+#include <rttr/registration>
 #include <set>
 #include <string>
 #include <vector>
 
 namespace ars::scene {
-class IComponent {};
-
 class Entity;
+
+class IComponent {
+  public:
+    virtual ~IComponent() = default;
+    virtual rttr::type type() = 0;
+
+    virtual void init(Entity *entity) {}
+    virtual void on_inspector();
+};
+
+#define ARS_COMPONENT(ty)                                                      \
+    rttr::type type() override {                                               \
+        return rttr::type::get<ty>();                                          \
+    }
+
+class IComponentRegistryEntry {
+  public:
+    virtual ~IComponentRegistryEntry() = default;
+    virtual std::unique_ptr<IComponent> create_instance() = 0;
+    virtual rttr::type type() = 0;
+};
+
+class ComponentRegistry {
+  public:
+    std::unordered_map<std::string, std::unique_ptr<IComponentRegistryEntry>>
+        component_types{};
+};
+
+template <typename T>
+class ComponentRegistryEntry : public IComponentRegistryEntry {
+  public:
+    std::unique_ptr<IComponent> create_instance() override {
+        return std::make_unique<T>();
+    }
+
+    rttr::type type() override {
+        return rttr::type::get<T>();
+    }
+};
+
+ComponentRegistry *global_component_registry();
+
+void register_component_type_entry(
+    const std::string &name, std::unique_ptr<IComponentRegistryEntry> entry);
+
+template <typename T> void register_component_type(const std::string &name) {
+    register_component_type_entry(
+        name, std::make_unique<ComponentRegistryEntry<T>>());
+}
+
+template <typename T> auto register_component(const std::string &name) {
+    register_component_type<T>(name);
+    return rttr::registration::class_<T>(name).template constructor<>();
+}
 
 class Scene {
   private:
@@ -27,7 +80,13 @@ class Scene {
 
     [[nodiscard]] Entity *root() const;
 
+    void update_cached_world_xform();
+
   private:
+    void
+    update_cached_world_xform_impl(Entity *entity,
+                                   const math::XformTRS<float> &parent_xform);
+
     Container _entities{};
     Entity *_root{};
 };
@@ -64,8 +123,13 @@ class Entity final {
     [[nodiscard]] math::XformTRS<float> world_xform() const;
     void set_world_xform(const math::XformTRS<float> &xform);
 
+    // Value only valid after call to Scene::update_cached_world_xform
+    math::XformTRS<float> cached_world_xform() const;
+    void set_cached_world_xform(const math::XformTRS<float> &xform);
+
   private:
     math::XformTRS<float> _local_to_parent{};
+    math::XformTRS<float> _local_to_world_cached{};
     Scene *_scene{};
     EntityId _id{};
     std::string _name = "New Entity";

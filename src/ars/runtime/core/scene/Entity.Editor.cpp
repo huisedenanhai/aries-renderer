@@ -116,29 +116,26 @@ void EntityInspector::on_imgui() {
         }
     });
 
-    auto comp_count = _entity->component_count();
+    auto components = _entity->components();
+    auto comp_count = components.size();
     std::vector<bool> to_remove(comp_count);
     for (size_t i = 0; i < comp_count; i++) {
         group([&]() {
             ImGui::Separator();
-            auto comp = _entity->component(i);
+            auto comp = components[i];
             auto comp_name = comp->type().get_name().to_string();
             ImGui::Text("%s", comp_name.c_str());
             ImGui::SameLine();
             if (ImGui::Button("Delete")) {
                 to_remove[i] = true;
             }
-            group([&]() { _entity->component(i)->on_inspector(); });
+            group([&]() { comp->on_inspector(); });
         });
     }
 
-    {
-        size_t i = comp_count;
-        while (i >= 1) {
-            i--;
-            if (to_remove[i]) {
-                _entity->remove_component(i);
-            }
+    for (size_t i = 0; i < comp_count; i++) {
+        if (to_remove[i]) {
+            _entity->remove_component(components[i]->type());
         }
     }
 
@@ -153,9 +150,12 @@ void EntityInspector::on_imgui() {
             for (const auto &ty :
                  global_component_registry()->component_types) {
                 auto &[ty_name, comp_reg] = ty;
+                // Skip existing component
+                if (_entity->component(comp_reg->type()) != nullptr) {
+                    continue;
+                }
                 if (ImGui::MenuItem(ty_name.c_str())) {
-                    auto comp = comp_reg->create_instance();
-                    _entity->insert_component(std::move(comp));
+                    _entity->add_component(comp_reg->type());
                 }
             }
             ImGui::EndPopup();

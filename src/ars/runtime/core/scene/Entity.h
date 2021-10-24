@@ -20,6 +20,7 @@ class IComponent {
     virtual rttr::type type() = 0;
 
     virtual void init(Entity *entity) {}
+    virtual void destroy() {}
     virtual void on_inspector();
 };
 
@@ -112,6 +113,7 @@ class Scene {
     void
     update_cached_world_xform_impl(Entity *entity,
                                    const math::XformTRS<float> &parent_xform);
+    void destroy_entity_impl(Entity *entity, bool can_destroy_root);
 
     Container _entities{};
     Entity *_root{};
@@ -139,10 +141,20 @@ class Entity final {
     [[nodiscard]] Entity *child(size_t index) const;
 
     [[nodiscard]] size_t component_count() const;
-    [[nodiscard]] IComponent *component(size_t index) const;
-    void remove_component(size_t index);
-    void insert_component(std::unique_ptr<IComponent> component,
-                          std::optional<size_t> index = std::nullopt);
+    [[nodiscard]] std::vector<IComponent *> components() const;
+    [[nodiscard]] IComponent *component(const rttr::type &ty) const;
+    void remove_component(const rttr::type &ty);
+    void add_component(const rttr::type &ty);
+
+    template <typename T> [[nodiscard]] IComponent *component() const {
+        return component(rttr::type::get<T>());
+    }
+    template <typename T> void remove_component() {
+        remove_component(rttr::type::get<T>());
+    }
+    template <typename T> void add_component() {
+        add_component(rttr::type::get<T>());
+    }
 
     [[nodiscard]] math::XformTRS<float> local_xform() const;
     void set_local_xform(const math::XformTRS<float> &xform);
@@ -150,7 +162,7 @@ class Entity final {
     void set_world_xform(const math::XformTRS<float> &xform);
 
     // Value only valid after call to Scene::update_cached_world_xform
-    math::XformTRS<float> cached_world_xform() const;
+    [[nodiscard]] math::XformTRS<float> cached_world_xform() const;
     void set_cached_world_xform(const math::XformTRS<float> &xform);
 
   private:
@@ -161,6 +173,6 @@ class Entity final {
     std::string _name = "New Entity";
     Entity *_parent{};
     std::vector<Entity *> _children{};
-    std::vector<std::unique_ptr<IComponent>> _components{};
+    std::map<rttr::type, std::unique_ptr<IComponent>> _components{};
 };
 } // namespace ars::scene

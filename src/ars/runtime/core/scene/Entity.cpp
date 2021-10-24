@@ -2,6 +2,7 @@
 #include "../Log.h"
 #include "../gui/ImGui.h"
 #include <cstdlib>
+#include <iomanip>
 #include <sstream>
 
 namespace ars::scene {
@@ -66,19 +67,6 @@ size_t Entity::component_count() const {
     return _components.size();
 }
 
-IComponent *Entity::component(size_t index) const {
-    return _components.at(index).get();
-}
-
-void Entity::remove_component(size_t index) {
-    erase_at_index(_components, index, name(), "component");
-}
-
-void Entity::insert_component(std::unique_ptr<IComponent> component,
-                              std::optional<size_t> index) {
-    return insert_at_index(_components, std::move(component), index);
-}
-
 Entity *Entity::parent() const {
     return _parent;
 }
@@ -126,6 +114,63 @@ void Entity::set_cached_world_xform(const math::XformTRS<float> &xform) {
     _local_to_world_cached = xform;
 }
 
+std::vector<IComponent *> Entity::components() const {
+    std::vector<IComponent *> comps{};
+    comps.reserve(_components.size());
+    for (auto &c : _components) {
+        comps.push_back(c.second.get());
+    }
+    return comps;
+}
+
+IComponent *Entity::component(const rttr::type &ty) const {
+    auto it = _components.find(ty);
+    if (it == _components.end()) {
+        return nullptr;
+    }
+    return it->second.get();
+}
+
+void Entity::remove_component(const rttr::type &ty) {
+    auto it = _components.find(ty);
+    if (it == _components.end()) {
+        return;
+    }
+
+    auto comp = it->second.get();
+    comp->destroy();
+    _components.erase(it);
+}
+
+void Entity::add_component(const rttr::type &ty) {
+    auto ty_name = ty.get_name().to_string();
+    const auto &regs = global_component_registry()->component_types;
+    auto regs_it = regs.find(ty_name);
+    if (regs_it == regs.end()) {
+        std::stringstream ss;
+        ss << "Try to add component type " << std::quoted(ty_name)
+           << ", which is not registered.";
+        log_error(ss.str());
+        return;
+    }
+
+    if (_components.find(ty) != _components.end()) {
+        std::stringstream ss;
+        ss << "Component " << std::quoted(ty_name)
+           << " already exists on entity " << std::quoted(name())
+           << ", add it twice will do nothing";
+        log_warn(ss.str());
+        return;
+    }
+
+    auto comp = regs_it->second->create_instance();
+
+    // Notice the initialization order
+    _components[ty] = std::move(comp);
+    auto comp_ptr = _components[ty].get();
+    comp_ptr->init(this);
+}
+
 Entity *Scene::create_entity() {
     auto id = _entities.alloc();
     auto &entity = _entities.get<std::unique_ptr<Entity>>(id);
@@ -138,31 +183,7 @@ Entity *Scene::create_entity() {
 }
 
 void Scene::destroy_entity(Entity *entity) {
-    if (entity == _root) {
-        log_error("If one what to delete the root of a scene, he should delete "
-                  "the scene itself");
-        return;
-    }
-    if (entity == nullptr) {
-        return;
-    }
-
-    assert(entity->scene() == this);
-
-    // Copy children as the destroy_entity method modifies children list of the
-    // entity
-    std::vector<Entity *> children{};
-    children.reserve(entity->child_count());
-    for (size_t i = 0; i < entity->child_count(); i++) {
-        children.push_back(entity->child(i));
-    }
-
-    for (auto child : children) {
-        destroy_entity(child);
-    }
-
-    entity->set_parent(nullptr);
-    _entities.free(entity->id());
+    destroy_entity_impl(entity, false);
 }
 
 Entity *Scene::root() const {
@@ -188,7 +209,42 @@ void Scene::update_cached_world_xform_impl(
     }
 }
 
-Scene::~Scene() = default;
+Scene::~Scene() {
+    destroy_entity_impl(_root, true);
+}
+
+void Scene::destroy_entity_impl(Entity *entity, bool can_destroy_root) {
+    if (!can_destroy_root && entity == _root) {
+        log_error("Try to delete the root of the scene. If one what to delete "
+                  "the root of a scene, he should delete the scene itself");
+        return;
+    }
+    if (entity == nullptr) {
+        return;
+    }
+
+    assert(entity->scene() == this);
+
+    // Copy children as the destroy_entity method modifies children list of the
+    // entity
+    std::vector<Entity *> children{};
+    children.reserve(entity->child_count());
+    for (size_t i = 0; i < entity->child_count(); i++) {
+        children.push_back(entity->child(i));
+    }
+
+    for (auto child : children) {
+        // Children should never be the root
+        destroy_entity_impl(child, false);
+    }
+
+    for (auto comp : entity->components()) {
+        entity->remove_component(comp->type());
+    }
+
+    entity->set_parent(nullptr);
+    _entities.free(entity->id());
+}
 
 void IComponent::on_inspector() {
     gui::input_instance(*this);

@@ -44,6 +44,14 @@ class MyComponent : public scene::IComponent {
             .property("my_xform", &MyComponent::my_xform);
     }
 
+    void init(scene::Entity *entity) override {
+        log_info("Init");
+    }
+
+    void destroy() override {
+        log_info("Destroy");
+    }
+
     std::string data{};
     int my_int = 12;
     float my_float = 24.0f;

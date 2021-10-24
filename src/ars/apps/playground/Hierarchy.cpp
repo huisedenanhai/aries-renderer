@@ -32,13 +32,15 @@ class MyComponent : public scene::IComponent {
     ARS_COMPONENT(MyComponent, scene::IComponent);
 
   public:
+    static void register_component() {
+        scene::register_component<MyComponent>("MyComponent")
+            .property("data", &MyComponent::data);
+    }
+
     std::string data{};
 };
 
-RTTR_REGISTRATION {
-    scene::register_component<MyComponent>("MyComponent")
-        .property("data", &MyComponent::data);
-}
+ARS_REGISTER_COMPONENT(MyComponent);
 
 class HierarchyInspectorApplication : public engine::IApplication {
   public:

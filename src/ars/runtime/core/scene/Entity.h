@@ -47,6 +47,11 @@ class IComponent {
     }                                                                          \
     ARS_COMPONENT_RTTR_ENABLE(__VA_ARGS__);
 
+#define ARS_REGISTER_COMPONENT(ty)                                             \
+    RTTR_PLUGIN_REGISTRATION {                                                 \
+        ty::register_component();                                              \
+    }
+
 class IComponentRegistryEntry {
   public:
     virtual ~IComponentRegistryEntry() = default;

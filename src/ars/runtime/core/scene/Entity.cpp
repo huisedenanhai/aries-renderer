@@ -1,7 +1,7 @@
 #include "Entity.h"
 #include "../Log.h"
+#include "../gui/ImGui.h"
 #include <cstdlib>
-#include <imgui/imgui.h>
 #include <sstream>
 
 namespace ars::scene {
@@ -190,7 +190,9 @@ void Scene::update_cached_world_xform_impl(
 
 Scene::~Scene() = default;
 
-void IComponent::on_inspector() {}
+void IComponent::on_inspector() {
+    gui::input_instance(*this);
+}
 
 ComponentRegistry *global_component_registry() {
     static ComponentRegistry reg{};

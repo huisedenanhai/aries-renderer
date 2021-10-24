@@ -12,6 +12,17 @@
 namespace ars::scene {
 class Entity;
 
+class IComponent {
+    RTTR_ENABLE();
+
+  public:
+    virtual ~IComponent() = default;
+    virtual rttr::type type() = 0;
+
+    virtual void init(Entity *entity) {}
+    virtual void on_inspector();
+};
+
 // Almost the same as RTTR_ENABLE, fix warning on some compiler with 'override'
 #define ARS_COMPONENT_RTTR_ENABLE(...)                                         \
   public:                                                                      \
@@ -28,17 +39,6 @@ class Entity;
     using base_class_list = TYPE_LIST(__VA_ARGS__);                            \
                                                                                \
   private:
-
-class IComponent {
-  public:
-    virtual ~IComponent() = default;
-    virtual rttr::type type() = 0;
-
-    virtual void init(Entity *entity) {}
-    virtual void on_inspector();
-
-    RTTR_ENABLE();
-};
 
 #define ARS_COMPONENT(ty, ...)                                                 \
   public:                                                                      \

@@ -63,4 +63,75 @@ bool input_xform(const char *label, math::XformTRS<float> &xform) {
     }
     return dirty;
 }
+
+bool input_instance(rttr::instance instance) {
+    auto ty = instance.get_derived_type();
+    bool changed = false;
+
+    for (auto &prop : ty.get_properties()) {
+        changed = input_property(instance, prop) || changed;
+    }
+
+    return changed;
+}
+
+template <typename T, typename Func>
+bool input_property_type(rttr::instance instance,
+                         rttr::property property,
+                         bool &changed,
+                         Func &&func) {
+    if (property.get_type() != rttr::type::get<T>()) {
+        return false;
+    }
+
+    auto name = property.get_name().to_string();
+    auto value = property.get_value(instance).get_value<T>();
+    changed = func(name.c_str(), value);
+    if (changed) {
+        property.set_value(instance, value);
+    }
+    return true;
+}
+
+bool input_property(rttr::instance instance, rttr::property property) {
+    bool changed = false;
+    if (input_property_type<std::string>(
+            instance, property, changed, input_text)) {
+        return changed;
+    }
+    if (input_property_type<float>(
+            instance, property, changed, [&](const char *label, float &v) {
+                return ImGui::InputFloat(label, &v);
+            })) {
+        return changed;
+    }
+    if (input_property_type<int>(
+            instance, property, changed, [&](const char *label, int &v) {
+                return ImGui::InputInt(label, &v);
+            })) {
+        return changed;
+    }
+    if (input_property_type<glm::vec2>(
+            instance, property, changed, input_vec2)) {
+        return changed;
+    }
+    if (input_property_type<glm::vec3>(
+            instance, property, changed, input_vec3)) {
+        return changed;
+    }
+    if (input_property_type<glm::vec4>(
+            instance, property, changed, input_vec4)) {
+        return changed;
+    }
+    if (input_property_type<glm::quat>(
+            instance, property, changed, input_rotation)) {
+        return changed;
+    }
+    if (input_property_type<math::XformTRS<float>>(
+            instance, property, changed, input_xform)) {
+        return changed;
+    }
+
+    return false;
+}
 } // namespace ars::gui

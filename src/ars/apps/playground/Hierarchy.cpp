@@ -34,10 +34,24 @@ class MyComponent : public scene::IComponent {
   public:
     static void register_component() {
         scene::register_component<MyComponent>("MyComponent")
-            .property("data", &MyComponent::data);
+            .property("data", &MyComponent::data)
+            .property("my_int", &MyComponent::my_int)
+            .property("my_float", &MyComponent::my_float)
+            .property("my_vec2", &MyComponent::my_vec2)
+            .property("my_vec3", &MyComponent::my_vec3)
+            .property("my_vec4", &MyComponent::my_vec4)
+            .property("my_rotation", &MyComponent::my_rotation)
+            .property("my_xform", &MyComponent::my_xform);
     }
 
     std::string data{};
+    int my_int = 12;
+    float my_float = 24.0f;
+    glm::vec2 my_vec2{};
+    glm::vec3 my_vec3{};
+    glm::vec4 my_vec4{};
+    glm::quat my_rotation{};
+    math::XformTRS<float> my_xform{};
 };
 
 ARS_REGISTER_COMPONENT(MyComponent);

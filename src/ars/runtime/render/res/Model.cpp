@@ -12,9 +12,7 @@
 namespace ars::render {
 namespace {
 void gltf_warn(const std::filesystem::path &path, const std::string &info) {
-    std::stringstream ss;
-    ss << "Loading " << path << ": " << info;
-    log_warn(ss.str());
+    ARS_LOG_WARN("Loading {}: {}", path.string(), info);
 }
 
 template <typename T, typename R> R cast_value(const unsigned char *ptr) {
@@ -537,7 +535,7 @@ Model load_gltf(IContext *context, const std::filesystem::path &path) {
     auto model_path_str = path.string();
 
     auto gltf_error = [&](const std::string &info) {
-        log_error("Failed to load " + model_path_str + ": " + info);
+        ARS_LOG_ERROR("Failed to load {}: {}", model_path_str, info);
     };
 
     bool ret;
@@ -563,7 +561,7 @@ Model load_gltf(IContext *context, const std::filesystem::path &path) {
     }
 
     if (!ret) {
-        log_error("Failed to parse " + path.string());
+        ARS_LOG_ERROR("Failed to parse {}", path.string());
         return Model{};
     }
 
@@ -578,10 +576,12 @@ Model load_gltf(IContext *context, const std::filesystem::path &path) {
     auto upload_duration = duration_cast<milliseconds>(stop - mid);
     {
         std::stringstream ss;
-        ss << "Load gltf file " << path << " takes " << total_duration.count()
-           << "ms, tinygltf decode takes " << decode_duration.count()
-           << "ms, upload takes " << upload_duration.count() << "ms";
-        log_info(ss.str());
+        ARS_LOG_INFO("Load gltf file {} takes {}ms, tinygltf decode takes "
+                     "{}ms, upload takes {}ms",
+                     path.string(),
+                     total_duration.count(),
+                     decode_duration.count(),
+                     upload_duration.count());
     }
 
     return model;

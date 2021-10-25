@@ -33,10 +33,10 @@ debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
 
     // just ignore info and verbose log from vulkan
     if (message_severity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
-        log_warn(ss.str());
+        ARS_LOG_WARN(ss.str());
     } else if (message_severity ==
                VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
-        log_error(ss.str());
+        ARS_LOG_ERROR(ss.str());
     }
 
     return VK_FALSE;
@@ -173,7 +173,7 @@ create_vulkan_instance(const ApplicationInfo &app_info,
     auto extensions = get_instance_extensions(enable_validation,
                                               app_info.enable_presentation);
     if (!check_instance_extension_supported(extensions)) {
-        panic("instance extension not supported");
+        ARS_LOG_CRITICAL("Instance extension not supported");
     }
 
     std::vector<const char *> layers{};
@@ -198,7 +198,7 @@ create_vulkan_instance(const ApplicationInfo &app_info,
     VkInstance instance{};
     VkAllocationCallbacks *allocator = nullptr;
     if (vkCreateInstance(&info, allocator, &instance) != VK_SUCCESS) {
-        panic("Failed to create vulkan instance");
+        ARS_LOG_CRITICAL("Failed to create vulkan instance");
     }
 
     return std::make_unique<Instance>(
@@ -232,7 +232,7 @@ VkDebugUtilsMessengerEXT create_debug_messenger(Instance *instance) {
     VkDebugUtilsMessengerEXT debug_messenger;
     auto info = default_debug_utils_messenger_create_info();
     if (instance->Create(&info, &debug_messenger) != VK_SUCCESS) {
-        log_error("Failed to create debug messenger");
+        ARS_LOG_ERROR("Failed to create debug messenger");
         return VK_NULL_HANDLE;
     }
     return debug_messenger;
@@ -248,12 +248,12 @@ void init_vulkan_backend(const ApplicationInfo &app_info) {
     glfwInit();
 
     if (volkInitialize() != VK_SUCCESS) {
-        panic("Failed to load vulkan function pointers");
+        ARS_LOG_CRITICAL("Failed to load vulkan function pointers");
     }
 
     bool enable_validation = app_info.enable_validation;
     if (enable_validation && !check_validation_layers()) {
-        log_warn("Validation layers requested but not available");
+        ARS_LOG_WARN("Validation layers requested but not available");
         enable_validation = false;
     }
 
@@ -457,7 +457,7 @@ VkPhysicalDevice choose_physical_device(Instance *instance,
     uint32_t device_count = 0;
     instance->EnumeratePhysicalDevices(&device_count, nullptr);
     if (device_count == 0) {
-        panic("Failed to find GPUs with Vulkan support!");
+        ARS_LOG_CRITICAL("Failed to find GPUs with Vulkan support!");
     }
 
     std::vector<VkPhysicalDevice> devices(device_count);
@@ -473,7 +473,7 @@ VkPhysicalDevice choose_physical_device(Instance *instance,
     }
 
     if (candidate == VK_NULL_HANDLE) {
-        panic("Failed to find a suitable GPU!");
+        ARS_LOG_CRITICAL("Failed to find a suitable GPU!");
     }
 
     return candidate;
@@ -526,7 +526,7 @@ void Context::init_device_and_queues(Instance *instance,
     VkDevice device;
     if (instance->Create(physical_device, &create_info, &device) !=
         VK_SUCCESS) {
-        panic("failed to create logical device!");
+        ARS_LOG_CRITICAL("failed to create logical device!");
     }
 
     _device = std::make_unique<Device>(instance, device, physical_device);
@@ -668,7 +668,7 @@ void Queue::submit(CommandBuffer *command_buffer,
     VkSemaphore signal_sem = VK_NULL_HANDLE;
 
     if (device->Create(&sem_info, &signal_sem) != VK_SUCCESS) {
-        panic("Failed to create semaphore");
+        ARS_LOG_CRITICAL("Failed to create semaphore");
     }
 
     _semaphores.push_back(signal_sem);
@@ -682,7 +682,7 @@ void Queue::submit(CommandBuffer *command_buffer,
 
     if (device->QueueSubmit(_queue, 1, &info, VK_NULL_HANDLE) !=
         VK_NULL_HANDLE) {
-        panic("Failed to submit command to queue");
+        ARS_LOG_CRITICAL("Failed to submit command to queue");
     }
 }
 
@@ -710,7 +710,7 @@ void Context::init_command_pool() {
     VkCommandPoolCreateInfo info{VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
     info.queueFamilyIndex = _queue->family_index();
     if (_device->Create(&info, &_command_pool) != VK_SUCCESS) {
-        panic("Can not create command pool");
+        ARS_LOG_CRITICAL("Can not create command pool");
     }
 }
 
@@ -763,7 +763,7 @@ void Context::init_pipeline_cache() {
         VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO};
 
     if (_device->Create(&info, &_pipeline_cache) != VK_SUCCESS) {
-        log_error(
+        ARS_LOG_ERROR(
             "Failed to create pipeline cache, pipeline creation might be slow");
     }
 }
@@ -804,13 +804,14 @@ VkSurfaceKHR Context::create_surface(GLFWwindow *window) {
     VkSurfaceKHR surface = VK_NULL_HANDLE;
     if (window != nullptr) {
         if (!s_vulkan->instance->presentation_enabled()) {
-            log_error("Presentation is not enabled for the render backend, but "
-                      "you still supply a window for presentation");
+            ARS_LOG_ERROR(
+                "Presentation is not enabled for the render backend, but "
+                "you still supply a window for presentation");
         } else if (glfwCreateWindowSurface(s_vulkan->instance->instance(),
                                            window,
                                            s_vulkan->instance->allocator(),
                                            &surface) != VK_SUCCESS) {
-            log_error("Can not create surface for the window");
+            ARS_LOG_ERROR("Can not create surface for the window");
         }
     }
 
@@ -829,8 +830,9 @@ VkSurfaceKHR Context::create_surface(GLFWwindow *window) {
                 &is_supported_surface) != VK_SUCCESS ||
             is_supported_surface != VK_TRUE) {
 
-            log_error("The physical device of the context does not support the "
-                      "presentation of the given window");
+            ARS_LOG_ERROR(
+                "The physical device of the context does not support the "
+                "presentation of the given window");
 
             // cleanup
             instance()->Destroy(surface);

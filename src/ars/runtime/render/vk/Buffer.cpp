@@ -23,7 +23,7 @@ Buffer::Buffer(Context *context,
                         &_buffer,
                         &_allocation,
                         nullptr) != VK_SUCCESS) {
-        panic("Failed to create buffer");
+        ARS_LOG_CRITICAL("Failed to create buffer");
     }
 }
 
@@ -37,7 +37,7 @@ void *Buffer::map() {
     void *mapped_data;
     if (vmaMapMemory(_context->vma()->raw(), _allocation, &mapped_data) !=
         VK_SUCCESS) {
-        panic("Failed to map buffer memory");
+        ARS_LOG_CRITICAL("Failed to map buffer memory");
     }
     return mapped_data;
 }

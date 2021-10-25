@@ -11,7 +11,7 @@ std::unique_ptr<ApplicationInfo> s_application_info{};
 
 void init_render_backend(const ApplicationInfo &info) {
     if (s_application_info != nullptr) {
-        log_error("Can not init render backend twice");
+        ARS_LOG_ERROR("Can not init render backend twice");
         return;
     }
 
@@ -26,7 +26,7 @@ void init_render_backend(const ApplicationInfo &info) {
 
 void destroy_render_backend() {
     if (s_application_info == nullptr) {
-        log_warn("Backend is not init, but you want to destroy it.");
+        ARS_LOG_WARN("Backend is not init, but you want to destroy it.");
         return;
     }
     switch (s_application_info->backend) {
@@ -40,8 +40,8 @@ void destroy_render_backend() {
 std::pair<std::unique_ptr<IContext>, std::unique_ptr<IWindow>>
 IContext::create(WindowInfo *window_info) {
     if (s_application_info == nullptr) {
-        log_error("Render backend has not been initialized. Please call "
-                  "init_render_backend first");
+        ARS_LOG_ERROR("Render backend has not been initialized. Please call "
+                      "init_render_backend first");
         return {};
     }
 

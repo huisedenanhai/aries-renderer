@@ -17,9 +17,7 @@ Shader::Shader(Context *context, const char *name) : _context(context) {
     info.codeSize = code.size;
 
     if (_context->device()->Create(&info, &_module) != VK_SUCCESS) {
-        std::stringstream ss;
-        ss << "Failed to load shader module " << name;
-        panic(ss.str());
+        ARS_LOG_CRITICAL("Failed to load shader module ", name);
     }
 }
 
@@ -95,7 +93,7 @@ DescriptorSetInfo::create_desc_set_layout(Device *device) const {
 
     VkDescriptorSetLayout layout;
     if (device->Create(&info, &layout) != VK_SUCCESS) {
-        panic("failed to create per frame descriptor layout");
+        ARS_LOG_CRITICAL("Failed to create per frame descriptor layout");
     }
     return layout;
 }
@@ -204,7 +202,7 @@ void GraphicsPipeline::init_layout(const GraphicsPipelineInfo &info) {
 
     if (_context->device()->Create(&create_info, &_pipeline_layout) !=
         VK_SUCCESS) {
-        panic("Failed to create pipeline layout");
+        ARS_LOG_CRITICAL("Failed to create pipeline layout");
     }
 }
 
@@ -311,7 +309,7 @@ void GraphicsPipeline::init_pipeline(const GraphicsPipelineInfo &info) {
     if (_context->device()->Create(
             _context->pipeline_cache(), 1, &create_info, &_pipeline) !=
         VK_SUCCESS) {
-        panic("Failed to create graphics pipeline");
+        ARS_LOG_CRITICAL("Failed to create graphics pipeline");
     }
 }
 

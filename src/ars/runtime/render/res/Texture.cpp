@@ -38,9 +38,7 @@ std::shared_ptr<ITexture> load_texture(IContext *context,
     channels = 4;
 
     if (!data) {
-        std::stringstream ss;
-        ss << "Failed to load image " << path;
-        panic(ss.str());
+        ARS_LOG_CRITICAL("Failed to load image {}", path.string());
     }
 
     auto texture = context->create_texture_2d(
@@ -59,14 +57,14 @@ std::shared_ptr<ITexture> load_texture(IContext *context,
     auto decode_duration = duration_cast<milliseconds>(mid - start);
     auto upload_duration = duration_cast<milliseconds>(stop - mid);
 
-    {
-        std::stringstream ss;
-        ss << "Load texture " << path << " " << width << "x" << height
-           << " takes " << total_duration.count() << "ms, decode image takes "
-           << decode_duration.count() << "ms, upload takes "
-           << upload_duration.count() << "ms";
-        log_info(ss.str());
-    }
+    ARS_LOG_INFO("Load texture {} {}x{} takes {}ms, decode image takes "
+                 "{}ms, upload takes {}ms",
+                 path.string(),
+                 width,
+                 height,
+                 total_duration.count(),
+                 decode_duration.count(),
+                 upload_duration.count());
 
     return texture;
 }

@@ -16,7 +16,7 @@ std::string engine::IApplication::get_name() const {
 
 void IApplication::init(render::IWindow *window) {
     if (_window != nullptr) {
-        log_error("Should not init the application twice.");
+        ARS_LOG_ERROR("Should not init the application twice.");
         return;
     }
     _window = window;

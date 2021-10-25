@@ -45,7 +45,7 @@ Texture::Texture(Context *context, const TextureCreateInfo &info)
                        &_image,
                        &_allocation,
                        nullptr) != VK_SUCCESS) {
-        panic("Failed to create image");
+        ARS_LOG_CRITICAL("Failed to create image");
     }
 
     VkImageViewCreateInfo view_info{VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
@@ -59,7 +59,7 @@ Texture::Texture(Context *context, const TextureCreateInfo &info)
     view_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
 
     if (context->device()->Create(&view_info, &_image_view) != VK_SUCCESS) {
-        panic("Failed to create image view");
+        ARS_LOG_CRITICAL("Failed to create image view");
     }
 
     VkSamplerCreateInfo sampler_info{VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
@@ -81,7 +81,7 @@ Texture::Texture(Context *context, const TextureCreateInfo &info)
     }
 
     if (context->device()->Create(&sampler_info, &_sampler)) {
-        panic("Failed to create sampler");
+        ARS_LOG_CRITICAL("Failed to create sampler");
     }
 }
 
@@ -164,13 +164,13 @@ void Texture::generate_mipmap() {
 
     if (!(format_properties.optimalTilingFeatures &
           VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
-        log_error("Texture image format does not support linear blit, skip "
-                  "mipmap generation");
+        ARS_LOG_ERROR("Texture image format does not support linear blit, skip "
+                      "mipmap generation");
         return;
     }
 
     if (_layout == VK_IMAGE_LAYOUT_UNDEFINED) {
-        log_error("Texture is not initialized, skip mipmap generation");
+        ARS_LOG_ERROR("Texture is not initialized, skip mipmap generation");
         return;
     }
 

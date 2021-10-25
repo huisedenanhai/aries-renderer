@@ -7,7 +7,7 @@ namespace ars::render::vk {
 RenderPass::RenderPass(Context *context, const VkRenderPassCreateInfo &info)
     : _context(context) {
     if (_context->device()->Create(&info, &_render_pass) != VK_SUCCESS) {
-        panic("Failed to create render pass");
+        ARS_LOG_CRITICAL("Failed to create render pass");
     }
     _attachments.reserve(info.attachmentCount);
     for (int i = 0; i < info.attachmentCount; i++) {
@@ -92,7 +92,8 @@ Framebuffer::Framebuffer(RenderPass *render_pass,
 
 void Framebuffer::init_framebuffer(VkRenderPass render_pass) {
     if (_attachments.empty()) {
-        panic("There must be at least one attachment for the framebuffer");
+        ARS_LOG_CRITICAL(
+            "There must be at least one attachment for the framebuffer");
     }
     auto extent = _attachments[0]->info().extent;
     VkFramebufferCreateInfo fb_info{VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO};
@@ -111,7 +112,7 @@ void Framebuffer::init_framebuffer(VkRenderPass render_pass) {
 
     auto device = _context->device();
     if (device->CreateFramebuffer(&fb_info, &_framebuffer) != VK_SUCCESS) {
-        panic("Failed to create framebuffer");
+        ARS_LOG_CRITICAL("Failed to create framebuffer");
     }
 
     _extent.width = fb_info.width;

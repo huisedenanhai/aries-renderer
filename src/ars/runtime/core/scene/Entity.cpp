@@ -30,10 +30,11 @@ T erase_at_index(std::vector<T> &vec,
                  const std::string &entity_name,
                  const std::string &ty) {
     if (index >= vec.size()) {
-        std::stringstream ss;
-        ss << "Try to remove " << ty << " of Entity \"" << entity_name
-           << "\" at index " << index << ", which is out of range";
-        log_warn(ss.str());
+        ARS_LOG_WARN("Try to remove {} of Entity \"{}\" at index {}, which is "
+                     "out of range",
+                     ty,
+                     entity_name,
+                     index);
         return {};
     }
     auto old = std::move(vec[index]);
@@ -147,19 +148,17 @@ void Entity::add_component(const rttr::type &ty) {
     const auto &regs = global_component_registry()->component_types;
     auto regs_it = regs.find(ty_name);
     if (regs_it == regs.end()) {
-        std::stringstream ss;
-        ss << "Try to add component type " << std::quoted(ty_name)
-           << ", which is not registered.";
-        log_error(ss.str());
+        ARS_LOG_ERROR(
+            "Try to add component type \"{}\", which is not registered.",
+            ty_name);
         return;
     }
 
     if (_components.find(ty) != _components.end()) {
-        std::stringstream ss;
-        ss << "Component " << std::quoted(ty_name)
-           << " already exists on entity " << std::quoted(name())
-           << ", add it twice will do nothing";
-        log_warn(ss.str());
+        ARS_LOG_WARN("Component \"{}\" already exists on entity \"{}\", add it "
+                     "twice will do nothing",
+                     ty_name,
+                     name());
         return;
     }
 
@@ -215,8 +214,9 @@ Scene::~Scene() {
 
 void Scene::destroy_entity_impl(Entity *entity, bool can_destroy_root) {
     if (!can_destroy_root && entity == _root) {
-        log_error("Try to delete the root of the scene. If one what to delete "
-                  "the root of a scene, he should delete the scene itself");
+        ARS_LOG_ERROR(
+            "Try to delete the root of the scene. If one what to delete "
+            "the root of a scene, he should delete the scene itself");
         return;
     }
     if (entity == nullptr) {

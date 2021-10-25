@@ -38,7 +38,7 @@ uint32_t vk_descriptor_type_index(VkDescriptorType type) {
     default:
         break;
     }
-    panic("invalid descriptor type");
+    ARS_LOG_CRITICAL("invalid descriptor type");
     return 0;
 }
 } // namespace
@@ -58,7 +58,7 @@ DescriptorPool::DescriptorPool(Device *device,
     info.pPoolSizes = sizes.data();
 
     if (_device->Create(&info, &_pool) != VK_SUCCESS) {
-        panic("Failed to create descriptor pool");
+        ARS_LOG_CRITICAL("Failed to create descriptor pool");
     }
 
     reset_available_counter();
@@ -72,7 +72,7 @@ DescriptorPool::~DescriptorPool() {
 
 void DescriptorPool::reset() {
     if (_device->ResetDescriptorPool(_pool, 0) != VK_SUCCESS) {
-        panic("Failed to reset descriptor pool");
+        ARS_LOG_CRITICAL("Failed to reset descriptor pool");
     }
 
     reset_available_counter();
@@ -87,7 +87,7 @@ void DescriptorPool::alloc(VkDescriptorSetLayout layout,
     }
 
     if (count > _available_sets) {
-        panic("Available descriptor sets not enough");
+        ARS_LOG_CRITICAL("Available descriptor sets not enough");
     }
 
     _available_sets -= count;
@@ -100,7 +100,7 @@ void DescriptorPool::alloc(VkDescriptorSetLayout layout,
         auto &available_desc_count =
             _available_sizes[vk_descriptor_type_index(bind->descriptorType)];
         if (available_desc_count < bind->descriptorCount) {
-            panic("available descriptor binding not enough");
+            ARS_LOG_CRITICAL("available descriptor binding not enough");
         }
 
         available_desc_count -= bind->descriptorCount;
@@ -114,7 +114,7 @@ void DescriptorPool::alloc(VkDescriptorSetLayout layout,
     alloc_info.pSetLayouts = layouts.data();
 
     if (_device->Allocate(&alloc_info, result) != VK_SUCCESS) {
-        panic("Failed to alloc descriptor set");
+        ARS_LOG_CRITICAL("Failed to alloc descriptor set");
     }
 }
 

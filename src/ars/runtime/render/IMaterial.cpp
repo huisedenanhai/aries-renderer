@@ -22,18 +22,14 @@ void IMaterial::set_variant(int id, const MaterialPropertyVariant &value) {
     for (auto &prop : _prototype->properties()) {
         if (prop.id == id) {
             if (value.type() != prop.type) {
-                std::stringstream ss;
-                ss << "material property type mismatch for id " << id;
-                log_warn(ss.str());
+                ARS_LOG_WARN("material property type mismatch for id {}", id);
                 return;
             }
             prop.setter(this, value);
             return;
         }
     }
-    std::stringstream ss;
-    ss << "material property not found with id " << id;
-    log_warn(ss.str());
+    ARS_LOG_WARN("Material property not found with id {}", id);
 }
 
 std::optional<MaterialPropertyVariant> IMaterial::get_variant(int id) {
@@ -43,9 +39,7 @@ std::optional<MaterialPropertyVariant> IMaterial::get_variant(int id) {
             return prop.getter(this);
         }
     }
-    std::stringstream ss;
-    ss << "material property not found with id " << id;
-    log_warn(ss.str());
+    ARS_LOG_WARN("Material property not found with id {}", id);
     return std::nullopt;
 }
 

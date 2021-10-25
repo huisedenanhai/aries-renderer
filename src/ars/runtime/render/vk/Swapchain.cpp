@@ -575,7 +575,7 @@ void Swapchain::init_swapchain() {
     create_info.oldSwapchain = VK_NULL_HANDLE;
 
     if (device->Create(&create_info, &_swapchain) != VK_SUCCESS) {
-        panic("Failed to create swap chain!");
+        ARS_LOG_CRITICAL("Failed to create swap chain!");
     }
 
     uint32_t swapchain_image_count = 0;
@@ -609,7 +609,7 @@ void Swapchain::init_image_views() {
 
         if (_context->device()->Create(&create_info, &_image_views[i]) !=
             VK_SUCCESS) {
-            panic("Failed to create image views!");
+            ARS_LOG_CRITICAL("Failed to create image views!");
         }
     }
 }
@@ -657,7 +657,7 @@ void Swapchain::present(ITexture *texture) {
     }
 
     if (acquire_result != VK_SUCCESS && acquire_result != VK_SUBOPTIMAL_KHR) {
-        panic("Failed to acquire swap chain image!");
+        ARS_LOG_CRITICAL("Failed to acquire swap chain image!");
     }
 
     queue->submit_once(
@@ -744,7 +744,7 @@ void Swapchain::present(ITexture *texture) {
     if (present_result != VK_SUCCESS &&
         present_result != VK_ERROR_OUT_OF_DATE_KHR &&
         present_result != VK_SUBOPTIMAL_KHR) {
-        panic("Failed to present to swapchain");
+        ARS_LOG_CRITICAL("Failed to present to swapchain");
     }
 
 #ifdef __APPLE__
@@ -795,7 +795,8 @@ void Swapchain::init_framebuffers() {
         info.renderPass = _render_pass->render_pass();
 
         if (device->Create(&info, &_framebuffers[i]) != VK_SUCCESS) {
-            panic("Failed to create framebuffers for swapchain images");
+            ARS_LOG_CRITICAL(
+                "Failed to create framebuffers for swapchain images");
         }
     }
 }
@@ -836,7 +837,7 @@ void Swapchain::init_semaphores() {
     VkSemaphoreCreateInfo info{VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
     if (_context->device()->Create(&info, &_image_ready_semaphore) !=
         VK_SUCCESS) {
-        panic("Failed to create image ready semaphore");
+        ARS_LOG_CRITICAL("Failed to create image ready semaphore");
     }
 }
 

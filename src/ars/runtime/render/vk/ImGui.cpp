@@ -200,7 +200,7 @@ ImGuiPass::ImGuiPass(Swapchain *swapchain) {
     assert(swapchain != nullptr);
 
     if (ImGui::GetCurrentContext() != nullptr) {
-        log_error("Multiple ImGui context is not supported.");
+        ARS_LOG_ERROR("Multiple ImGui context is not supported.");
     }
 
     _imgui_context = ImGui::CreateContext();

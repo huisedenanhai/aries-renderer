@@ -45,11 +45,11 @@ class MyComponent : public scene::IComponent {
     }
 
     void init(scene::Entity *entity) override {
-        log_info("Init");
+        ARS_LOG_INFO("Init");
     }
 
     void destroy() override {
-        log_info("Destroy");
+        ARS_LOG_INFO("Destroy");
     }
 
     std::string data{};
@@ -79,9 +79,7 @@ class HierarchyInspectorApplication : public engine::IApplication {
 
         auto t = rttr::type::get<MyComponent>();
         for (auto &prop : t.get_properties()) {
-            std::stringstream ss;
-            ss << "name: " << prop.get_name();
-            log_info(ss.str());
+            ARS_LOG_INFO("name: {}", prop.get_name().to_string());
         }
     }
 

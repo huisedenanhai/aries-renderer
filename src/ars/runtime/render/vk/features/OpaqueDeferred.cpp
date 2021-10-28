@@ -7,7 +7,8 @@
 namespace ars::render::vk {
 OpaqueDeferred::OpaqueDeferred(View *view) : _view(view) {
     init_render_pass();
-    init_pipeline();
+    init_geometry_pass_pipeline();
+    init_shading_pass_pipeline();
 }
 
 void OpaqueDeferred::render(CommandBuffer *cmd) {
@@ -172,7 +173,7 @@ void OpaqueDeferred::init_render_pass() {
         rts.data(), static_cast<uint32_t>(std::size(rts) - 1), rts.back());
 }
 
-void OpaqueDeferred::init_pipeline() {
+void OpaqueDeferred::init_geometry_pass_pipeline() {
     auto ctx = _view->context();
     auto vert_shader = std::make_unique<Shader>(ctx, "GeometryPass.vert");
     auto frag_shader = std::make_unique<Shader>(ctx, "GeometryPass.frag");
@@ -229,5 +230,22 @@ std::array<NamedRT, 5> OpaqueDeferred::geometry_pass_rts() const {
             NamedRT_GBuffer2,
             NamedRT_GBuffer3,
             NamedRT_Depth};
+}
+
+void OpaqueDeferred::init_shading_pass_pipeline() {
+    auto ctx = _view->context();
+    auto shader = std::make_unique<Shader>(ctx, "ShadingPass.comp");
+    ComputePipelineInfo info{};
+    info.shader = shader.get();
+
+    VkPushConstantRange range{};
+    range.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    range.size = 2 * sizeof(int32_t);
+    range.offset = 0;
+
+    info.push_constant_range_count = 1;
+    info.push_constant_ranges = &range;
+
+    _shading_pass_pipeline = std::make_unique<ComputePipeline>(ctx, info);
 }
 } // namespace ars::render::vk

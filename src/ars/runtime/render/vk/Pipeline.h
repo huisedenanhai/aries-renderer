@@ -51,9 +51,37 @@ class Shader {
     VkShaderModule _module = VK_NULL_HANDLE;
 };
 
+class Pipeline {
+  public:
+    explicit Pipeline(Context *context);
+
+    ARS_NO_COPY_MOVE(Pipeline);
+
+    ~Pipeline();
+
+    [[nodiscard]] VkPipeline pipeline() const;
+    [[nodiscard]] VkPipelineLayout pipeline_layout() const;
+    [[nodiscard]] VkDescriptorSet alloc_desc_set(uint32_t set) const;
+
+  protected:
+    void init_layout(const PipelineLayoutInfo &pipeline_layout_info,
+                     uint32_t push_constant_range_count,
+                     VkPushConstantRange *push_constant_ranges);
+
+    Context *_context = nullptr;
+
+    std::array<VkDescriptorSetLayout, MAX_DESC_SET_COUNT> _descriptor_layouts{};
+    PipelineLayoutInfo _pipeline_layout_info{};
+    VkPipelineLayout _pipeline_layout = VK_NULL_HANDLE;
+    VkPipeline _pipeline = VK_NULL_HANDLE;
+};
+
 // Use reversed-Z by default
 VkPipelineDepthStencilStateCreateInfo
 enabled_depth_stencil_state(bool depth_write = true);
+VkPipelineColorBlendAttachmentState
+create_attachment_blend_state(VkBlendFactor src_factor,
+                              VkBlendFactor dst_factor);
 
 struct GraphicsPipelineInfo {
     std::vector<Shader *> shaders{};
@@ -70,31 +98,30 @@ struct GraphicsPipelineInfo {
     VkPipelineDepthStencilStateCreateInfo *depth_stencil = nullptr;
 };
 
-class GraphicsPipeline {
+class GraphicsPipeline : public Pipeline {
   public:
     GraphicsPipeline(Context *context, const GraphicsPipelineInfo &info);
-
-    ARS_NO_COPY_MOVE(GraphicsPipeline);
-
-    ~GraphicsPipeline();
-
-    [[nodiscard]] VkPipeline pipeline() const;
-    [[nodiscard]] VkPipelineLayout pipeline_layout() const;
-    [[nodiscard]] VkDescriptorSet alloc_desc_set(uint32_t set) const;
 
   private:
     void init_layout(const GraphicsPipelineInfo &info);
     void init_pipeline(const GraphicsPipelineInfo &info);
-
-    Context *_context = nullptr;
-
-    std::array<VkDescriptorSetLayout, MAX_DESC_SET_COUNT> _descriptor_layouts{};
-    PipelineLayoutInfo _pipeline_layout_info{};
-    VkPipelineLayout _pipeline_layout = VK_NULL_HANDLE;
-    VkPipeline _pipeline = VK_NULL_HANDLE;
 };
 
-VkPipelineColorBlendAttachmentState
-create_attachment_blend_state(VkBlendFactor src_factor,
-                              VkBlendFactor dst_factor);
+struct ComputePipelineInfo {
+    Shader *shader = nullptr;
+
+    // Push constant ranges can not be inferred from shader reflection data as
+    // offsets are unknown.
+    uint32_t push_constant_range_count = 0;
+    VkPushConstantRange *push_constant_ranges = nullptr;
+};
+
+class ComputePipeline : public Pipeline {
+  public:
+    ComputePipeline(Context *context, const ComputePipelineInfo &info);
+
+  private:
+    void init_layout(const ComputePipelineInfo &info);
+    void init_pipeline(const ComputePipelineInfo &info);
+};
 } // namespace ars::render::vk

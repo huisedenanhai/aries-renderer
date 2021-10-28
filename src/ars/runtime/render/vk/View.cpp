@@ -75,7 +75,7 @@ void View::update_color_tex_adapter() {
 
 TextureInfo View::color_tex_info() const {
     TextureInfo info{};
-    info.format = Format::R8G8B8A8_SRGB;
+    info.format = Format::B10G11R11_UFLOAT_PACK32;
     info.width = _size.width;
     info.height = _size.height;
     info.mip_levels = 1;

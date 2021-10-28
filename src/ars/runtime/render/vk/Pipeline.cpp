@@ -146,12 +146,12 @@ std::optional<T> merge(const std::optional<T> &lhs,
 
 GraphicsPipeline::GraphicsPipeline(Context *context,
                                    const GraphicsPipelineInfo &info)
-    : _context(context) {
+    : Pipeline(context) {
     init_layout(info);
     init_pipeline(info);
 }
 
-GraphicsPipeline::~GraphicsPipeline() {
+Pipeline::~Pipeline() {
     auto device = _context->device();
 
     for (auto desc_layout : _descriptor_layouts) {
@@ -176,34 +176,9 @@ void GraphicsPipeline::init_layout(const GraphicsPipelineInfo &info) {
             merge(pipeline_layout_info, shader->pipeline_layout_info());
     }
 
-    _pipeline_layout_info = pipeline_layout_info;
-
-    std::vector<VkDescriptorSetLayout> valid_desc_sets{};
-    valid_desc_sets.reserve(MAX_DESC_SET_COUNT);
-
-    for (int i = 0; i < MAX_DESC_SET_COUNT; i++) {
-        auto &s = pipeline_layout_info.sets[i];
-        if (s.has_value()) {
-            auto desc_set = s->create_desc_set_layout(_context->device());
-            _descriptor_layouts[i] = desc_set;
-            valid_desc_sets.push_back(desc_set);
-        } else {
-            _descriptor_layouts[i] = VK_NULL_HANDLE;
-        }
-    }
-
-    VkPipelineLayoutCreateInfo create_info{
-        VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
-
-    create_info.setLayoutCount = static_cast<uint32_t>(valid_desc_sets.size());
-    create_info.pSetLayouts = valid_desc_sets.data();
-    create_info.pushConstantRangeCount = info.push_constant_range_count;
-    create_info.pPushConstantRanges = info.push_constant_ranges;
-
-    if (_context->device()->Create(&create_info, &_pipeline_layout) !=
-        VK_SUCCESS) {
-        ARS_LOG_CRITICAL("Failed to create pipeline layout");
-    }
+    Pipeline::init_layout(pipeline_layout_info,
+                          info.push_constant_range_count,
+                          info.push_constant_ranges);
 }
 
 void GraphicsPipeline::init_pipeline(const GraphicsPipelineInfo &info) {
@@ -313,17 +288,52 @@ void GraphicsPipeline::init_pipeline(const GraphicsPipelineInfo &info) {
     }
 }
 
-VkPipeline GraphicsPipeline::pipeline() const {
+VkPipeline Pipeline::pipeline() const {
     return _pipeline;
 }
 
-VkDescriptorSet GraphicsPipeline::alloc_desc_set(uint32_t set) const {
+VkDescriptorSet Pipeline::alloc_desc_set(uint32_t set) const {
     return _context->descriptor_arena()->alloc(
         _descriptor_layouts[set], _pipeline_layout_info.sets[set].value());
 }
 
-VkPipelineLayout GraphicsPipeline::pipeline_layout() const {
+VkPipelineLayout Pipeline::pipeline_layout() const {
     return _pipeline_layout;
+}
+
+Pipeline::Pipeline(Context *context) : _context(context) {}
+
+void Pipeline::init_layout(const PipelineLayoutInfo &pipeline_layout_info,
+                           uint32_t push_constant_range_count,
+                           VkPushConstantRange *push_constant_ranges) {
+    _pipeline_layout_info = pipeline_layout_info;
+
+    std::vector<VkDescriptorSetLayout> valid_desc_sets{};
+    valid_desc_sets.reserve(MAX_DESC_SET_COUNT);
+
+    for (int i = 0; i < MAX_DESC_SET_COUNT; i++) {
+        auto &s = pipeline_layout_info.sets[i];
+        if (s.has_value()) {
+            auto desc_set = s->create_desc_set_layout(_context->device());
+            _descriptor_layouts[i] = desc_set;
+            valid_desc_sets.push_back(desc_set);
+        } else {
+            _descriptor_layouts[i] = VK_NULL_HANDLE;
+        }
+    }
+
+    VkPipelineLayoutCreateInfo create_info{
+        VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
+
+    create_info.setLayoutCount = static_cast<uint32_t>(valid_desc_sets.size());
+    create_info.pSetLayouts = valid_desc_sets.data();
+    create_info.pushConstantRangeCount = push_constant_range_count;
+    create_info.pPushConstantRanges = push_constant_ranges;
+
+    if (_context->device()->Create(&create_info, &_pipeline_layout) !=
+        VK_SUCCESS) {
+        ARS_LOG_CRITICAL("Failed to create pipeline layout");
+    }
 }
 
 VkPipelineColorBlendAttachmentState
@@ -352,5 +362,39 @@ enabled_depth_stencil_state(bool depth_write) {
     info.depthCompareOp = VK_COMPARE_OP_GREATER_OR_EQUAL;
 
     return info;
+}
+
+ComputePipeline::ComputePipeline(Context *context,
+                                 const ComputePipelineInfo &info)
+    : Pipeline(context) {
+    assert(info.shader);
+    init_layout(info);
+    init_pipeline(info);
+}
+
+void ComputePipeline::init_layout(const ComputePipelineInfo &info) {
+    Pipeline::init_layout(info.shader->pipeline_layout_info(),
+                          info.push_constant_range_count,
+                          info.push_constant_ranges);
+}
+
+void ComputePipeline::init_pipeline(const ComputePipelineInfo &info) {
+    VkComputePipelineCreateInfo create_info{
+        VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO};
+
+    auto shader = info.shader;
+    auto &si = create_info.stage;
+    si.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    si.module = shader->module();
+    si.stage = shader->stage();
+    si.pName = shader->entry();
+
+    create_info.layout = _pipeline_layout;
+
+    if (_context->device()->Create(
+            _context->pipeline_cache(), 1, &create_info, &_pipeline) !=
+        VK_SUCCESS) {
+        ARS_LOG_CRITICAL("Failed to create compute pipeline");
+    }
 }
 } // namespace ars::render::vk

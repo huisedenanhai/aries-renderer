@@ -355,6 +355,10 @@ VkPipelineBindPoint Pipeline::bind_point() const {
     return _bind_point;
 }
 
+void Pipeline::bind(CommandBuffer *cmd) const {
+    cmd->BindPipeline(bind_point(), pipeline());
+}
+
 VkPipelineColorBlendAttachmentState
 create_attachment_blend_state(VkBlendFactor src_factor,
                               VkBlendFactor dst_factor) {

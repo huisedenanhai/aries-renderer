@@ -31,8 +31,7 @@ void OpaqueDeferred::render(CommandBuffer *cmd) {
     auto rp_exec =
         _render_pass->begin(cmd, fb, clear_values, VK_SUBPASS_CONTENTS_INLINE);
 
-    cmd->BindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS,
-                      _geometry_pass_pipeline->pipeline());
+    _geometry_pass_pipeline->bind(cmd);
 
     fb->set_viewport_scissor(cmd);
 
@@ -139,8 +138,8 @@ void OpaqueDeferred::render(CommandBuffer *cmd) {
 
     final_color->assure_layout(VK_IMAGE_LAYOUT_GENERAL);
 
-    cmd->BindPipeline(VK_PIPELINE_BIND_POINT_COMPUTE,
-                      _shading_pass_pipeline->pipeline());
+    _shading_pass_pipeline->bind(cmd);
+
     int32_t size[2] = {static_cast<int>(final_color_extent.width),
                        static_cast<int>(final_color_extent.height)};
     cmd->PushConstants(_shading_pass_pipeline->pipeline_layout(),

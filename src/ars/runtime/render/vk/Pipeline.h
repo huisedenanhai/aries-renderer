@@ -83,6 +83,8 @@ class Pipeline {
     [[nodiscard]] Context *context() const;
     [[nodiscard]] VkPipelineBindPoint bind_point() const;
 
+    void bind(CommandBuffer *cmd) const;
+
   protected:
     void init_layout(const PipelineLayoutInfo &pipeline_layout_info,
                      uint32_t push_constant_range_count,

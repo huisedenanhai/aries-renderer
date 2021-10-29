@@ -690,8 +690,7 @@ void Swapchain::present(ITexture *texture) {
                 VkRect2D scissor{{0, 0}, _extent};
                 cmd->SetScissor(0, 1, &scissor);
 
-                cmd->BindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                  _pipeline->pipeline());
+                _pipeline->bind(cmd);
 
                 DescriptorEncoder desc{};
                 desc.set_combined_image_sampler(0, 0, upcast(texture).get());

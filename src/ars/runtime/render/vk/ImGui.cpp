@@ -364,8 +364,7 @@ void ImGuiPass::draw(CommandBuffer *cmd, ImGuiViewport *viewport) {
 
         // Bind pipeline and descriptor sets:
         {
-            cmd->BindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS,
-                              pipeline->pipeline());
+            pipeline->bind(cmd);
 
             DescriptorEncoder desc{};
             desc.set_combined_image_sampler(0, 0, bd->font_atlas());

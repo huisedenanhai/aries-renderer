@@ -367,23 +367,9 @@ void ImGuiPass::draw(CommandBuffer *cmd, ImGuiViewport *viewport) {
             cmd->BindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS,
                               pipeline->pipeline());
 
-            auto desc_set = pipeline->alloc_desc_set(0);
-
-            VkWriteDescriptorSet write{};
-            VkDescriptorImageInfo image_info{};
-            fill_desc_combined_image_sampler(
-                &write, &image_info, desc_set, 0, bd->font_atlas());
-
-            swapchain->context()->device()->UpdateDescriptorSets(
-                1, &write, 0, nullptr);
-
-            cmd->BindDescriptorSets(VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                    pipeline->pipeline_layout(),
-                                    0,
-                                    1,
-                                    &desc_set,
-                                    0,
-                                    nullptr);
+            DescriptorEncoder desc{};
+            desc.set_combined_image_sampler(0, 0, bd->font_atlas());
+            desc.commit(cmd, pipeline);
         }
 
         // Bind vertex and index buffers

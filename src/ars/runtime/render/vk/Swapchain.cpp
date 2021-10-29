@@ -693,22 +693,9 @@ void Swapchain::present(ITexture *texture) {
                 cmd->BindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS,
                                   _pipeline->pipeline());
 
-                auto desc_set = _pipeline->alloc_desc_set(0);
-
-                VkWriteDescriptorSet write{};
-                VkDescriptorImageInfo image_info{};
-                fill_desc_combined_image_sampler(
-                    &write, &image_info, desc_set, 0, upcast(texture).get());
-
-                device->UpdateDescriptorSets(1, &write, 0, nullptr);
-
-                cmd->BindDescriptorSets(VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                        _pipeline->pipeline_layout(),
-                                        0,
-                                        1,
-                                        &desc_set,
-                                        0,
-                                        nullptr);
+                DescriptorEncoder desc{};
+                desc.set_combined_image_sampler(0, 0, upcast(texture).get());
+                desc.commit(cmd, _pipeline.get());
 
                 cmd->Draw(3, 1, 0, 0);
             }

@@ -58,18 +58,10 @@ void OpaqueDeferred::render(CommandBuffer *cmd) {
             glm::mat4 P;
         };
 
-        auto trans_buf = ctx->create_buffer(sizeof(Transform),
-                                            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                                            VMA_MEMORY_USAGE_CPU_TO_GPU);
-
-        trans_buf->map_once([&](void *ptr) {
-            Transform t{};
-            t.MV = v_matrix * matrix;
-            t.I_MV = glm::inverse(t.MV);
-            t.P = p_matrix;
-
-            std::memcpy(ptr, &t, sizeof(Transform));
-        });
+        Transform t{};
+        t.MV = v_matrix * matrix;
+        t.I_MV = glm::inverse(t.MV);
+        t.P = p_matrix;
 
         struct MaterialParam {
             glm::vec4 base_color_factor;
@@ -80,28 +72,18 @@ void OpaqueDeferred::render(CommandBuffer *cmd) {
             glm::vec3 emission_factor;
         };
 
-        auto mat_buf = ctx->create_buffer(sizeof(MaterialParam),
-                                          VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                                          VMA_MEMORY_USAGE_CPU_TO_GPU);
+        MaterialParam m{};
+        m.base_color_factor = glm::vec4(1.0f);
+        m.metallic_factor = 1.0f;
+        m.roughness_factor = 1.0f;
+        m.normal_scale = 1.0f;
+        m.occlusion_strength = 1.0f;
+        m.emission_factor = glm::vec3(1.0f);
 
-        mat_buf->map_once([](void *ptr) {
-            MaterialParam m{};
-            m.base_color_factor = glm::vec4(1.0f);
-            m.metallic_factor = 1.0f;
-            m.roughness_factor = 1.0f;
-            m.normal_scale = 1.0f;
-            m.occlusion_strength = 1.0f;
-            m.emission_factor = glm::vec3(1.0f);
+        DescriptorEncoder desc{};
+        desc.set_uniform_buffer(0, 0, t);
+        desc.set_uniform_buffer(1, 0, m);
 
-            std::memcpy(ptr, &m, sizeof(MaterialParam));
-        });
-
-        VkDescriptorSet desc_sets[2] = {
-            _geometry_pass_pipeline->alloc_desc_set(0),
-            _geometry_pass_pipeline->alloc_desc_set(1),
-        };
-        VkWriteDescriptorSet write[7]{};
-        VkDescriptorImageInfo image_info[5]{};
         Handle<Texture> images[5] = {
             material->base_color_tex.vk_texture(),
             material->metallic_roughness_tex.vk_texture(),
@@ -109,43 +91,11 @@ void OpaqueDeferred::render(CommandBuffer *cmd) {
             material->occlusion_tex.vk_texture(),
             material->emission_tex.vk_texture(),
         };
-        auto image_writes = write + 2;
-        for (int i = 0; i < 5; i++) {
-            fill_desc_combined_image_sampler(&image_writes[i],
-                                             &image_info[i],
-                                             desc_sets[1],
-                                             i + 1,
-                                             images[i].get());
+        for (int i = 0; i < std::size(images); i++) {
+            desc.set_combined_image_sampler(1, i + 1, images[i].get());
         }
 
-        VkDescriptorBufferInfo trans_buf_info;
-        fill_desc_uniform_buffer(&write[0],
-                                 &trans_buf_info,
-                                 desc_sets[0],
-                                 0,
-                                 trans_buf->buffer(),
-                                 0,
-                                 trans_buf->size());
-
-        VkDescriptorBufferInfo mat_buf_info;
-        fill_desc_uniform_buffer(&write[1],
-                                 &mat_buf_info,
-                                 desc_sets[1],
-                                 0,
-                                 mat_buf->buffer(),
-                                 0,
-                                 mat_buf->size());
-
-        ctx->device()->UpdateDescriptorSets(
-            static_cast<uint32_t>(std::size(write)), write, 0, nullptr);
-
-        cmd->BindDescriptorSets(VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                _geometry_pass_pipeline->pipeline_layout(),
-                                0,
-                                2,
-                                desc_sets,
-                                0,
-                                nullptr);
+        desc.commit(cmd, _geometry_pass_pipeline.get());
 
         VkBuffer vertex_buffers[] = {
             mesh->position_buffer()->buffer(),
@@ -199,20 +149,9 @@ void OpaqueDeferred::render(CommandBuffer *cmd) {
                        2 * sizeof(int32_t),
                        size);
 
-    auto desc_set = _shading_pass_pipeline->alloc_desc_set(0);
-    VkWriteDescriptorSet write{};
-    VkDescriptorImageInfo image_info{};
-    fill_desc_storage_image(
-        &write, &image_info, desc_set, 0, final_color.get());
-    ctx->device()->UpdateDescriptorSets(1, &write, 0, nullptr);
-
-    cmd->BindDescriptorSets(VK_PIPELINE_BIND_POINT_COMPUTE,
-                            _shading_pass_pipeline->pipeline_layout(),
-                            0,
-                            1,
-                            &desc_set,
-                            0,
-                            nullptr);
+    DescriptorEncoder desc{};
+    desc.set_storage_image(0, 0, final_color.get());
+    desc.commit(cmd, _shading_pass_pipeline.get());
 
     auto local_size_x = 32u;
     auto local_size_y = 32u;

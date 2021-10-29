@@ -4,11 +4,13 @@
 #include <array>
 #include <optional>
 #include <string>
+#include <variant>
 #include <vector>
 
 namespace ars::render::vk {
 class Context;
 class RenderPass;
+class Texture;
 
 constexpr uint32_t MAX_DESC_BINDING_COUNT = 16;
 constexpr uint32_t MAX_DESC_SET_COUNT = 16;
@@ -53,7 +55,7 @@ class Shader {
 
 class Pipeline {
   public:
-    explicit Pipeline(Context *context);
+    Pipeline(Context *context, VkPipelineBindPoint bind_point);
 
     ARS_NO_COPY_MOVE(Pipeline);
 
@@ -62,6 +64,8 @@ class Pipeline {
     [[nodiscard]] VkPipeline pipeline() const;
     [[nodiscard]] VkPipelineLayout pipeline_layout() const;
     [[nodiscard]] VkDescriptorSet alloc_desc_set(uint32_t set) const;
+    [[nodiscard]] Context *context() const;
+    [[nodiscard]] VkPipelineBindPoint bind_point() const;
 
   protected:
     void init_layout(const PipelineLayoutInfo &pipeline_layout_info,
@@ -74,6 +78,7 @@ class Pipeline {
     PipelineLayoutInfo _pipeline_layout_info{};
     VkPipelineLayout _pipeline_layout = VK_NULL_HANDLE;
     VkPipeline _pipeline = VK_NULL_HANDLE;
+    VkPipelineBindPoint _bind_point = VK_PIPELINE_BIND_POINT_MAX_ENUM;
 };
 
 // Use reversed-Z by default
@@ -123,5 +128,64 @@ class ComputePipeline : public Pipeline {
   private:
     void init_layout(const ComputePipelineInfo &info);
     void init_pipeline(const ComputePipelineInfo &info);
+};
+
+// Utility struct for descriptor binding.
+//
+// Call commit() after setup descriptor bindings to update and bind descriptors
+// to command buffer.
+//
+// This struct holds shallow reference to data, data should
+// be alive on commit.
+struct DescriptorEncoder {
+  public:
+    DescriptorEncoder();
+
+    void set_combined_image_sampler(uint32_t set,
+                                    uint32_t binding,
+                                    Texture *texture);
+
+    void set_storage_image(uint32_t set, uint32_t binding, Texture *texture);
+
+    void set_uniform_buffer(uint32_t set,
+                            uint32_t binding,
+                            void *data,
+                            size_t data_size);
+
+    template <typename T>
+    void set_uniform_buffer(uint32_t set, uint32_t binding, const T &data) {
+        static_assert(std::is_pod_v<T>);
+        set_uniform_buffer(set, binding, (void *)&data, sizeof(data));
+    }
+
+    void commit(CommandBuffer *cmd, Pipeline *pipeline);
+
+  private:
+    struct CombinedImageSamplerData {
+        Texture *texture = nullptr;
+    };
+
+    struct StorageImageData {
+        Texture *texture = nullptr;
+    };
+
+    struct UniformBufferData {
+        void *data = nullptr;
+        size_t size{};
+    };
+
+    using BindingData = std::
+        variant<CombinedImageSamplerData, StorageImageData, UniformBufferData>;
+
+    struct BindingInfo {
+        uint32_t set{};
+        uint32_t binding{};
+        BindingData data{};
+    };
+
+    void set_binding(uint32_t set, uint32_t binding, const BindingData &data);
+
+    int _binding_indices[MAX_DESC_SET_COUNT][MAX_DESC_BINDING_COUNT]{};
+    std::vector<BindingInfo> _bindings;
 };
 } // namespace ars::render::vk

@@ -8,6 +8,7 @@ namespace ars::render::vk {
 class Context;
 struct DescriptorSetInfo;
 class Texture;
+class Pipeline;
 
 class DescriptorPool {
   public:
@@ -75,24 +76,4 @@ class DescriptorArena {
     void next_pool();
     void alloc_new_pool();
 };
-
-void fill_desc_combined_image_sampler(VkWriteDescriptorSet *write,
-                                      VkDescriptorImageInfo *image_info,
-                                      VkDescriptorSet dst_set,
-                                      uint32_t binding,
-                                      Texture *texture);
-
-void fill_desc_storage_image(VkWriteDescriptorSet *write,
-                             VkDescriptorImageInfo *image_info,
-                             VkDescriptorSet dst_set,
-                             uint32_t binding,
-                             Texture *texture);
-
-void fill_desc_uniform_buffer(VkWriteDescriptorSet *write,
-                              VkDescriptorBufferInfo *buffer_info,
-                              VkDescriptorSet dst_set,
-                              uint32_t binding,
-                              VkBuffer buffer,
-                              VkDeviceSize offset,
-                              VkDeviceSize range);
 } // namespace ars::render::vk

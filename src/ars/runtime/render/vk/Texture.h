@@ -58,10 +58,13 @@ class Texture {
     [[nodiscard]] VkSampler sampler() const;
     [[nodiscard]] VkImageLayout layout() const;
     [[nodiscard]] VkImageView image_view() const;
+    [[nodiscard]] VkImage image() const;
 
     [[nodiscard]] const TextureCreateInfo &info() const;
 
     void assure_layout(VkImageLayout layout);
+
+    [[nodiscard]] VkImageSubresourceRange subresource_range() const;
 
   private:
     // Transfer all subresources to the target layout and set the _layout field.
@@ -73,8 +76,6 @@ class Texture {
                          VkAccessFlags src_access_mask,
                          VkShaderStageFlags dst_stage_mask,
                          VkAccessFlags dst_access_mask);
-
-    [[nodiscard]] VkImageSubresourceRange get_subresource_range() const;
 
     Context *_context = nullptr;
     VmaAllocation _allocation = VK_NULL_HANDLE;

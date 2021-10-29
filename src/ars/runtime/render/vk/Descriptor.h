@@ -82,6 +82,12 @@ void fill_desc_combined_image_sampler(VkWriteDescriptorSet *write,
                                       uint32_t binding,
                                       Texture *texture);
 
+void fill_desc_storage_image(VkWriteDescriptorSet *write,
+                             VkDescriptorImageInfo *image_info,
+                             VkDescriptorSet dst_set,
+                             uint32_t binding,
+                             Texture *texture);
+
 void fill_desc_uniform_buffer(VkWriteDescriptorSet *write,
                               VkDescriptorBufferInfo *buffer_info,
                               VkDescriptorSet dst_set,

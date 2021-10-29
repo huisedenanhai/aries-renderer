@@ -52,7 +52,7 @@ Texture::Texture(Context *context, const TextureCreateInfo &info)
     view_info.image = _image;
     view_info.format = info.format;
     view_info.viewType = info.view_type;
-    view_info.subresourceRange = get_subresource_range();
+    view_info.subresourceRange = subresource_range();
     view_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
     view_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
     view_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -98,7 +98,7 @@ Texture::~Texture() {
     }
 }
 
-VkImageSubresourceRange Texture::get_subresource_range() const {
+VkImageSubresourceRange Texture::subresource_range() const {
     VkImageSubresourceRange range{};
     range.aspectMask = _info.aspect_mask;
     range.baseArrayLayer = 0;
@@ -187,7 +187,7 @@ void Texture::generate_mipmap() {
                            VkAccessFlags dst_access_mask) {
         VkImageMemoryBarrier barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
 
-        barrier.subresourceRange = get_subresource_range();
+        barrier.subresourceRange = subresource_range();
         barrier.subresourceRange.baseMipLevel = mip_level;
         barrier.subresourceRange.levelCount = level_count;
         barrier.image = _image;
@@ -254,7 +254,7 @@ void Texture::generate_mipmap() {
             }
 
             VkImageSubresourceLayers res{};
-            res.aspectMask = get_subresource_range().aspectMask;
+            res.aspectMask = subresource_range().aspectMask;
             res.baseArrayLayer = 0;
             res.layerCount = _info.array_layers;
 
@@ -318,7 +318,7 @@ void Texture::transfer_layout(CommandBuffer *cmd,
     VkImageMemoryBarrier barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
 
     auto queue = _context->queue();
-    barrier.subresourceRange = get_subresource_range();
+    barrier.subresourceRange = subresource_range();
     barrier.image = _image;
     barrier.oldLayout = _layout;
     barrier.newLayout = dst_layout;
@@ -351,6 +351,10 @@ const TextureCreateInfo &Texture::info() const {
 
 void Texture::assure_layout(VkImageLayout layout) {
     _layout = layout;
+}
+
+VkImage Texture::image() const {
+    return _image;
 }
 
 TextureCreateInfo TextureCreateInfo::sampled_2d(VkFormat format,

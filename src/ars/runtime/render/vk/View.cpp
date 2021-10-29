@@ -3,7 +3,6 @@
 #include "Material.h"
 #include "Mesh.h"
 #include "Pipeline.h"
-#include "RenderPass.h"
 #include "Scene.h"
 #include "features/Renderer.h"
 #include <ars/runtime/core/Log.h>
@@ -154,7 +153,8 @@ RenderTargetInfo View::rt_info(NamedRT name) const {
     }
     case NamedRT_FinalColor: {
         auto &tex = info.texture = translate(color_tex_info());
-        tex.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        tex.usage |=
+            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
         break;
     }
     case NamedRT_Count:
@@ -165,7 +165,7 @@ RenderTargetInfo View::rt_info(NamedRT name) const {
 }
 
 std::unique_ptr<RenderPass> View::create_single_pass_render_pass(
-    NamedRT *colors, uint32_t color_count, NamedRT depth_stencil) {
+    NamedRT *colors, uint32_t color_count, NamedRT depth_stencil) const {
     auto attach_count = color_count;
     bool has_depth_stencil = depth_stencil != NamedRT_Count;
     if (has_depth_stencil) {

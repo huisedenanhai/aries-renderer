@@ -165,6 +165,60 @@ void OpaqueDeferred::render(CommandBuffer *cmd) {
     });
 
     _render_pass->end(rp_exec);
+
+    auto final_color = _view->render_target(NamedRT_FinalColor);
+    auto final_color_extent = final_color->info().extent;
+
+    VkImageMemoryBarrier image_barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
+    image_barrier.subresourceRange = final_color->subresource_range();
+    image_barrier.srcAccessMask = 0;
+    image_barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+    image_barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    image_barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+    image_barrier.image = final_color->image();
+
+    cmd->PipelineBarrier(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                         0,
+                         0,
+                         nullptr,
+                         0,
+                         nullptr,
+                         1,
+                         &image_barrier);
+
+    final_color->assure_layout(VK_IMAGE_LAYOUT_GENERAL);
+
+    cmd->BindPipeline(VK_PIPELINE_BIND_POINT_COMPUTE,
+                      _shading_pass_pipeline->pipeline());
+    int32_t size[2] = {static_cast<int>(final_color_extent.width),
+                       static_cast<int>(final_color_extent.height)};
+    cmd->PushConstants(_shading_pass_pipeline->pipeline_layout(),
+                       VK_SHADER_STAGE_COMPUTE_BIT,
+                       0,
+                       2 * sizeof(int32_t),
+                       size);
+
+    auto desc_set = _shading_pass_pipeline->alloc_desc_set(0);
+    VkWriteDescriptorSet write{};
+    VkDescriptorImageInfo image_info{};
+    fill_desc_storage_image(
+        &write, &image_info, desc_set, 0, final_color.get());
+    ctx->device()->UpdateDescriptorSets(1, &write, 0, nullptr);
+
+    cmd->BindDescriptorSets(VK_PIPELINE_BIND_POINT_COMPUTE,
+                            _shading_pass_pipeline->pipeline_layout(),
+                            0,
+                            1,
+                            &desc_set,
+                            0,
+                            nullptr);
+
+    auto local_size_x = 32u;
+    auto local_size_y = 32u;
+    auto group_x = (extent.width + local_size_x - 1) / local_size_x;
+    auto group_y = (extent.height + local_size_y - 1) / local_size_y;
+    cmd->Dispatch(group_x, group_y, 1);
 }
 
 void OpaqueDeferred::init_render_pass() {
@@ -225,7 +279,7 @@ void OpaqueDeferred::init_geometry_pass_pipeline() {
 }
 
 std::array<NamedRT, 5> OpaqueDeferred::geometry_pass_rts() const {
-    return {NamedRT_FinalColor,
+    return {NamedRT_GBuffer0,
             NamedRT_GBuffer1,
             NamedRT_GBuffer2,
             NamedRT_GBuffer3,

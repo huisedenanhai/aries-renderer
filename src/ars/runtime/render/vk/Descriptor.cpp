@@ -259,4 +259,24 @@ void fill_desc_uniform_buffer(VkWriteDescriptorSet *write,
     buffer_info->offset = offset;
     buffer_info->range = range;
 }
+
+void fill_desc_storage_image(VkWriteDescriptorSet *write,
+                             VkDescriptorImageInfo *image_info,
+                             VkDescriptorSet dst_set,
+                             uint32_t binding,
+                             Texture *texture) {
+    write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write->descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    write->dstSet = dst_set;
+    write->dstBinding = binding;
+    write->dstArrayElement = 0;
+    write->descriptorCount = 1;
+    write->pBufferInfo = nullptr;
+    write->pImageInfo = image_info;
+    write->pTexelBufferView = nullptr;
+
+    image_info->imageLayout = texture->layout();
+    image_info->imageView = texture->image_view();
+    image_info->sampler = texture->sampler();
+}
 } // namespace ars::render::vk

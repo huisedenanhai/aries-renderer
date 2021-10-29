@@ -48,7 +48,7 @@ class View : public IView {
     [[nodiscard]] RenderTargetId rt_id(NamedRT name) const;
     [[nodiscard]] RenderTargetInfo rt_info(NamedRT name) const;
     std::unique_ptr<RenderPass> create_single_pass_render_pass(
-        NamedRT *colors, uint32_t color_count, NamedRT depth_stencil);
+        NamedRT *colors, uint32_t color_count, NamedRT depth_stencil) const;
 
   private:
     void alloc_render_targets();

@@ -27,6 +27,19 @@ struct PipelineLayoutInfo {
     std::array<std::optional<DescriptorSetInfo>, MAX_DESC_SET_COUNT> sets{};
 };
 
+struct ShaderLocalSize {
+    uint32_t x = 1;
+    uint32_t y = 1;
+    uint32_t z = 1;
+
+    // Utility method for dispatch. Will round up thread count to multiples of
+    // local size.
+    void dispatch(CommandBuffer *cmd,
+                  uint32_t thread_x,
+                  uint32_t thread_y,
+                  uint32_t thread_z) const;
+};
+
 class Shader {
   public:
     Shader(Context *context, const char *name);
@@ -43,11 +56,14 @@ class Shader {
 
     [[nodiscard]] const PipelineLayoutInfo &pipeline_layout_info() const;
 
+    [[nodiscard]] ShaderLocalSize local_size() const;
+
   private:
     void load_reflection_info(size_t code_size, const uint8_t *code);
 
     Context *_context = nullptr;
     std::string _entry{};
+    ShaderLocalSize _local_size{};
     PipelineLayoutInfo _layout_info{};
     VkShaderStageFlagBits _stage{};
     VkShaderModule _module = VK_NULL_HANDLE;
@@ -125,9 +141,13 @@ class ComputePipeline : public Pipeline {
   public:
     ComputePipeline(Context *context, const ComputePipelineInfo &info);
 
+    [[nodiscard]] ShaderLocalSize local_size() const;
+
   private:
     void init_layout(const ComputePipelineInfo &info);
     void init_pipeline(const ComputePipelineInfo &info);
+
+    ShaderLocalSize _local_size{};
 };
 
 // Utility struct for descriptor binding.

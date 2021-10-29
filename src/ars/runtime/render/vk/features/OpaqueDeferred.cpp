@@ -153,11 +153,8 @@ void OpaqueDeferred::render(CommandBuffer *cmd) {
     desc.set_storage_image(0, 0, final_color.get());
     desc.commit(cmd, _shading_pass_pipeline.get());
 
-    auto local_size_x = 32u;
-    auto local_size_y = 32u;
-    auto group_x = (extent.width + local_size_x - 1) / local_size_x;
-    auto group_y = (extent.height + local_size_y - 1) / local_size_y;
-    cmd->Dispatch(group_x, group_y, 1);
+    _shading_pass_pipeline->local_size().dispatch(
+        cmd, extent.width, extent.height, 1);
 }
 
 void OpaqueDeferred::init_render_pass() {

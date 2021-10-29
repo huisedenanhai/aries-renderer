@@ -1,10 +1,8 @@
 #include "Pipeline.h"
 #include "Context.h"
-#include "Descriptor.h"
 #include <ars/runtime/core/Log.h>
 #include <ars/runtime/core/misc/Visitor.h>
 #include <cassert>
-#include <sstream>
 #include <vulkan/spirv_reflect.h>
 
 namespace ars::render::vk {
@@ -38,8 +36,15 @@ const PipelineLayoutInfo &Shader::pipeline_layout_info() const {
 
 void Shader::load_reflection_info(size_t code_size, const uint8_t *code) {
     spv_reflect::ShaderModule reflect(code_size, code);
+    // Not sure what's the usage for a shader without entry...
+    assert(reflect.GetEntryPointCount() > 0);
     _stage = static_cast<VkShaderStageFlagBits>(reflect.GetShaderStage());
     _entry = reflect.GetEntryPointName();
+
+    auto &entry = reflect.GetShaderModule().entry_points[0];
+    _local_size.x = entry.local_size.x;
+    _local_size.y = entry.local_size.y;
+    _local_size.z = entry.local_size.z;
 
     uint32_t set_count;
     std::vector<SpvReflectDescriptorSet *> sets;
@@ -74,6 +79,10 @@ VkShaderStageFlagBits Shader::stage() const {
 
 const char *Shader::entry() const {
     return _entry.c_str();
+}
+
+ShaderLocalSize Shader::local_size() const {
+    return _local_size;
 }
 
 VkDescriptorSetLayout
@@ -378,6 +387,7 @@ ComputePipeline::ComputePipeline(Context *context,
                                  const ComputePipelineInfo &info)
     : Pipeline(context, VK_PIPELINE_BIND_POINT_COMPUTE) {
     assert(info.shader);
+    _local_size = info.shader->local_size();
     init_layout(info);
     init_pipeline(info);
 }
@@ -406,6 +416,10 @@ void ComputePipeline::init_pipeline(const ComputePipelineInfo &info) {
         VK_SUCCESS) {
         ARS_LOG_CRITICAL("Failed to create compute pipeline");
     }
+}
+
+ShaderLocalSize ComputePipeline::local_size() const {
+    return _local_size;
 }
 
 DescriptorEncoder::DescriptorEncoder() {
@@ -616,4 +630,14 @@ void DescriptorEncoder::set_binding(
     _bindings[index] = info;
 }
 
+void ShaderLocalSize::dispatch(CommandBuffer *cmd,
+                               uint32_t thread_x,
+                               uint32_t thread_y,
+                               uint32_t thread_z) const {
+    auto group_x = (thread_x + x - 1) / x;
+    auto group_y = (thread_y + y - 1) / y;
+    auto group_z = (thread_z + z - 1) / z;
+
+    cmd->Dispatch(group_x, group_y, group_z);
+}
 } // namespace ars::render::vk

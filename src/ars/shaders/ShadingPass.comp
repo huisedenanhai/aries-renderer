@@ -3,6 +3,7 @@
 #include <GBuffer.glsl>
 #include <Light.glsl>
 #include <Misc.glsl>
+#include <ShadingModel.glsl>
 
 layout(local_size_x = 32, local_size_y = 32) in;
 
@@ -15,10 +16,27 @@ layout(set = 0, binding = 0) uniform sampler2D gbuffer0_tex;
 layout(set = 0, binding = 1) uniform sampler2D gbuffer1_tex;
 layout(set = 0, binding = 2) uniform sampler2D gbuffer2_tex;
 layout(set = 0, binding = 3) uniform sampler2D gbuffer3_tex;
-
 layout(set = 0,
-       binding = 4,
-       r11f_g11f_b10f) writeonly uniform image2D output_image;
+binding = 4,
+r11f_g11f_b10f) writeonly uniform image2D output_image;
+
+vec3 shade_unlit(GBuffer gbuffer) {
+    return gbuffer.base_color.rgb;
+}
+
+vec3 shade_metallic_roughness_pbr(GBuffer gbuffer) {
+    return gbuffer.base_color.rgb;
+}
+
+vec3 shade(GBuffer gbuffer) {
+    if (gbuffer.shading_model == SHADING_MODEL_UNLIT) {
+        return shade_unlit(gbuffer);
+    }
+    if (gbuffer.shading_model == SHADING_MODEL_METALLIC_ROUGHNESS_PBR) {
+        return shade_metallic_roughness_pbr(gbuffer);
+    }
+    return vec3(0);
+}
 
 void main() {
     ivec2 index = ivec2(gl_GlobalInvocationID.xy);
@@ -30,11 +48,11 @@ void main() {
     vec2 uv = index_to_uv(vec2(index), inv_resolution);
 
     GBuffer gbuffer = decode_gbuffer(texture(gbuffer0_tex, uv),
-                                     texture(gbuffer1_tex, uv),
-                                     texture(gbuffer2_tex, uv),
-                                     texture(gbuffer3_tex, uv));
+    texture(gbuffer1_tex, uv),
+    texture(gbuffer2_tex, uv),
+    texture(gbuffer3_tex, uv));
 
-    vec3 result = vec3(gbuffer.normal_vs);
+    vec3 result = shade(gbuffer);
 
     imageStore(output_image, index, vec4(result, 1.0));
 }

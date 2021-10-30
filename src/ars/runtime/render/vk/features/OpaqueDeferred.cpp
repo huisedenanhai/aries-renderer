@@ -115,26 +115,55 @@ void OpaqueDeferred::render(CommandBuffer *cmd) {
 
     _render_pass->end(rp_exec);
 
+    VkImageMemoryBarrier image_barriers[5]{};
+
+    // Wait color attachments
+    NamedRT color_rt_names[4] = {
+        NamedRT_GBuffer0,
+        NamedRT_GBuffer1,
+        NamedRT_GBuffer2,
+        NamedRT_GBuffer3,
+    };
+
+    Handle<Texture> color_rts[4]{};
+    for (int i = 0; i < 4; i++) {
+        color_rts[i] = _view->render_target(color_rt_names[i]);
+    }
+
+    for (int i = 0; i < 4; i++) {
+        auto &rt = color_rts[i];
+        auto &barrier = image_barriers[i];
+        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        barrier.subresourceRange = rt->subresource_range();
+        barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        barrier.oldLayout = rt->layout();
+        barrier.newLayout = rt->layout();
+        barrier.image = rt->image();
+    }
+
     auto final_color = _view->render_target(NamedRT_FinalColor);
     auto final_color_extent = final_color->info().extent;
 
-    VkImageMemoryBarrier image_barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
-    image_barrier.subresourceRange = final_color->subresource_range();
-    image_barrier.srcAccessMask = 0;
-    image_barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-    image_barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    image_barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-    image_barrier.image = final_color->image();
+    // Transfer final color attachment layout
+    auto &final_color_barrier = image_barriers[4];
+    final_color_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    final_color_barrier.subresourceRange = final_color->subresource_range();
+    final_color_barrier.srcAccessMask = 0;
+    final_color_barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+    final_color_barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    final_color_barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+    final_color_barrier.image = final_color->image();
 
-    cmd->PipelineBarrier(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+    cmd->PipelineBarrier(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                          VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                          0,
                          0,
                          nullptr,
                          0,
                          nullptr,
-                         1,
-                         &image_barrier);
+                         static_cast<uint32_t>(std::size(image_barriers)),
+                         image_barriers);
 
     final_color->assure_layout(VK_IMAGE_LAYOUT_GENERAL);
 
@@ -149,7 +178,10 @@ void OpaqueDeferred::render(CommandBuffer *cmd) {
                        size);
 
     DescriptorEncoder desc{};
-    desc.set_storage_image(0, 0, final_color.get());
+    for (int i = 0; i < 4; i++) {
+        desc.set_combined_image_sampler(0, i, color_rts[i].get());
+    }
+    desc.set_storage_image(0, 4, final_color.get());
     desc.commit(cmd, _shading_pass_pipeline.get());
 
     _shading_pass_pipeline->local_size().dispatch(

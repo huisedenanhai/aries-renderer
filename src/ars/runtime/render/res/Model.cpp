@@ -218,6 +218,13 @@ void load_nodes(const tinygltf::Model &gltf, Model &model) {
         if (gltf_node.mesh >= 0) {
             node.mesh = gltf_node.mesh;
         }
+        auto gltf_light_ext = gltf_node.extensions.find("KHR_lights_punctual");
+        if (gltf_light_ext != gltf_node.extensions.end()) {
+            if (gltf_light_ext->second.Has("light")) {
+                node.light = gltf_light_ext->second.Get("light").Get<int>();
+            }
+        }
+
         node.children.reserve(gltf_node.children.size());
         for (auto child : gltf_node.children) {
             node.children.push_back(child);
@@ -506,6 +513,32 @@ void load_materials(IContext *context,
     }
 }
 
+Model::LightType translate_light_type(const std::string &type) {
+    if (type == "point") {
+        return Model::Point;
+    }
+    if (type == "directional") {
+        return Model::Directional;
+    }
+    assert(type == "spot");
+    return Model::Spot;
+}
+
+void load_lights(const tinygltf::Model &gltf, Model &model) {
+    model.lights.reserve(gltf.lights.size());
+    for (auto &gltf_light : gltf.lights) {
+        Model::Light light{};
+
+        light.name = gltf_light.name;
+        light.color = glm::vec3(
+            gltf_light.color[0], gltf_light.color[1], gltf_light.color[2]);
+        light.intensity = static_cast<float>(gltf_light.intensity);
+        light.type = translate_light_type(gltf_light.type);
+
+        model.lights.emplace_back(std::move(light));
+    }
+}
+
 Model load_gltf(IContext *context,
                 const std::filesystem::path &path,
                 const tinygltf::Model &gltf) {
@@ -517,6 +550,7 @@ Model load_gltf(IContext *context,
     load_cameras(path, gltf, model);
     load_textures(context, path, gltf, model);
     load_materials(context, gltf, model);
+    load_lights(gltf, model);
 
     return model;
 }

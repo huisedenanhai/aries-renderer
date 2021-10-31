@@ -80,7 +80,7 @@ class Application : public ars::engine::IApplication {
     void start() override {
         {
             // test if offscreen context runs
-//            auto offscreen_context = IContext::create(nullptr);
+            //            auto offscreen_context = IContext::create(nullptr);
         }
 
         auto ctx = ars::engine::render_context();
@@ -98,7 +98,8 @@ class Application : public ars::engine::IApplication {
                 });
         }
 
-        auto model = load_gltf(ctx, "FlightHelmet/FlightHelmet.gltf");
+        //        auto model = load_gltf(ctx, "FlightHelmet/FlightHelmet.gltf");
+        auto model = load_gltf(ctx, "Test/Test.gltf");
         _scene = ctx->create_scene();
         _view = _scene->create_view(window()->physical_size());
         _fly_camera.xform.set_translation({0, 0.3f, 2.0f});
@@ -138,6 +139,25 @@ class Application : public ars::engine::IApplication {
             }
         }
 
+        if (n.light.has_value()) {
+            auto &l = model.lights[n.light.value()];
+            auto set_up_light = [&](auto &&light, const Model::Light &data) {
+                light->set_xform(xform);
+                light->set_color(data.color);
+                light->set_intensity(data.intensity);
+            };
+            if (l.type == Model::Directional) {
+                auto light = _scene->create_directional_light();
+                set_up_light(light, l);
+                _directional_lights.emplace_back(std::move(light));
+            }
+            if (l.type == Model::Point) {
+                auto light = _scene->create_point_light();
+                set_up_light(light, l);
+                _point_lights.emplace_back(std::move(light));
+            }
+        }
+
         for (auto child : n.children) {
             load_render_objects(model, child, xform);
         }
@@ -167,6 +187,8 @@ class Application : public ars::engine::IApplication {
     }
 
     void destroy() override {
+        _point_lights.clear();
+        _directional_lights.clear();
         _objects.clear();
         _view.reset();
         _scene.reset();
@@ -175,6 +197,8 @@ class Application : public ars::engine::IApplication {
   private:
     FlyCamera _fly_camera{};
     std::vector<std::unique_ptr<IRenderObject>> _objects{};
+    std::vector<std::unique_ptr<IDirectionalLight>> _directional_lights{};
+    std::vector<std::unique_ptr<IPointLight>> _point_lights{};
     std::unique_ptr<IView> _view{};
     std::unique_ptr<IScene> _scene{};
 };

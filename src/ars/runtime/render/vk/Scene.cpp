@@ -15,6 +15,10 @@ std::unique_ptr<IView> Scene::create_view(const Extent2D &size) {
     return std::make_unique<View>(this, size);
 }
 
+std::unique_ptr<IPointLight> Scene::create_point_light() {
+    return std::make_unique<PointLight>(this);
+}
+
 Scene::Scene(Context *context) : _context(context) {}
 
 Context *Scene::context() const {
@@ -26,11 +30,11 @@ IScene *View::scene() {
 }
 
 math::XformTRS<float> DirectionalLight::xform() {
-    return math::XformTRS<float>(get<glm::mat4>());
+    return get<math::XformTRS<float>>();
 }
 
 void DirectionalLight::set_xform(const math::XformTRS<float> &xform) {
-    get<glm::mat4>() = xform.matrix();
+    get<math::XformTRS<float>>() = xform;
 }
 
 IScene *DirectionalLight::scene() {
@@ -43,6 +47,22 @@ DirectionalLight::DirectionalLight(Scene *scene) : _scene(scene) {
 
 DirectionalLight::~DirectionalLight() {
     _scene->directional_lights.free(_id);
+}
+
+glm::vec3 DirectionalLight::color() {
+    return get<Light>().color;
+}
+
+void DirectionalLight::set_color(const glm::vec3 &color) {
+    get<Light>().color = color;
+}
+
+float DirectionalLight::intensity() {
+    return get<Light>().intensity;
+}
+
+void DirectionalLight::set_intensity(float intensity) {
+    get<Light>().intensity = intensity;
 }
 
 math::XformTRS<float> RenderObject::xform() {
@@ -79,5 +99,41 @@ RenderObject::RenderObject(Scene *scene) : _scene(scene) {
 
 RenderObject::~RenderObject() {
     _scene->render_objects.free(_id);
+}
+
+PointLight::PointLight(Scene *scene) : _scene(scene) {
+    _id = _scene->point_lights.alloc();
+}
+
+PointLight::~PointLight() {
+    _scene->point_lights.free(_id);
+}
+
+IScene *PointLight::scene() {
+    return _scene;
+}
+
+void PointLight::set_xform(const math::XformTRS<float> &xform) {
+    get<math::XformTRS<float>>() = xform;
+}
+
+math::XformTRS<float> PointLight::xform() {
+    return get<math::XformTRS<float>>();
+}
+
+glm::vec3 PointLight::color() {
+    return get<Light>().color;
+}
+
+void PointLight::set_color(const glm::vec3 &color) {
+    get<Light>().color = color;
+}
+
+float PointLight::intensity() {
+    return get<Light>().intensity;
+}
+
+void PointLight::set_intensity(float intensity) {
+    get<Light>().intensity = intensity;
 }
 } // namespace ars::render::vk

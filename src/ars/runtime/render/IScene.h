@@ -36,6 +36,24 @@ class IDirectionalLight {
 
     virtual math::XformTRS<float> xform() = 0;
     virtual void set_xform(const math::XformTRS<float> &xform) = 0;
+    virtual glm::vec3 color() = 0;
+    virtual void set_color(const glm::vec3 &color) = 0;
+    virtual float intensity() = 0;
+    virtual void set_intensity(float intensity) = 0;
+
+    virtual IScene *scene() = 0;
+};
+
+class IPointLight {
+  public:
+    virtual ~IPointLight() = default;
+
+    virtual math::XformTRS<float> xform() = 0;
+    virtual void set_xform(const math::XformTRS<float> &xform) = 0;
+    virtual glm::vec3 color() = 0;
+    virtual void set_color(const glm::vec3 &color) = 0;
+    virtual float intensity() = 0;
+    virtual void set_intensity(float intensity) = 0;
 
     virtual IScene *scene() = 0;
 };
@@ -45,7 +63,7 @@ struct Perspective {
     float z_far = 100.0f; // z_far == 0 means infinity z_far
     float z_near = 0.1f;  // must > 0
 
-    glm::mat4 projection_matrix(float w_div_h) const;
+    [[nodiscard]] glm::mat4 projection_matrix(float w_div_h) const;
 };
 
 struct Orthographic {
@@ -53,7 +71,7 @@ struct Orthographic {
     float z_far = 100.0f; // must > 0
     float z_near = 0.1f;  // must > 0
 
-    glm::mat4 projection_matrix(float w_div_h) const;
+    [[nodiscard]] glm::mat4 projection_matrix(float w_div_h) const;
 };
 
 struct CameraData : std::variant<Perspective, Orthographic> {
@@ -65,7 +83,7 @@ struct CameraData : std::variant<Perspective, Orthographic> {
 
     // reversed-Z in range [0, 1], with -z_near mapped to 1.0 and -z_far mapped
     // to 0.0 output follows Vulkan spec with +Y axis point down
-    glm::mat4 projection_matrix(float w_div_h) const;
+    [[nodiscard]] glm::mat4 projection_matrix(float w_div_h) const;
 };
 
 // A rect to render to.
@@ -96,6 +114,7 @@ class IScene {
 
     virtual std::unique_ptr<IRenderObject> create_render_object() = 0;
     virtual std::unique_ptr<IDirectionalLight> create_directional_light() = 0;
+    virtual std::unique_ptr<IPointLight> create_point_light() = 0;
     virtual std::unique_ptr<IView> create_view(const Extent2D &size) = 0;
 };
 } // namespace ars::render

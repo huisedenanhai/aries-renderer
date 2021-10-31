@@ -23,6 +23,7 @@ struct Model {
         std::vector<Index> children{};
         std::optional<Index> mesh;
         std::optional<Index> camera;
+        std::optional<Index> light;
         math::XformTRS<float> local_to_parent{};
     };
 
@@ -56,6 +57,15 @@ struct Model {
         std::shared_ptr<IMaterial> material;
     };
 
+    enum LightType { Directional, Point, Spot };
+
+    struct Light {
+        std::string name;
+        LightType type;
+        glm::vec3 color;
+        float intensity;
+    };
+
     std::optional<Index> default_scene{};
     std::vector<Node> nodes{};
     std::vector<Mesh> meshes{};
@@ -63,6 +73,7 @@ struct Model {
     std::vector<Camera> cameras{};
     std::vector<Texture> textures{};
     std::vector<Material> materials{};
+    std::vector<Light> lights{};
 };
 
 Model load_gltf(IContext *context, const std::filesystem::path &path);

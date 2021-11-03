@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../core/misc/NoCopyMove.h"
+#include <ars/runtime/core/misc/Macro.h>
 #include "Vulkan.h"
 #include <algorithm>
 

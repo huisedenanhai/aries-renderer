@@ -148,7 +148,8 @@ RenderTargetInfo View::rt_info(NamedRT name) const {
         auto &tex = info.texture =
             TextureCreateInfo::sampled_2d(VK_FORMAT_D32_SFLOAT, 1, 1, 1);
         tex.aspect_mask = VK_IMAGE_ASPECT_DEPTH_BIT;
-        tex.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        tex.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT |
+                    VK_IMAGE_USAGE_SAMPLED_BIT;
         break;
     }
     case NamedRT_FinalColor: {
@@ -220,6 +221,10 @@ std::unique_ptr<RenderPass> View::create_single_pass_render_pass(
     info.pSubpasses = &subpass;
 
     return std::make_unique<RenderPass>(context(), info);
+}
+
+glm::mat4 View::view_matrix() const {
+    return glm::inverse(_xform.matrix_no_scale());
 }
 
 } // namespace ars::render::vk

@@ -635,6 +635,10 @@ void DescriptorEncoder::set_buffer_data(uint32_t set,
                                         uint32_t binding,
                                         void *data,
                                         size_t data_size) {
+    if (data_size == 0) {
+        ARS_LOG_ERROR("Try to set a buffer with zero sized data");
+        return;
+    }
     BufferDataInfo info{};
     info.data = data;
     info.size = data_size;

@@ -2,38 +2,89 @@
 
 #include <GBuffer.glsl>
 #include <Light.glsl>
+#include <MetallicRoughnessPBR.glsl>
 #include <Misc.glsl>
 #include <ShadingModel.glsl>
+#include <Transform.glsl>
 
 layout(local_size_x = 32, local_size_y = 32) in;
-
-layout(push_constant) uniform PushConstant {
-    int width;
-    int height;
-};
 
 layout(set = 0, binding = 0) uniform sampler2D gbuffer0_tex;
 layout(set = 0, binding = 1) uniform sampler2D gbuffer1_tex;
 layout(set = 0, binding = 2) uniform sampler2D gbuffer2_tex;
 layout(set = 0, binding = 3) uniform sampler2D gbuffer3_tex;
+layout(set = 0, binding = 4) uniform sampler2D depth_stencil_tex;
 layout(set = 0,
-binding = 4,
-r11f_g11f_b10f) writeonly uniform image2D output_image;
+       binding = 5,
+       r11f_g11f_b10f) writeonly uniform image2D output_image;
+
+layout(set = 1, binding = 0) uniform Param {
+    int width;
+    int height;
+    int point_light_count;
+    int directional_light_count;
+    mat4 I_P;
+};
+
+// Light position and direction are in view space
+layout(set = 1, binding = 1) buffer PointLights {
+    PointLight point_lights[];
+};
+
+layout(set = 1, binding = 2) buffer DirectionalLights {
+    DirectionalLight directional_lights[];
+};
 
 vec3 shade_unlit(GBuffer gbuffer) {
     return gbuffer.base_color.rgb;
 }
 
-vec3 shade_metallic_roughness_pbr(GBuffer gbuffer) {
-    return gbuffer.base_color.rgb;
+vec3 shade_metallic_roughness_pbr(GBuffer gbuffer, vec2 uv) {
+    MetallicRoughnessPBRGBuffer material = decode_material(gbuffer.material);
+
+    MetallicRoughnessPBR brdf;
+    brdf.base_color = gbuffer.base_color.rgb;
+    brdf.metallic = material.metallic;
+    brdf.perceptual_roughness = material.perceptual_roughness;
+
+    vec3 fd = diffuse_BRDF(brdf);
+
+    // Extract geometry info
+    float depth01 = texture(depth_stencil_tex, uv).r;
+    vec3 pos_vs = reconstruct_position_from_ss(I_P, uv, depth01);
+    vec3 v_vs = -normalize(pos_vs);
+    vec3 n_vs = gbuffer.normal_vs;
+    n_vs = faceforward(n_vs, -v_vs, n_vs);
+
+    vec3 radiance = vec3(0.0);
+
+    for (int i = 0; i < point_light_count; i++) {
+        vec3 lr, l_vs;
+        radiance_to_point(point_lights[i], pos_vs, lr, l_vs);
+
+        float NoL = clamp01(dot(n_vs, l_vs));
+        vec3 fr = specular_BRDF(brdf, n_vs, v_vs, l_vs);
+        radiance += (fd + fr) * NoL * lr;
+    }
+
+    for (int i = 0; i < directional_light_count; i++) {
+        vec3 lr, l_vs;
+        radiance_to_point(directional_lights[i], pos_vs, lr, l_vs);
+
+        float NoL = clamp01(dot(n_vs, l_vs));
+        vec3 fr = specular_BRDF(brdf, n_vs, v_vs, l_vs);
+        radiance += (fd + fr) * NoL * lr;
+    }
+
+    return radiance;
 }
 
-vec3 shade(GBuffer gbuffer) {
+vec3 shade(GBuffer gbuffer, vec2 uv) {
     if (gbuffer.shading_model == SHADING_MODEL_UNLIT) {
         return shade_unlit(gbuffer);
     }
     if (gbuffer.shading_model == SHADING_MODEL_METALLIC_ROUGHNESS_PBR) {
-        return shade_metallic_roughness_pbr(gbuffer);
+        return shade_metallic_roughness_pbr(gbuffer, uv);
     }
     return vec3(0);
 }
@@ -48,11 +99,11 @@ void main() {
     vec2 uv = index_to_uv(vec2(index), inv_resolution);
 
     GBuffer gbuffer = decode_gbuffer(texture(gbuffer0_tex, uv),
-    texture(gbuffer1_tex, uv),
-    texture(gbuffer2_tex, uv),
-    texture(gbuffer3_tex, uv));
+                                     texture(gbuffer1_tex, uv),
+                                     texture(gbuffer2_tex, uv),
+                                     texture(gbuffer3_tex, uv));
 
-    vec3 result = shade(gbuffer);
+    vec3 result = shade(gbuffer, uv);
 
     imageStore(output_image, index, vec4(result, 1.0));
 }

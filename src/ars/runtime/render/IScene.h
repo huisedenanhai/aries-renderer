@@ -81,6 +81,9 @@ struct CameraData : std::variant<Perspective, Orthographic> {
   public:
     using Base::Base;
 
+    [[nodiscard]] float z_far() const;
+    [[nodiscard]] float z_near() const;
+
     // reversed-Z in range [0, 1], with -z_near mapped to 1.0 and -z_far mapped
     // to 0.0 output follows Vulkan spec with +Y axis point down
     [[nodiscard]] glm::mat4 projection_matrix(float w_div_h) const;

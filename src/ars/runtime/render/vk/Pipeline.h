@@ -157,6 +157,32 @@ class ComputePipeline : public Pipeline {
     ShaderLocalSize _local_size{};
 };
 
+namespace details {
+template <typename T> struct DataViewTrait {
+  public:
+    static_assert(std::is_pod_v<T>);
+    static void *ptr(const T &v) {
+        return (void *)&v;
+    }
+
+    static size_t size(const T &v) {
+        return sizeof(T);
+    }
+};
+
+template <typename T> struct DataViewTrait<std::vector<T>> {
+  public:
+    static_assert(std::is_pod_v<T>);
+    static void *ptr(const std::vector<T> &v) {
+        return (void *)(v.data());
+    }
+
+    static size_t size(const std::vector<T> &v) {
+        return sizeof(T) * v.size();
+    }
+};
+} // namespace details
+
 // Utility struct for descriptor binding.
 //
 // Call commit() after setup descriptor bindings to update and bind descriptors
@@ -177,8 +203,9 @@ struct DescriptorEncoder {
 
     template <typename T>
     void set_buffer_data(uint32_t set, uint32_t binding, const T &data) {
-        static_assert(std::is_pod_v<T>);
-        set_buffer_data(set, binding, (void *)&data, sizeof(data));
+        using DataView = details::DataViewTrait<T>;
+        set_buffer_data(
+            set, binding, DataView::ptr(data), DataView::size(data));
     }
 
     void set_buffer(uint32_t set,

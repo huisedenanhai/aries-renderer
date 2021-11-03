@@ -59,7 +59,7 @@ void main() {
     g.base_color = texture(base_color_tex, uv_vs) * base_color_factor;
     g.normal_vs = normalize(get_shading_normal_vs());
 
-    MetallicRoughnessPBRParam material;
+    MetallicRoughnessPBRGBuffer material;
     material.occlusion = get_occlusion();
 
     vec4 metallic_roughness = texture(metallic_roughness_tex, uv_vs);

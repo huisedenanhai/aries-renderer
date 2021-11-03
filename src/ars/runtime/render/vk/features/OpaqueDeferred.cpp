@@ -12,11 +12,17 @@ OpaqueDeferred::OpaqueDeferred(View *view) : _view(view) {
 }
 
 void OpaqueDeferred::render(CommandBuffer *cmd) {
+    geometry_pass(cmd);
+    geometry_pass_barrier(cmd);
+    shading_pass(cmd);
+}
+
+void OpaqueDeferred::geometry_pass(CommandBuffer *cmd) {
     auto ctx = _view->context();
 
     Framebuffer *fb = nullptr;
     {
-        auto rts = geometry_pass_rts();
+        auto rts = geometry_pass_rt_names();
         std::vector<Handle<Texture>> render_targets{};
         render_targets.reserve(rts.size());
         for (auto rt : rts) {
@@ -39,7 +45,7 @@ void OpaqueDeferred::render(CommandBuffer *cmd) {
     auto &rd_objs = _view->vk_scene()->render_objects;
     auto w_div_h =
         static_cast<float>(extent.width) / static_cast<float>(extent.height);
-    auto v_matrix = glm::inverse(_view->xform().matrix_no_scale());
+    auto v_matrix = _view->view_matrix();
     auto p_matrix = _view->camera().projection_matrix(w_div_h);
     rd_objs.for_each_id([&](Scene::RenderObjects::Id id) {
         auto &matrix = rd_objs.get<glm::mat4>(id);
@@ -114,28 +120,25 @@ void OpaqueDeferred::render(CommandBuffer *cmd) {
     });
 
     _render_pass->end(rp_exec);
+}
 
-    VkImageMemoryBarrier image_barriers[5]{};
+void OpaqueDeferred::geometry_pass_barrier(const CommandBuffer *cmd) const {
+    // Wait attachments
+    auto rts = geometry_pass_rts();
+    VkImageMemoryBarrier image_barriers[std::size(rts) + 1]{};
 
-    // Wait color attachments
-    NamedRT color_rt_names[4] = {
-        NamedRT_GBuffer0,
-        NamedRT_GBuffer1,
-        NamedRT_GBuffer2,
-        NamedRT_GBuffer3,
-    };
-
-    Handle<Texture> color_rts[4]{};
-    for (int i = 0; i < 4; i++) {
-        color_rts[i] = _view->render_target(color_rt_names[i]);
-    }
-
-    for (int i = 0; i < 4; i++) {
-        auto &rt = color_rts[i];
+    // Color attachments
+    for (int i = 0; i < std::size(rts); i++) {
+        auto &rt = rts[i];
         auto &barrier = image_barriers[i];
         barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
         barrier.subresourceRange = rt->subresource_range();
         barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        // The last attachment is depth stencil attachment
+        if (i + 1 == std::size(rts)) {
+            barrier.srcAccessMask =
+                VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+        }
         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
         barrier.oldLayout = rt->layout();
         barrier.newLayout = rt->layout();
@@ -143,10 +146,9 @@ void OpaqueDeferred::render(CommandBuffer *cmd) {
     }
 
     auto final_color = _view->render_target(NamedRT_FinalColor);
-    auto final_color_extent = final_color->info().extent;
 
     // Transfer final color attachment layout
-    auto &final_color_barrier = image_barriers[4];
+    auto &final_color_barrier = image_barriers[std::size(rts)];
     final_color_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     final_color_barrier.subresourceRange = final_color->subresource_range();
     final_color_barrier.srcAccessMask = 0;
@@ -155,7 +157,9 @@ void OpaqueDeferred::render(CommandBuffer *cmd) {
     final_color_barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
     final_color_barrier.image = final_color->image();
 
-    cmd->PipelineBarrier(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+    cmd->PipelineBarrier(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+                             VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
+                             VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
                          VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                          0,
                          0,
@@ -166,6 +170,11 @@ void OpaqueDeferred::render(CommandBuffer *cmd) {
                          image_barriers);
 
     final_color->assure_layout(VK_IMAGE_LAYOUT_GENERAL);
+}
+
+void OpaqueDeferred::shading_pass(CommandBuffer *cmd) const {
+    auto final_color = _view->render_target(NamedRT_FinalColor);
+    auto final_color_extent = final_color->info().extent;
 
     _shading_pass_pipeline->bind(cmd);
 
@@ -178,18 +187,95 @@ void OpaqueDeferred::render(CommandBuffer *cmd) {
                        size);
 
     DescriptorEncoder desc{};
-    for (int i = 0; i < 4; i++) {
-        desc.set_texture(0, i, color_rts[i].get());
+    auto rts = geometry_pass_rts();
+    for (int i = 0; i < std::size(rts); i++) {
+        desc.set_texture(0, i, rts[i].get());
     }
-    desc.set_texture(0, 4, final_color.get());
+    desc.set_texture(0, std::size(rts), final_color.get());
+
+    struct ShadingParam {
+        int32_t width;
+        int32_t height;
+        int32_t point_light_count;
+        int32_t directional_light_count;
+        glm::mat4 I_P;
+    };
+
+    ShadingParam param{};
+    param.width = static_cast<int32_t>(final_color_extent.width);
+    param.height = static_cast<int32_t>(final_color_extent.height);
+    param.point_light_count =
+        static_cast<int32_t>(_view->vk_scene()->point_lights.size());
+    param.directional_light_count =
+        static_cast<int32_t>(_view->vk_scene()->directional_lights.size());
+
+    auto v_matrix = _view->view_matrix();
+    auto w_div_h = static_cast<float>(final_color_extent.width) /
+                   static_cast<float>(final_color_extent.height);
+    auto p_matrix = _view->camera().projection_matrix(w_div_h);
+
+    param.I_P = glm::inverse(p_matrix);
+
+    desc.set_buffer_data(1, 0, param);
+
+    struct alignas(16) PointLightData {
+        glm::vec3 position;
+        ARS_PADDING_FIELD(float);
+        glm::vec3 color;
+        float intensity;
+    };
+
+    std::vector<PointLightData> point_light_data{};
+    {
+        auto &point_light_soa = _view->vk_scene()->point_lights;
+        point_light_data.resize(
+            std::max(point_light_soa.size(), static_cast<size_t>(1)));
+
+        auto xform_arr = point_light_soa.get_array<math::XformTRS<float>>();
+        auto light_arr = point_light_soa.get_array<Light>();
+        for (int i = 0; i < point_light_soa.size(); i++) {
+            auto &data = point_light_data[i];
+            data.position =
+                math::xform_position(v_matrix, xform_arr[i].translation());
+            data.color = light_arr[i].color;
+            data.intensity = light_arr[i].intensity;
+        }
+    }
+    desc.set_buffer_data(1, 1, point_light_data);
+
+    struct alignas(16) DirectionalLightData {
+        glm::vec3 direction;
+        ARS_PADDING_FIELD(float);
+        glm::vec3 color;
+        float intensity;
+    };
+
+    std::vector<DirectionalLightData> dir_light_data{};
+    {
+        auto &dir_light_soa = _view->vk_scene()->directional_lights;
+        dir_light_data.resize(
+            std::max(dir_light_soa.size(), static_cast<size_t>(1)));
+
+        auto xform_arr = dir_light_soa.get_array<math::XformTRS<float>>();
+        auto light_arr = dir_light_soa.get_array<Light>();
+        for (int i = 0; i < dir_light_soa.size(); i++) {
+            auto &data = dir_light_data[i];
+            data.direction = glm::normalize(
+                math::xform_direction(v_matrix, xform_arr[i].forward()));
+            data.color = light_arr[i].color;
+            data.intensity = light_arr[i].intensity;
+        }
+    }
+    desc.set_buffer_data(1, 2, dir_light_data);
+
     desc.commit(cmd, _shading_pass_pipeline.get());
 
     _shading_pass_pipeline->local_size().dispatch(
-        cmd, extent.width, extent.height, 1);
+        cmd, param.width, param.height, 1);
 }
 
 void OpaqueDeferred::init_render_pass() {
-    auto rts = geometry_pass_rts();
+    auto rts = geometry_pass_rt_names();
     _render_pass = _view->create_single_pass_render_pass(
         rts.data(), static_cast<uint32_t>(std::size(rts) - 1), rts.back());
 }
@@ -245,7 +331,8 @@ void OpaqueDeferred::init_geometry_pass_pipeline() {
     _geometry_pass_pipeline = std::make_unique<GraphicsPipeline>(ctx, info);
 }
 
-std::array<NamedRT, 5> OpaqueDeferred::geometry_pass_rts() const {
+std::array<NamedRT, 5> OpaqueDeferred::geometry_pass_rt_names() const {
+    // The last one must be the depth texture
     return {NamedRT_GBuffer0,
             NamedRT_GBuffer1,
             NamedRT_GBuffer2,
@@ -268,5 +355,14 @@ void OpaqueDeferred::init_shading_pass_pipeline() {
     info.push_constant_ranges = &range;
 
     _shading_pass_pipeline = std::make_unique<ComputePipeline>(ctx, info);
+}
+
+std::array<Handle<Texture>, 5> OpaqueDeferred::geometry_pass_rts() const {
+    auto rt_names = geometry_pass_rt_names();
+    std::array<Handle<Texture>, 5> rts{};
+    for (int i = 0; i < std::size(rts); i++) {
+        rts[i] = _view->render_target(rt_names[i]);
+    }
+    return rts;
 }
 } // namespace ars::render::vk

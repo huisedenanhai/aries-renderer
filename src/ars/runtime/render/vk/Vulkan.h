@@ -7,7 +7,7 @@
 
 #include <vulkan/volk.hpp>
 
-#include "../../core/misc/NoCopyMove.h"
+#include <ars/runtime/core/misc/Macro.h>
 #include <memory>
 
 namespace ars::render::vk {

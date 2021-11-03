@@ -21,7 +21,7 @@ layout(std140, set = 0, binding = 0) uniform Transform {
 
 void main() {
     positoin_vs = transform_position(MV, position_os).xyz;
-    normal_vs = transform_normal(I_MV, positoin_vs);
+    normal_vs = transform_normal(I_MV, normal_os);
     vec3 bitangent_os = calculate_bitangent(normal_os, tangent_os);
     bitangent_vs = transform_vector(MV, bitangent_os);
     tangent_vs = transform_vector(MV, tangent_os.xyz);

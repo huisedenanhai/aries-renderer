@@ -9,6 +9,7 @@ template <typename T> struct XformTRS {
     using Mat4 = glm::mat<4, 4, T>;
     using Mat3 = glm::mat<3, 3, T>;
     using Vec3 = glm::vec<3, T>;
+    using Vec4 = glm::vec<4, T>;
     using Quat = glm::qua<T>;
 
     XformTRS() = default;
@@ -91,4 +92,19 @@ template <typename T> struct XformTRS {
     Quat _rotation{1, 0, 0, 0};
     Vec3 _scale{1, 1, 1};
 };
+
+template <typename T>
+glm::vec<3, T> xform_position(const glm::mat<4, 4, T> &mat,
+                              const glm::vec<3, T> &pos) {
+    auto p = mat * glm::vec<4, T>(pos, static_cast<T>(1.0));
+    return {p.x, p.y, p.z};
+}
+
+template <typename T>
+glm::vec<3, T> xform_direction(const glm::mat<4, 4, T> &mat,
+                               const glm::vec<3, T> &dir) {
+    auto p = mat * glm::vec<4, T>(dir, static_cast<T>(0.0));
+    return {p.x, p.y, p.z};
+}
+
 } // namespace ars::math

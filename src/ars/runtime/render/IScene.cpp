@@ -59,4 +59,12 @@ glm::mat4 CameraData::projection_matrix(float w_div_h) const {
     return std::visit(
         [w_div_h](auto &&d) { return d.projection_matrix(w_div_h); }, *this);
 }
+
+float CameraData::z_far() const {
+    return std::visit([](auto &&d) { return d.z_far; }, *this);
+}
+
+float CameraData::z_near() const {
+    return std::visit([](auto &&d) { return d.z_near; }, *this);
+}
 } // namespace ars::render

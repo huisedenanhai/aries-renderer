@@ -359,6 +359,10 @@ void Pipeline::bind(CommandBuffer *cmd) const {
     cmd->BindPipeline(bind_point(), pipeline());
 }
 
+const PipelineLayoutInfo &Pipeline::pipeline_layout_info() const {
+    return _pipeline_layout_info;
+}
+
 VkPipelineColorBlendAttachmentState
 create_attachment_blend_state(VkBlendFactor src_factor,
                               VkBlendFactor dst_factor) {
@@ -435,32 +439,6 @@ DescriptorEncoder::DescriptorEncoder() {
     }
 }
 
-void DescriptorEncoder::set_combined_image_sampler(uint32_t set,
-                                                   uint32_t binding,
-                                                   Texture *texture) {
-    CombinedImageSamplerData value{};
-    value.texture = texture;
-    set_binding(set, binding, value);
-}
-
-void DescriptorEncoder::set_storage_image(uint32_t set,
-                                          uint32_t binding,
-                                          Texture *texture) {
-    StorageImageData value{};
-    value.texture = texture;
-    set_binding(set, binding, value);
-}
-
-void DescriptorEncoder::set_uniform_buffer(uint32_t set,
-                                           uint32_t binding,
-                                           void *data,
-                                           size_t data_size) {
-    UniformBufferData value{};
-    value.data = data;
-    value.size = data_size;
-    set_binding(set, binding, value);
-}
-
 namespace {
 void fill_desc_image(VkWriteDescriptorSet *write,
                      VkDescriptorImageInfo *image_info,
@@ -483,28 +461,16 @@ void fill_desc_image(VkWriteDescriptorSet *write,
     image_info->sampler = texture->sampler();
 }
 
-void fill_desc_combined_image_sampler(VkWriteDescriptorSet *write,
-                                      VkDescriptorImageInfo *image_info,
-                                      VkDescriptorSet dst_set,
-                                      uint32_t binding,
-                                      Texture *texture) {
-    fill_desc_image(write,
-                    image_info,
-                    dst_set,
-                    binding,
-                    texture,
-                    VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-}
-
-void fill_desc_uniform_buffer(VkWriteDescriptorSet *write,
-                              VkDescriptorBufferInfo *buffer_info,
-                              VkDescriptorSet dst_set,
-                              uint32_t binding,
-                              VkBuffer buffer,
-                              VkDeviceSize offset,
-                              VkDeviceSize range) {
+void fill_desc_buffer(VkWriteDescriptorSet *write,
+                      VkDescriptorBufferInfo *buffer_info,
+                      VkDescriptorSet dst_set,
+                      uint32_t binding,
+                      VkBuffer buffer,
+                      VkDeviceSize offset,
+                      VkDeviceSize range,
+                      VkDescriptorType type) {
     write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    write->descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    write->descriptorType = type;
     write->dstSet = dst_set;
     write->dstBinding = binding;
     write->dstArrayElement = 0;
@@ -551,6 +517,7 @@ void DescriptorEncoder::commit(CommandBuffer *cmd, Pipeline *pipeline) {
     size_t buffer_index = 0;
 
     auto ctx = pipeline->context();
+    auto &layout_info = pipeline->pipeline_layout_info();
 
     for (auto &b : _bindings) {
         auto &set = desc_sets[b.set];
@@ -558,39 +525,61 @@ void DescriptorEncoder::commit(CommandBuffer *cmd, Pipeline *pipeline) {
             set = pipeline->alloc_desc_set(b.set);
         }
 
-        std::visit(make_visitor(
-                       [&](const CombinedImageSamplerData &data) {
-                           auto &w = writes[write_index++];
-                           auto &img_info = image_infos[image_index++];
+        auto bind_info = layout_info.binding(b.set, b.binding);
+        if (!bind_info.has_value()) {
+            continue;
+        }
 
-                           fill_desc_combined_image_sampler(
-                               &w, &img_info, set, b.binding, data.texture);
-                       },
-                       [&](const StorageImageData &data) {
-                           auto &w = writes[write_index++];
-                           auto &img_info = image_infos[image_index++];
+        auto desc_type = bind_info->descriptorType;
+        std::visit(
+            make_visitor(
+                [&](const ImageInfo &data) {
+                    auto &w = writes[write_index++];
+                    auto &img_info = image_infos[image_index++];
 
-                           fill_desc_storage_image(
-                               &w, &img_info, set, b.binding, data.texture);
-                       },
-                       [&](const UniformBufferData &data) {
-                           auto &w = writes[write_index++];
-                           auto &buf_info = buffer_infos[buffer_index++];
-                           auto buf = ctx->create_buffer(
-                               data.size,
-                               VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                               VMA_MEMORY_USAGE_CPU_TO_GPU);
-                           buf->set_data_raw(data.data, 0, data.size);
+                    fill_desc_image(
+                        &w, &img_info, set, b.binding, data.texture, desc_type);
+                },
+                [&](const BufferDataInfo &data) {
+                    auto &w = writes[write_index++];
+                    auto &buf_info = buffer_infos[buffer_index++];
 
-                           fill_desc_uniform_buffer(&w,
-                                                    &buf_info,
-                                                    set,
-                                                    b.binding,
-                                                    buf->buffer(),
-                                                    0,
-                                                    data.size);
-                       }),
-                   b.data);
+                    VkBufferUsageFlags usage = 0;
+                    if (desc_type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) {
+                        usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+                    }
+
+                    if (desc_type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER) {
+                        usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+                    }
+
+                    auto buf = ctx->create_buffer(
+                        data.size, usage, VMA_MEMORY_USAGE_CPU_TO_GPU);
+                    buf->set_data_raw(data.data, 0, data.size);
+
+                    fill_desc_buffer(&w,
+                                     &buf_info,
+                                     set,
+                                     b.binding,
+                                     buf->buffer(),
+                                     0,
+                                     data.size,
+                                     desc_type);
+                },
+                [&](const BufferInfo &data) {
+                    auto &w = writes[write_index++];
+                    auto &buf_info = buffer_infos[buffer_index++];
+
+                    fill_desc_buffer(&w,
+                                     &buf_info,
+                                     set,
+                                     b.binding,
+                                     data.buffer->buffer(),
+                                     data.offset,
+                                     data.size,
+                                     desc_type);
+                }),
+            b.data);
     }
 
     ctx->device()->UpdateDescriptorSets(
@@ -634,6 +623,42 @@ void DescriptorEncoder::set_binding(
     _bindings[index] = info;
 }
 
+void DescriptorEncoder::set_texture(uint32_t set,
+                                    uint32_t binding,
+                                    Texture *texture) {
+    ImageInfo info{};
+    info.texture = texture;
+    set_binding(set, binding, info);
+}
+
+void DescriptorEncoder::set_buffer_data(uint32_t set,
+                                        uint32_t binding,
+                                        void *data,
+                                        size_t data_size) {
+    BufferDataInfo info{};
+    info.data = data;
+    info.size = data_size;
+    set_binding(set, binding, info);
+}
+
+void DescriptorEncoder::set_buffer(uint32_t set,
+                                   uint32_t binding,
+                                   Buffer *buffer,
+                                   VkDeviceSize offset,
+                                   VkDeviceSize size) {
+    BufferInfo info{};
+    info.buffer = buffer;
+    info.offset = offset;
+    info.size = size;
+    set_binding(set, binding, info);
+}
+
+void DescriptorEncoder::set_buffer(uint32_t set,
+                                   uint32_t binding,
+                                   Buffer *buffer) {
+    set_buffer(set, binding, buffer, 0, buffer->size());
+}
+
 void ShaderLocalSize::dispatch(CommandBuffer *cmd,
                                uint32_t thread_x,
                                uint32_t thread_y,
@@ -643,5 +668,20 @@ void ShaderLocalSize::dispatch(CommandBuffer *cmd,
     auto group_z = (thread_z + z - 1) / z;
 
     cmd->Dispatch(group_x, group_y, group_z);
+}
+
+std::optional<VkDescriptorSetLayoutBinding>
+PipelineLayoutInfo::binding(uint32_t set, uint32_t binding) const {
+    if (set >= sets.size()) {
+        return std::nullopt;
+    }
+    auto &s = sets[set];
+    if (!s.has_value()) {
+        return std::nullopt;
+    }
+    if (binding >= s->bindings.size()) {
+        return std::nullopt;
+    }
+    return s->bindings[binding];
 }
 } // namespace ars::render::vk

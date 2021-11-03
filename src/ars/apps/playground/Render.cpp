@@ -98,8 +98,8 @@ class Application : public ars::engine::IApplication {
                 });
         }
 
-        //        auto model = load_gltf(ctx, "FlightHelmet/FlightHelmet.gltf");
-        auto model = load_gltf(ctx, "Test/Test.gltf");
+        auto model = load_gltf(ctx, "FlightHelmet/FlightHelmet.gltf");
+        //        auto model = load_gltf(ctx, "Test/Test.gltf");
         _scene = ctx->create_scene();
         _view = _scene->create_view(window()->physical_size());
         _fly_camera.xform.set_translation({0, 0.3f, 2.0f});

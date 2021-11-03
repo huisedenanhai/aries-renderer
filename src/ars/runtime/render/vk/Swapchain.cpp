@@ -693,7 +693,7 @@ void Swapchain::present(ITexture *texture) {
                 _pipeline->bind(cmd);
 
                 DescriptorEncoder desc{};
-                desc.set_combined_image_sampler(0, 0, upcast(texture).get());
+                desc.set_texture(0, 0, upcast(texture).get());
                 desc.commit(cmd, _pipeline.get());
 
                 cmd->Draw(3, 1, 0, 0);

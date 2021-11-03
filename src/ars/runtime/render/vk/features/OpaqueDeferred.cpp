@@ -80,8 +80,8 @@ void OpaqueDeferred::render(CommandBuffer *cmd) {
         m.emission_factor = glm::vec3(1.0f);
 
         DescriptorEncoder desc{};
-        desc.set_uniform_buffer(0, 0, t);
-        desc.set_uniform_buffer(1, 0, m);
+        desc.set_buffer_data(0, 0, t);
+        desc.set_buffer_data(1, 0, m);
 
         Handle<Texture> images[5] = {
             material->base_color_tex.vk_texture(),
@@ -91,7 +91,7 @@ void OpaqueDeferred::render(CommandBuffer *cmd) {
             material->emission_tex.vk_texture(),
         };
         for (int i = 0; i < std::size(images); i++) {
-            desc.set_combined_image_sampler(1, i + 1, images[i].get());
+            desc.set_texture(1, i + 1, images[i].get());
         }
 
         desc.commit(cmd, _geometry_pass_pipeline.get());
@@ -179,9 +179,9 @@ void OpaqueDeferred::render(CommandBuffer *cmd) {
 
     DescriptorEncoder desc{};
     for (int i = 0; i < 4; i++) {
-        desc.set_combined_image_sampler(0, i, color_rts[i].get());
+        desc.set_texture(0, i, color_rts[i].get());
     }
-    desc.set_storage_image(0, 4, final_color.get());
+    desc.set_texture(0, 4, final_color.get());
     desc.commit(cmd, _shading_pass_pipeline.get());
 
     _shading_pass_pipeline->local_size().dispatch(

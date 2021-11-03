@@ -367,7 +367,7 @@ void ImGuiPass::draw(CommandBuffer *cmd, ImGuiViewport *viewport) {
             pipeline->bind(cmd);
 
             DescriptorEncoder desc{};
-            desc.set_combined_image_sampler(0, 0, bd->font_atlas());
+            desc.set_texture(0, 0, bd->font_atlas());
             desc.commit(cmd, pipeline);
         }
 

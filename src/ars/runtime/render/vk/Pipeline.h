@@ -11,6 +11,7 @@ namespace ars::render::vk {
 class Context;
 class RenderPass;
 class Texture;
+class Buffer;
 
 constexpr uint32_t MAX_DESC_BINDING_COUNT = 16;
 constexpr uint32_t MAX_DESC_SET_COUNT = 16;
@@ -25,6 +26,9 @@ struct DescriptorSetInfo {
 
 struct PipelineLayoutInfo {
     std::array<std::optional<DescriptorSetInfo>, MAX_DESC_SET_COUNT> sets{};
+
+    std::optional<VkDescriptorSetLayoutBinding> binding(uint32_t set,
+                                                        uint32_t binding) const;
 };
 
 struct ShaderLocalSize {
@@ -79,6 +83,7 @@ class Pipeline {
 
     [[nodiscard]] VkPipeline pipeline() const;
     [[nodiscard]] VkPipelineLayout pipeline_layout() const;
+    [[nodiscard]] const PipelineLayoutInfo &pipeline_layout_info() const;
     [[nodiscard]] VkDescriptorSet alloc_desc_set(uint32_t set) const;
     [[nodiscard]] Context *context() const;
     [[nodiscard]] VkPipelineBindPoint bind_point() const;
@@ -163,41 +168,46 @@ struct DescriptorEncoder {
   public:
     DescriptorEncoder();
 
-    void set_combined_image_sampler(uint32_t set,
-                                    uint32_t binding,
-                                    Texture *texture);
+    void set_texture(uint32_t set, uint32_t binding, Texture *texture);
 
-    void set_storage_image(uint32_t set, uint32_t binding, Texture *texture);
-
-    void set_uniform_buffer(uint32_t set,
-                            uint32_t binding,
-                            void *data,
-                            size_t data_size);
+    void set_buffer_data(uint32_t set,
+                         uint32_t binding,
+                         void *data,
+                         size_t data_size);
 
     template <typename T>
-    void set_uniform_buffer(uint32_t set, uint32_t binding, const T &data) {
+    void set_buffer_data(uint32_t set, uint32_t binding, const T &data) {
         static_assert(std::is_pod_v<T>);
-        set_uniform_buffer(set, binding, (void *)&data, sizeof(data));
+        set_buffer_data(set, binding, (void *)&data, sizeof(data));
     }
+
+    void set_buffer(uint32_t set,
+                    uint32_t binding,
+                    Buffer *buffer,
+                    VkDeviceSize offset,
+                    VkDeviceSize size);
+
+    void set_buffer(uint32_t set, uint32_t binding, Buffer *buffer);
 
     void commit(CommandBuffer *cmd, Pipeline *pipeline);
 
   private:
-    struct CombinedImageSamplerData {
+    struct ImageInfo {
         Texture *texture = nullptr;
     };
 
-    struct StorageImageData {
-        Texture *texture = nullptr;
-    };
-
-    struct UniformBufferData {
+    struct BufferDataInfo {
         void *data = nullptr;
         size_t size{};
     };
 
-    using BindingData = std::
-        variant<CombinedImageSamplerData, StorageImageData, UniformBufferData>;
+    struct BufferInfo {
+        Buffer *buffer = nullptr;
+        VkDeviceSize offset{};
+        VkDeviceSize size{};
+    };
+
+    using BindingData = std::variant<ImageInfo, BufferDataInfo, BufferInfo>;
 
     struct BindingInfo {
         uint32_t set{};

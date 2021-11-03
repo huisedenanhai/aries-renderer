@@ -94,15 +94,15 @@ template <typename T> struct XformTRS {
 };
 
 template <typename T>
-glm::vec<3, T> xform_position(const glm::mat<4, 4, T> &mat,
-                              const glm::vec<3, T> &pos) {
+glm::vec<4, T> transform_position(const glm::mat<4, 4, T> &mat,
+                                  const glm::vec<3, T> &pos) {
     auto p = mat * glm::vec<4, T>(pos, static_cast<T>(1.0));
-    return {p.x, p.y, p.z};
+    return p;
 }
 
 template <typename T>
-glm::vec<3, T> xform_direction(const glm::mat<4, 4, T> &mat,
-                               const glm::vec<3, T> &dir) {
+glm::vec<3, T> transform_direction(const glm::mat<4, 4, T> &mat,
+                                   const glm::vec<3, T> &dir) {
     auto p = mat * glm::vec<4, T>(dir, static_cast<T>(0.0));
     return {p.x, p.y, p.z};
 }

@@ -236,7 +236,7 @@ void OpaqueDeferred::shading_pass(CommandBuffer *cmd) const {
         for (int i = 0; i < point_light_soa.size(); i++) {
             auto &data = point_light_data[i];
             data.position =
-                math::xform_position(v_matrix, xform_arr[i].translation());
+                math::transform_position(v_matrix, xform_arr[i].translation());
             data.color = light_arr[i].color;
             data.intensity = light_arr[i].intensity;
         }
@@ -261,7 +261,7 @@ void OpaqueDeferred::shading_pass(CommandBuffer *cmd) const {
         for (int i = 0; i < dir_light_soa.size(); i++) {
             auto &data = dir_light_data[i];
             data.direction = glm::normalize(
-                math::xform_direction(v_matrix, xform_arr[i].forward()));
+                math::transform_direction(v_matrix, xform_arr[i].forward()));
             data.color = light_arr[i].color;
             data.intensity = light_arr[i].intensity;
         }

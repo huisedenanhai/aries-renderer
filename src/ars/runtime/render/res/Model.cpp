@@ -239,10 +239,12 @@ void load_nodes(const tinygltf::Model &gltf, Model &model) {
                                      static_cast<float>(gltf_node.scale[2])));
         }
         if (gltf_node.rotation.size() == 4) {
-            glm::quat rotation(static_cast<float>(gltf_node.rotation[0]),
+            // GLTF quaternion component order [x, y, z, w]
+            // glm quaternion constructor component order [w, x, y, z]
+            glm::quat rotation(static_cast<float>(gltf_node.rotation[3]),
+                               static_cast<float>(gltf_node.rotation[0]),
                                static_cast<float>(gltf_node.rotation[1]),
-                               static_cast<float>(gltf_node.rotation[2]),
-                               static_cast<float>(gltf_node.rotation[3]));
+                               static_cast<float>(gltf_node.rotation[2]));
             transform = glm::mat4_cast(rotation) * transform;
         }
         if (gltf_node.translation.size() == 3) {

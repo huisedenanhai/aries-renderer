@@ -34,6 +34,7 @@ class IDirectionalLight {
   public:
     virtual ~IDirectionalLight() = default;
 
+    // The light points at local -Z, i.e., the forward direction of the tranform
     virtual math::XformTRS<float> xform() = 0;
     virtual void set_xform(const math::XformTRS<float> &xform) = 0;
     virtual glm::vec3 color() = 0;

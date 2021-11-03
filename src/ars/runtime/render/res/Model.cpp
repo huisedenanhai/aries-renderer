@@ -230,14 +230,14 @@ void load_nodes(const tinygltf::Model &gltf, Model &model) {
             node.children.push_back(child);
         }
 
-        auto transform = glm::identity<glm::mat4>();
-        if (gltf_node.scale.size() == 3) {
-            transform =
-                glm::scale(transform,
-                           glm::vec3(static_cast<float>(gltf_node.scale[0]),
-                                     static_cast<float>(gltf_node.scale[1]),
-                                     static_cast<float>(gltf_node.scale[2])));
+        math::XformTRS<float> trs{};
+        if (gltf_node.translation.size() == 3) {
+            trs.set_translation(
+                glm::vec3(static_cast<float>(gltf_node.translation[0]),
+                          static_cast<float>(gltf_node.translation[1]),
+                          static_cast<float>(gltf_node.translation[2])));
         }
+
         if (gltf_node.rotation.size() == 4) {
             // GLTF quaternion component order [x, y, z, w]
             // glm quaternion constructor component order [w, x, y, z]
@@ -245,25 +245,27 @@ void load_nodes(const tinygltf::Model &gltf, Model &model) {
                                static_cast<float>(gltf_node.rotation[0]),
                                static_cast<float>(gltf_node.rotation[1]),
                                static_cast<float>(gltf_node.rotation[2]));
-            transform = glm::mat4_cast(rotation) * transform;
+            trs.set_rotation(rotation);
         }
-        if (gltf_node.translation.size() == 3) {
-            transform = glm::translate(
-                transform,
-                glm::vec3(static_cast<float>(gltf_node.translation[0]),
-                          static_cast<float>(gltf_node.translation[1]),
-                          static_cast<float>(gltf_node.translation[2])));
+
+        if (gltf_node.scale.size() == 3) {
+            trs.set_scale(glm::vec3(static_cast<float>(gltf_node.scale[0]),
+                                    static_cast<float>(gltf_node.scale[1]),
+                                    static_cast<float>(gltf_node.scale[2])));
         }
+
         if (gltf_node.matrix.size() == 16) {
+            auto matrix = glm::identity<glm::mat4>();
             for (int i = 0; i < 4; i++) {
                 for (int j = 0; j < 4; j++) {
-                    transform[i][j] =
+                    matrix[i][j] =
                         static_cast<float>(gltf_node.matrix[i * 4 + j]);
                 }
             }
+            trs = math::XformTRS<float>(matrix);
         }
 
-        node.local_to_parent = math::XformTRS<float>(transform);
+        node.local_to_parent = trs;
 
         model.nodes.emplace_back(std::move(node));
     }

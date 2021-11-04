@@ -1,6 +1,5 @@
 #include "IMaterial.h"
 #include <ars/runtime/core/Log.h>
-#include <sstream>
 
 namespace ars::render {
 int IMaterial::str_to_id(const std::string &name) {

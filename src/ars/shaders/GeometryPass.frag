@@ -36,6 +36,7 @@ vec3 get_shading_normal_ts() {
     return normal * vec3(normal_scale, normal_scale, 1.0);
 }
 
+// The result may be not normalized
 vec3 get_shading_normal_vs() {
     vec3 normal_ts = get_shading_normal_ts();
     // avoid NAN when tangent is not present

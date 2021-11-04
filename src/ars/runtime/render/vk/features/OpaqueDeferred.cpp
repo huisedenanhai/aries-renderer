@@ -5,7 +5,8 @@
 #include "../Scene.h"
 
 namespace ars::render::vk {
-OpaqueDeferred::OpaqueDeferred(View *view) : _view(view) {
+OpaqueDeferred::OpaqueDeferred(View *view, NamedRT final_color_rt)
+    : _view(view), _final_color_rt(final_color_rt) {
     init_render_pass();
     init_geometry_pass_pipeline();
     init_shading_pass_pipeline();
@@ -145,7 +146,7 @@ void OpaqueDeferred::geometry_pass_barrier(const CommandBuffer *cmd) const {
         barrier.image = rt->image();
     }
 
-    auto final_color = _view->render_target(NamedRT_FinalColor0);
+    auto final_color = _view->render_target(_final_color_rt);
 
     // Transfer final color attachment layout
     auto &final_color_barrier = image_barriers[std::size(rts)];
@@ -173,18 +174,10 @@ void OpaqueDeferred::geometry_pass_barrier(const CommandBuffer *cmd) const {
 }
 
 void OpaqueDeferred::shading_pass(CommandBuffer *cmd) const {
-    auto final_color = _view->render_target(NamedRT_FinalColor0);
+    auto final_color = _view->render_target(_final_color_rt);
     auto final_color_extent = final_color->info().extent;
 
     _shading_pass_pipeline->bind(cmd);
-
-    int32_t size[2] = {static_cast<int>(final_color_extent.width),
-                       static_cast<int>(final_color_extent.height)};
-    cmd->PushConstants(_shading_pass_pipeline->pipeline_layout(),
-                       VK_SHADER_STAGE_COMPUTE_BIT,
-                       0,
-                       2 * sizeof(int32_t),
-                       size);
 
     DescriptorEncoder desc{};
     auto rts = geometry_pass_rts();
@@ -345,15 +338,6 @@ void OpaqueDeferred::init_shading_pass_pipeline() {
     auto shader = std::make_unique<Shader>(ctx, "ShadingPass.comp");
     ComputePipelineInfo info{};
     info.shader = shader.get();
-
-    VkPushConstantRange range{};
-    range.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-    range.size = 2 * sizeof(int32_t);
-    range.offset = 0;
-
-    info.push_constant_range_count = 1;
-    info.push_constant_ranges = &range;
-
     _shading_pass_pipeline = std::make_unique<ComputePipeline>(ctx, info);
 }
 
@@ -369,7 +353,7 @@ std::array<Handle<Texture>, 5> OpaqueDeferred::geometry_pass_rts() const {
 std::vector<PassDependency> OpaqueDeferred::dst_dependencies() {
     std::vector<PassDependency> deps(1);
     auto &d = deps[0];
-    d.texture = _view->render_target(NamedRT_FinalColor0);
+    d.texture = _view->render_target(_final_color_rt);
     d.access_mask = VK_ACCESS_SHADER_WRITE_BIT;
     d.layout = VK_IMAGE_LAYOUT_GENERAL;
     d.stage_mask = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;

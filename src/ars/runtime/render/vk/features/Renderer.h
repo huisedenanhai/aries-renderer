@@ -6,6 +6,7 @@
 
 namespace ars::render::vk {
 class OpaqueDeferred;
+class ToneMapping;
 
 class Renderer {
   public:
@@ -17,5 +18,6 @@ class Renderer {
   private:
     View *_view = nullptr;
     std::unique_ptr<OpaqueDeferred> _opaque_deferred{};
+    std::unique_ptr<ToneMapping> _tone_mapping{};
 };
 } // namespace ars::render::vk

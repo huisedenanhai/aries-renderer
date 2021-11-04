@@ -10,7 +10,7 @@
 namespace ars::render::vk {
 class OpaqueDeferred {
   public:
-    explicit OpaqueDeferred(View *view);
+    OpaqueDeferred(View *view, NamedRT final_color_rt);
     ~OpaqueDeferred() = default;
 
     void render(CommandBuffer *cmd);
@@ -29,6 +29,7 @@ class OpaqueDeferred {
     void shading_pass(CommandBuffer *cmd) const;
 
     View *_view = nullptr;
+    NamedRT _final_color_rt{};
     std::unique_ptr<RenderPass> _render_pass{};
     std::unique_ptr<GraphicsPipeline> _geometry_pass_pipeline{};
     std::unique_ptr<ComputePipeline> _shading_pass_pipeline{};

@@ -145,7 +145,7 @@ void OpaqueDeferred::geometry_pass_barrier(const CommandBuffer *cmd) const {
         barrier.image = rt->image();
     }
 
-    auto final_color = _view->render_target(NamedRT_FinalColor);
+    auto final_color = _view->render_target(NamedRT_FinalColor0);
 
     // Transfer final color attachment layout
     auto &final_color_barrier = image_barriers[std::size(rts)];
@@ -173,7 +173,7 @@ void OpaqueDeferred::geometry_pass_barrier(const CommandBuffer *cmd) const {
 }
 
 void OpaqueDeferred::shading_pass(CommandBuffer *cmd) const {
-    auto final_color = _view->render_target(NamedRT_FinalColor);
+    auto final_color = _view->render_target(NamedRT_FinalColor0);
     auto final_color_extent = final_color->info().extent;
 
     _shading_pass_pipeline->bind(cmd);
@@ -365,4 +365,16 @@ std::array<Handle<Texture>, 5> OpaqueDeferred::geometry_pass_rts() const {
     }
     return rts;
 }
+
+std::vector<PassDependency> OpaqueDeferred::dst_dependencies() {
+    std::vector<PassDependency> deps(1);
+    auto &d = deps[0];
+    d.texture = _view->render_target(NamedRT_FinalColor0);
+    d.access_mask = VK_ACCESS_SHADER_WRITE_BIT;
+    d.layout = VK_IMAGE_LAYOUT_GENERAL;
+    d.stage_mask = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+
+    return deps;
+}
+
 } // namespace ars::render::vk

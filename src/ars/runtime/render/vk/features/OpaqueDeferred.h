@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Pipeline.h"
+#include "../RenderGraph.h"
 #include "../RenderPass.h"
 #include "../View.h"
 #include "../Vulkan.h"
@@ -13,6 +14,8 @@ class OpaqueDeferred {
     ~OpaqueDeferred() = default;
 
     void render(CommandBuffer *cmd);
+
+    [[nodiscard]] std::vector<PassDependency> dst_dependencies();
 
   private:
     void init_render_pass();

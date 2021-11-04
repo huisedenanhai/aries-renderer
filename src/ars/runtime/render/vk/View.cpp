@@ -18,10 +18,10 @@ void View::render() {
     auto ctx = context();
     _rt_manager->update(translate(_size));
 
-    ctx->queue()->submit_once(
-        [&](CommandBuffer *cmd) { _renderer->render(cmd); });
+    auto final_rt = ctx->queue()->submit_once(
+        [&](CommandBuffer *cmd) { return _renderer->render(cmd); });
 
-    update_color_tex_adapter();
+    update_color_tex_adapter(final_rt);
 }
 
 ITexture *View::get_color_texture() {
@@ -61,8 +61,12 @@ void View::set_size(const Extent2D &size) {
     _size = size;
 }
 
-void View::update_color_tex_adapter() {
-    auto color_rt = render_target(NamedRT_FinalColor);
+void View::update_color_tex_adapter(NamedRT rt) {
+    if (rt != NamedRT_FinalColor0 && rt != NamedRT_FinalColor1) {
+        ARS_LOG_ERROR("Final result from renderer must be either FinalColor0 "
+                      "or FinalColor1");
+    }
+    auto color_rt = render_target(rt);
     auto rt_info = color_tex_info();
     if (_color_tex_adapter == nullptr) {
         _color_tex_adapter =
@@ -152,7 +156,8 @@ RenderTargetInfo View::rt_info(NamedRT name) const {
                     VK_IMAGE_USAGE_SAMPLED_BIT;
         break;
     }
-    case NamedRT_FinalColor: {
+    case NamedRT_FinalColor0:
+    case NamedRT_FinalColor1: {
         auto &tex = info.texture = translate(color_tex_info());
         tex.usage |=
             VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT;

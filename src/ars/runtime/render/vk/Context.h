@@ -6,6 +6,7 @@
 #include "RenderPass.h"
 #include "Texture.h"
 #include "Vulkan.h"
+#include <ars/runtime/core/misc/Defer.h>
 
 #include <set>
 #include <vector>
@@ -39,7 +40,7 @@ class Queue {
 
     // record a command buffer and submit it immediately
     template <typename Func>
-    void submit_once(Func &&func,
+    auto submit_once(Func &&func,
                      uint32_t wait_semaphore_count = 0,
                      VkSemaphore *wait_semaphores = nullptr);
 
@@ -181,14 +182,23 @@ class Context : public IContext {
 };
 
 template <typename Func>
-void Queue::submit_once(Func &&func,
+auto Queue::submit_once(Func &&func,
                         uint32_t wait_semaphore_count,
                         VkSemaphore *wait_semaphores) {
     auto cmd = _context->create_command_buffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     cmd->begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-    func(cmd.get());
-    cmd->end();
-    submit(cmd.get(), wait_semaphore_count, wait_semaphores);
+
+    ARS_DEFER([&]() {
+        cmd->end();
+        submit(cmd.get(), wait_semaphore_count, wait_semaphores);
+    });
+
+    if constexpr (std::is_void_v<
+                      std::invoke_result_t<Func, decltype(cmd.get())>>) {
+        func(cmd.get());
+    } else {
+        return func(cmd.get());
+    }
 }
 
 } // namespace ars::render::vk

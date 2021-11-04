@@ -16,7 +16,8 @@ enum NamedRT {
     NamedRT_GBuffer2, // for material
     NamedRT_GBuffer3, // for emission
     NamedRT_Depth,
-    NamedRT_FinalColor,
+    NamedRT_FinalColor0,
+    NamedRT_FinalColor1,
 
     NamedRT_Count
 };
@@ -53,7 +54,7 @@ class View : public IView {
 
   private:
     void alloc_render_targets();
-    void update_color_tex_adapter();
+    void update_color_tex_adapter(NamedRT rt);
     [[nodiscard]] TextureInfo color_tex_info() const;
 
     Scene *_scene = nullptr;

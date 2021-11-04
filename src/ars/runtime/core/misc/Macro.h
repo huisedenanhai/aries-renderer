@@ -37,3 +37,5 @@
 // For padding struct fields
 #define ARS_PADDING_FIELD(ty)                                                  \
     [[maybe_unused]] ty ARS_MACRO_CONCAT(_unused_field_, __LINE__)
+
+#define ARS_NAME_WITH_LINENO(n) ARS_MACRO_CONCAT(n, __LINE__)

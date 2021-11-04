@@ -1,17 +1,18 @@
 #pragma once
 
-#include "OpaqueDeferred.h"
+#include "../View.h"
+#include "../Vulkan.h"
 #include <memory>
 
 namespace ars::render::vk {
-class View;
+class OpaqueDeferred;
 
 class Renderer {
   public:
     explicit Renderer(View *view);
-    ~Renderer() = default;
+    ~Renderer();
 
-    void render(CommandBuffer *cmd);
+    NamedRT render(CommandBuffer *cmd);
 
   private:
     View *_view = nullptr;

@@ -56,7 +56,7 @@ struct MetallicRoughnessPBR {
     float perceptual_roughness;
 };
 
-float METALLIC_ROUGHNESS_MIN_REFLECTIVITY = 0.04;
+const float METALLIC_ROUGHNESS_MIN_REFLECTIVITY = 0.04;
 
 float one_minus_reflectivity(MetallicRoughnessPBR brdf) {
     return (1.0 - METALLIC_ROUGHNESS_MIN_REFLECTIVITY) * (1.0 - brdf.metallic);

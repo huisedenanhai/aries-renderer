@@ -16,7 +16,7 @@ void radiance_to_point(PointLight light,
                        out vec3 direction) {
     vec3 point_to_light = light.position - point;
     float attenuation = 1.0 / max(dot(point_to_light, point_to_light), 1e-5);
-    radiance = attenuation * light.color * light.intensity;
+    radiance = attenuation * light.color * light.intensity / (4.0 * PI);
     direction = normalize(point_to_light);
 }
 

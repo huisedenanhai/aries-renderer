@@ -80,12 +80,12 @@ void OpaqueDeferred::geometry_pass(CommandBuffer *cmd) {
         };
 
         MaterialParam m{};
-        m.base_color_factor = glm::vec4(1.0f);
-        m.metallic_factor = 1.0f;
-        m.roughness_factor = 1.0f;
-        m.normal_scale = 1.0f;
-        m.occlusion_strength = 1.0f;
-        m.emission_factor = glm::vec3(1.0f);
+        m.base_color_factor = material->base_color_factor;
+        m.metallic_factor = material->metallic_factor;
+        m.roughness_factor = material->roughness_factor;
+        m.normal_scale = material->normal_scale;
+        m.occlusion_strength = material->occlusion_strength;
+        m.emission_factor = material->emission_factor;
 
         DescriptorEncoder desc{};
         desc.set_buffer_data(0, 0, t);

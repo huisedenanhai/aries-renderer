@@ -66,7 +66,7 @@ vec3 shade_metallic_roughness_pbr(GBuffer gbuffer, vec2 uv) {
     float depth01 = texture(depth_stencil_tex, uv).r;
     vec3 pos_vs = reconstruct_position_from_ss(I_P, uv, depth01);
     vec3 v_vs = -normalize(pos_vs);
-    vec3 n_vs = gbuffer.normal_vs;
+    vec3 n_vs = normalize(gbuffer.normal_vs);
     n_vs = faceforward(n_vs, -v_vs, n_vs);
 
     vec3 direct_radiance = vec3(0.0);
@@ -95,7 +95,7 @@ vec3 shade_metallic_roughness_pbr(GBuffer gbuffer, vec2 uv) {
     vec3 env_irradiance = get_env_irradiance() * material.occlusion;
     vec3 indirect_radiance = (fd + fe) * env_irradiance;
 
-    return direct_radiance + indirect_radiance;
+    return direct_radiance + indirect_radiance + gbuffer.emission;
 }
 
 vec3 shade(GBuffer gbuffer, vec2 uv) {

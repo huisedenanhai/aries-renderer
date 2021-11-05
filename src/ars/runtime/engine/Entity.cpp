@@ -143,7 +143,7 @@ void Entity::remove_component(const rttr::type &ty) {
     _components.erase(it);
 }
 
-void Entity::add_component(const rttr::type &ty) {
+IComponent *Entity::add_component(const rttr::type &ty) {
     auto ty_name = ty.get_name().to_string();
     const auto &regs = global_component_registry()->component_types;
     auto regs_it = regs.find(ty_name);
@@ -151,7 +151,7 @@ void Entity::add_component(const rttr::type &ty) {
         ARS_LOG_ERROR(
             "Try to add component type \"{}\", which is not registered.",
             ty_name);
-        return;
+        return nullptr;
     }
 
     if (_components.find(ty) != _components.end()) {
@@ -159,7 +159,7 @@ void Entity::add_component(const rttr::type &ty) {
                      "twice will do nothing",
                      ty_name,
                      name());
-        return;
+        return nullptr;
     }
 
     auto comp = regs_it->second->create_instance();
@@ -168,6 +168,7 @@ void Entity::add_component(const rttr::type &ty) {
     _components[ty] = std::move(comp);
     auto comp_ptr = _components[ty].get();
     comp_ptr->init(this);
+    return comp_ptr;
 }
 
 Entity *Scene::create_entity() {

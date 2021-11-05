@@ -155,7 +155,7 @@ class Entity final {
     [[nodiscard]] std::vector<IComponent *> components() const;
     [[nodiscard]] IComponent *component(const rttr::type &ty) const;
     void remove_component(const rttr::type &ty);
-    void add_component(const rttr::type &ty);
+    IComponent *add_component(const rttr::type &ty);
 
     template <typename T> [[nodiscard]] IComponent *component() const {
         return component(rttr::type::get<T>());
@@ -163,8 +163,8 @@ class Entity final {
     template <typename T> void remove_component() {
         remove_component(rttr::type::get<T>());
     }
-    template <typename T> void add_component() {
-        add_component(rttr::type::get<T>());
+    template <typename T> T *add_component() {
+        return dynamic_cast<T *>(add_component(rttr::type::get<T>()));
     }
 
     [[nodiscard]] math::XformTRS<float> local_xform() const;

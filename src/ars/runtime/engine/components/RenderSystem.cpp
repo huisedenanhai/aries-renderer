@@ -1,4 +1,5 @@
 #include "RenderSystem.h"
+#include <ars/runtime/core/Log.h>
 
 namespace ars::engine {
 void MeshRenderer::register_component() {
@@ -6,17 +7,24 @@ void MeshRenderer::register_component() {
 }
 
 void MeshRenderer::init(Entity *entity) {
-    _entity = entity;
-    auto rd_sys = entity->scene()->render_system();
-    auto &objs = rd_sys->objects;
+    _render_system = entity->scene()->render_system();
+    auto &objs = _render_system->_objects;
     _id = objs.alloc();
     objs.get<Entity *>(_id) = entity;
-    objs.get<std::unique_ptr<render::IRenderObject>>(_id) =
-        rd_sys->render_scene->create_render_object();
 }
 
 void MeshRenderer::destroy() {
-    _entity->scene()->render_system()->objects.free(_id);
+    _render_system->_objects.free(_id);
+}
+
+std::vector<std::unique_ptr<render::IRenderObject>> &
+MeshRenderer::primitives() const {
+    return _render_system->_objects
+        .get<std::vector<std::unique_ptr<render::IRenderObject>>>(_id);
+}
+
+Entity *MeshRenderer::entity() const {
+    return _render_system->_objects.get<Entity *>(_id);
 }
 
 void PointLight::register_component() {
@@ -24,17 +32,26 @@ void PointLight::register_component() {
 }
 
 void PointLight::init(Entity *entity) {
-    _entity = entity;
-    auto rd_sys = entity->scene()->render_system();
-    auto &point_lights = rd_sys->point_lights;
+    _render_system = entity->scene()->render_system();
+    auto &point_lights = _render_system->_point_lights;
     _id = point_lights.alloc();
     point_lights.get<Entity *>(_id) = entity;
     point_lights.get<std::unique_ptr<render::IPointLight>>(_id) =
-        rd_sys->render_scene->create_point_light();
+        _render_system->_render_scene->create_point_light();
 }
 
 void PointLight::destroy() {
-    _entity->scene()->render_system()->point_lights.free(_id);
+    _render_system->_point_lights.free(_id);
+}
+
+render::IPointLight *PointLight::light() const {
+    return _render_system->_point_lights
+        .get<std::unique_ptr<render::IPointLight>>(_id)
+        .get();
+}
+
+Entity *PointLight::entity() const {
+    return _render_system->_point_lights.get<Entity *>(_id);
 }
 
 void DirectionalLight::register_component() {
@@ -43,36 +60,122 @@ void DirectionalLight::register_component() {
 }
 
 void DirectionalLight::init(Entity *entity) {
-    _entity = entity;
-    auto rd_sys = entity->scene()->render_system();
-    auto &lights = rd_sys->directional_lights;
+    _render_system = entity->scene()->render_system();
+    auto &lights = _render_system->_directional_lights;
     _id = lights.alloc();
     lights.get<Entity *>(_id) = entity;
     lights.get<std::unique_ptr<render::IDirectionalLight>>(_id) =
-        rd_sys->render_scene->create_directional_light();
+        _render_system->_render_scene->create_directional_light();
 }
 
 void DirectionalLight::destroy() {
-    _entity->scene()->render_system()->directional_lights.free(_id);
+    _render_system->_directional_lights.free(_id);
+}
+
+render::IDirectionalLight *DirectionalLight::light() const {
+    return _render_system->_directional_lights
+        .get<std::unique_ptr<render::IDirectionalLight>>(_id)
+        .get();
+}
+
+Entity *DirectionalLight::entity() const {
+    return _render_system->_directional_lights.get<Entity *>(_id);
 }
 
 RenderSystem::RenderSystem(render::IContext *context) {
-    render_scene = context->create_scene();
+    _render_scene = context->create_scene();
 }
 
-template <typename T>
-void update_xform(SoA<Entity *, std::unique_ptr<T>> &soa) {
+template <typename T, typename Func>
+void update_xform(SoA<Entity *, T> &soa, Func &&updater) {
     auto count = soa.size();
     auto entities = soa.template get_array<Entity *>();
-    auto targets = soa.template get_array<std::unique_ptr<T>>();
+    auto targets = soa.template get_array<T>();
     for (int i = 0; i < count; i++) {
-        targets[i]->set_xform(entities[i]->cached_world_xform());
+        updater(targets[i], entities[i]->cached_world_xform());
     }
 }
 
 void RenderSystem::update() {
-    update_xform(objects);
-    update_xform(directional_lights);
-    update_xform(point_lights);
+    update_xform(_objects, [](auto &&ts, auto &&xform) {
+        for (auto &t : ts) {
+            t->set_xform(xform);
+        }
+    });
+    update_xform(_directional_lights,
+                 [](auto &&t, auto &&xform) { t->set_xform(xform); });
+    update_xform(_point_lights,
+                 [](auto &&t, auto &&xform) { t->set_xform(xform); });
+}
+
+render::IScene *RenderSystem::render_scene() const {
+    return _render_scene.get();
+}
+
+namespace {
+void load_node(Entity *parent,
+               const render::Model &model,
+               render::Model::Index node) {
+    auto entity = parent->scene()->create_entity();
+    auto &n = model.nodes[node];
+    entity->set_name(n.name);
+    entity->set_parent(parent);
+    entity->set_local_xform(n.local_to_parent);
+
+    auto rd_scene = parent->scene()->render_system()->render_scene();
+
+    if (n.mesh.has_value()) {
+        auto &m = model.meshes[n.mesh.value()];
+        auto comp = entity->add_component<MeshRenderer>();
+        comp->primitives().reserve(m.primitives.size());
+        for (auto &p : m.primitives) {
+            auto rd_obj = rd_scene->create_render_object();
+            rd_obj->set_mesh(p.mesh);
+
+            if (p.material.has_value()) {
+                auto &mat = model.materials[p.material.value()];
+                rd_obj->set_material(mat.material);
+            }
+
+            comp->primitives().emplace_back(std::move(rd_obj));
+        }
+    }
+
+    if (n.light.has_value()) {
+        auto &l = model.lights[n.light.value()];
+        auto set_up_light = [&](auto &&light,
+                                const render::Model::Light &data) {
+            light->set_color(data.color);
+            light->set_intensity(data.intensity);
+        };
+        if (l.type == render::Model::Directional) {
+            auto comp = entity->add_component<DirectionalLight>();
+            set_up_light(comp->light(), l);
+        }
+        if (l.type == render::Model::Point) {
+            auto comp = entity->add_component<PointLight>();
+            set_up_light(comp->light(), l);
+        }
+    }
+
+    for (auto child : n.children) {
+        load_node(entity, model, child);
+    }
+}
+} // namespace
+
+void load_model(Entity *parent, const render::Model &model) {
+    if (parent == nullptr) {
+        ARS_LOG_ERROR("Can not load model to the null entity");
+        return;
+    }
+
+    if (model.scenes.empty()) {
+        return;
+    }
+    auto &scene = model.scenes[model.default_scene.value_or(0)];
+    for (auto n : scene.nodes) {
+        load_node(parent, model, n);
+    }
 }
 } // namespace ars::engine

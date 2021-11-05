@@ -9,24 +9,6 @@
 
 using namespace ars;
 
-class MeshFeatureProcessor
-    : public SoA<engine::Entity *, std::unique_ptr<render::IRenderObject>> {
-  public:
-};
-
-class MeshRenderer : public engine::IComponent {
-  public:
-    void init(engine::Entity *entity) override {}
-
-    void on_inspector() override {
-        ImGui::Text("Mesh Renderer");
-    }
-
-  private:
-    MeshFeatureProcessor *_processor{};
-    MeshFeatureProcessor::Id _id{};
-};
-
 class MyComponent : public engine::IComponent {
     ARS_COMPONENT(MyComponent, engine::IComponent);
 

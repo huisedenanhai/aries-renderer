@@ -22,3 +22,4 @@ aries_setup_common_target(render)
 
 add_subdirectory(vk)
 add_subdirectory(res)
+add_subdirectory(components)

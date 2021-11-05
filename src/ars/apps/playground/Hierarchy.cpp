@@ -3,6 +3,7 @@
 #include <ars/runtime/engine/Engine.h>
 #include <ars/runtime/render/IScene.h>
 #include <ars/runtime/render/IWindow.h>
+#include <ars/runtime/render/components/RenderSystemComponent.h>
 #include <imgui/imgui.h>
 #include <rttr/registration>
 #include <sstream>
@@ -15,6 +16,7 @@ class MeshFeatureProcessor
   public:
 };
 
+ARS_REGISTER_COMPONENT(ars::render::RenderSystemComponent);
 class MeshRenderer : public scene::IComponent {
   public:
     void init(scene::Entity *entity) override {}

@@ -2,8 +2,6 @@
 #include "../Log.h"
 #include "../gui/ImGui.h"
 #include <cstdlib>
-#include <iomanip>
-#include <sstream>
 
 namespace ars::scene {
 std::string Entity::name() const {
@@ -145,6 +143,17 @@ void Entity::remove_component(const rttr::type &ty) {
 
 void Entity::add_component(const rttr::type &ty) {
     auto ty_name = ty.get_name().to_string();
+    if (this != _scene->root()) {
+        auto is_system_component =
+            ty.get_constructor().get_metadata(ComponentMeta::SystemComponent);
+        if (is_system_component.is_valid() &&
+            is_system_component.get_value<bool>()) {
+            ARS_LOG_ERROR("Try to add system component type \"{}\", but only "
+                          "the root entity can have system component.",
+                          ty_name);
+            return;
+        }
+    }
     const auto &regs = global_component_registry()->component_types;
     auto regs_it = regs.find(ty_name);
     if (regs_it == regs.end()) {

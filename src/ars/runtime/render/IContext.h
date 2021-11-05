@@ -85,5 +85,4 @@ class IContext {
     virtual std::shared_ptr<ITexture>
     create_texture_impl(const TextureInfo &info) = 0;
 };
-
 } // namespace ars::render

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../math/Transform.h"
+#include "../misc/Macro.h"
 #include "../misc/SoA.h"
 #include <memory>
 #include <optional>
@@ -48,10 +49,21 @@ class IComponent {
     }                                                                          \
     ARS_COMPONENT_RTTR_ENABLE(__VA_ARGS__);
 
-#define ARS_REGISTER_COMPONENT(ty)                                             \
-    RTTR_PLUGIN_REGISTRATION {                                                 \
-        ty::register_component();                                              \
+namespace details {
+template <typename T> struct ComponentAutoRegister {
+    // noexcept silence some clang-tidy warning. The constructor is called
+    // before the main function is start, the program halts if any exception is
+    // thrown.
+    ComponentAutoRegister() noexcept {
+        T::register_component();
     }
+};
+} // namespace details
+
+// Put this in a source file (rather than a header file)
+#define ARS_REGISTER_COMPONENT(ty)                                             \
+    static const ars::scene::details::ComponentAutoRegister<ty>                \
+        ARS_NAME_WITH_LINENO(auto_register__)
 
 class IComponentRegistryEntry {
   public:
@@ -175,4 +187,6 @@ class Entity final {
     std::vector<Entity *> _children{};
     std::map<rttr::type, std::unique_ptr<IComponent>> _components{};
 };
+
+enum class ComponentMeta { SystemComponent };
 } // namespace ars::scene

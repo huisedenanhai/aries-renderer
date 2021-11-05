@@ -5,7 +5,8 @@
 #include <memory>
 
 namespace ars::render::vk {
-class OpaqueDeferred;
+class OpaqueGeometry;
+class DeferredShading;
 class ToneMapping;
 
 class Renderer {
@@ -17,7 +18,8 @@ class Renderer {
 
   private:
     View *_view = nullptr;
-    std::unique_ptr<OpaqueDeferred> _opaque_deferred{};
+    std::unique_ptr<OpaqueGeometry> _opaque_geometry{};
+    std::unique_ptr<DeferredShading> _deferred_shading{};
     std::unique_ptr<ToneMapping> _tone_mapping{};
 };
 } // namespace ars::render::vk

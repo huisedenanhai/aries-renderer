@@ -3,5 +3,7 @@ aries_target_sources(render PRIVATE
         Renderer.h
         ToneMapping.cpp
         ToneMapping.h
-        OpaqueDeferred.cpp
-        OpaqueDeferred.h)
+        DeferredShading.cpp
+        DeferredShading.h
+        OpaqueGeometry.cpp
+        OpaqueGeometry.h)

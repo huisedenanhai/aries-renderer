@@ -1,13 +1,14 @@
 #include <ars/runtime/core/input/Keyboard.h>
 #include <ars/runtime/core/input/Mouse.h>
 #include <ars/runtime/engine/Engine.h>
-#include <ars/runtime/render/IContext.h>
+#include <ars/runtime/engine/Entity.Editor.h>
+#include <ars/runtime/engine/Entity.h>
+#include <ars/runtime/engine/components/RenderSystem.h>
 #include <ars/runtime/render/IScene.h>
 #include <ars/runtime/render/ITexture.h>
 #include <ars/runtime/render/IWindow.h>
 #include <ars/runtime/render/res/Model.h>
 #include <ars/runtime/render/res/Texture.h>
-#include <chrono>
 #include <imgui/imgui.h>
 #include <string>
 
@@ -80,7 +81,7 @@ class Application : public ars::engine::IApplication {
     void start() override {
         {
             // test if offscreen context runs
-            //            auto offscreen_context = IContext::create(nullptr);
+            // auto offscreen_context = IContext::create(nullptr);
         }
 
         auto ctx = ars::engine::render_context();
@@ -102,70 +103,22 @@ class Application : public ars::engine::IApplication {
         // auto model = load_gltf(ctx, "Test/Test.gltf");
         auto model =
             load_gltf(ctx, "FlightHelmetWithLight/FlightHelmetWithLight.gltf");
-        _scene = ctx->create_scene();
-        _view = _scene->create_view(window()->physical_size());
+        _scene = std::make_unique<ars::engine::Scene>();
+        _view = _scene->render_system()->render_scene()->create_view(
+            window()->physical_size());
         _fly_camera.xform.set_translation({0, 0.3f, 2.0f});
+        ars::engine::load_model(_scene->root(), model);
 
-        load_render_objects(model);
-    }
-
-    void load_render_objects(const Model &model) {
-        if (model.scenes.empty()) {
-            return;
-        }
-        auto &scene = model.scenes[model.default_scene.value_or(0)];
-        for (auto n : scene.nodes) {
-            load_render_objects(model, n, {});
-        }
-    }
-
-    void
-    load_render_objects(const Model &model,
-                        Model::Index node,
-                        const ars::math::XformTRS<float> &parent_to_world) {
-        auto &n = model.nodes[node];
-        auto xform = parent_to_world * n.local_to_parent;
-        if (n.mesh.has_value()) {
-            auto &m = model.meshes[n.mesh.value()];
-            for (auto &p : m.primitives) {
-                auto rd_obj = _scene->create_render_object();
-                rd_obj->set_xform(xform);
-                rd_obj->set_mesh(p.mesh);
-
-                if (p.material.has_value()) {
-                    auto &mat = model.materials[p.material.value()];
-                    rd_obj->set_material(mat.material);
-                }
-
-                _objects.emplace_back(std::move(rd_obj));
-            }
-        }
-
-        if (n.light.has_value()) {
-            auto &l = model.lights[n.light.value()];
-            auto set_up_light = [&](auto &&light, const Model::Light &data) {
-                light->set_xform(xform);
-                light->set_color(data.color);
-                light->set_intensity(data.intensity);
-            };
-            if (l.type == Model::Directional) {
-                auto light = _scene->create_directional_light();
-                set_up_light(light, l);
-                _directional_lights.emplace_back(std::move(light));
-            }
-            if (l.type == Model::Point) {
-                auto light = _scene->create_point_light();
-                set_up_light(light, l);
-                _point_lights.emplace_back(std::move(light));
-            }
-        }
-
-        for (auto child : n.children) {
-            load_render_objects(model, child, xform);
-        }
+        _hierarchy_inspector =
+            std::make_unique<ars::engine::editor::HierarchyInspector>();
+        _entity_inspector =
+            std::make_unique<ars::engine::editor::EntityInspector>();
     }
 
     void update(double dt) override {
+        _scene->update_cached_world_xform();
+        _scene->render_system()->update();
+
         if (window()->keyboard()->is_released(ars::input::Key::Escape)) {
             quit();
             return;
@@ -186,23 +139,31 @@ class Application : public ars::engine::IApplication {
 
     void on_imgui() override {
         ImGui::ShowDemoWindow();
+
+        ImGui::Begin("Hierarchy");
+        _hierarchy_inspector->set_scene(_scene.get());
+        _hierarchy_inspector->on_imgui();
+        ImGui::End();
+
+        ImGui::Begin("Entity");
+        _entity_inspector->set_entity(_hierarchy_inspector->current_selected());
+        _entity_inspector->on_imgui();
+        ImGui::End();
     }
 
     void destroy() override {
-        _point_lights.clear();
-        _directional_lights.clear();
-        _objects.clear();
         _view.reset();
         _scene.reset();
     }
 
   private:
     FlyCamera _fly_camera{};
-    std::vector<std::unique_ptr<IRenderObject>> _objects{};
-    std::vector<std::unique_ptr<IDirectionalLight>> _directional_lights{};
-    std::vector<std::unique_ptr<IPointLight>> _point_lights{};
     std::unique_ptr<IView> _view{};
-    std::unique_ptr<IScene> _scene{};
+    std::unique_ptr<ars::engine::Scene> _scene{};
+
+    std::unique_ptr<ars::engine::editor::HierarchyInspector>
+        _hierarchy_inspector{};
+    std::unique_ptr<ars::engine::editor::EntityInspector> _entity_inspector{};
 };
 
 int main() {

@@ -7,6 +7,9 @@ Scene *HierarchyInspector::scene() const {
 }
 
 void HierarchyInspector::set_scene(Scene *scene) {
+    if (_scene == scene) {
+        return;
+    }
     _scene = scene;
     _current_selected = nullptr;
 }

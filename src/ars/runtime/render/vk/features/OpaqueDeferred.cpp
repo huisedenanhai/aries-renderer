@@ -1,5 +1,6 @@
 #include "OpaqueDeferred.h"
 #include "../Context.h"
+#include "../Lut.h"
 #include "../Material.h"
 #include "../Mesh.h"
 #include "../Scene.h"
@@ -184,7 +185,8 @@ void OpaqueDeferred::shading_pass(CommandBuffer *cmd) const {
     for (int i = 0; i < std::size(rts); i++) {
         desc.set_texture(0, i, rts[i].get());
     }
-    desc.set_texture(0, std::size(rts), final_color.get());
+    desc.set_texture(0, 5, _view->context()->lut()->brdf_lut().get());
+    desc.set_texture(0, 6, final_color.get());
 
     struct ShadingParam {
         int32_t width;
@@ -334,11 +336,8 @@ std::array<NamedRT, 5> OpaqueDeferred::geometry_pass_rt_names() const {
 }
 
 void OpaqueDeferred::init_shading_pass_pipeline() {
-    auto ctx = _view->context();
-    auto shader = std::make_unique<Shader>(ctx, "ShadingPass.comp");
-    ComputePipelineInfo info{};
-    info.shader = shader.get();
-    _shading_pass_pipeline = std::make_unique<ComputePipeline>(ctx, info);
+    _shading_pass_pipeline =
+        ComputePipeline::create(_view->context(), "ShadingPass.comp");
 }
 
 std::array<Handle<Texture>, 5> OpaqueDeferred::geometry_pass_rts() const {

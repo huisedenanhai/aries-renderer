@@ -1,4 +1,5 @@
 #include "Context.h"
+#include "Lut.h"
 #include "Material.h"
 #include "Mesh.h"
 #include "Scene.h"
@@ -559,6 +560,7 @@ Context::Context(const WindowInfo *info,
 
     init_default_textures();
     _material_prototypes = std::make_unique<MaterialPrototypeRegistry>(this);
+    _lut = std::make_unique<Lut>(this);
 }
 
 Instance *Context::instance() const {
@@ -894,5 +896,9 @@ void Context::init_default_textures() {
         create_single_color_texture({1.0f, 1.0f, 1.0f, 1.0f});
     _default_textures[static_cast<uint32_t>(DefaultTexture::Normal)] =
         create_single_color_texture({0.5f, 0.5f, 1.0f, 1.0f});
+}
+
+Lut *Context::lut() const {
+    return _lut.get();
 }
 } // namespace ars::render::vk

@@ -430,6 +430,14 @@ ShaderLocalSize ComputePipeline::local_size() const {
     return _local_size;
 }
 
+std::unique_ptr<ComputePipeline>
+ComputePipeline::create(Context *context, const char *shader_name) {
+    auto shader = std::make_unique<Shader>(context, shader_name);
+    ComputePipelineInfo info{};
+    info.shader = shader.get();
+    return std::make_unique<ComputePipeline>(context, info);
+}
+
 DescriptorEncoder::DescriptorEncoder() {
     // Init all binding indices as -1
     for (auto &si : _binding_indices) {

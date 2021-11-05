@@ -14,6 +14,7 @@
 struct GLFWwindow;
 
 namespace ars::render::vk {
+class Lut;
 class DescriptorArena;
 class Swapchain;
 class Context;
@@ -131,6 +132,8 @@ class Context : public IContext {
     void register_swapchain(Swapchain *swapchain);
     void unregister_swapchain(Swapchain *swapchain);
 
+    [[nodiscard]] Lut *lut() const;
+
   private:
     // This method init device if not
     std::tuple<GLFWwindow *, VkSurfaceKHR>
@@ -179,6 +182,8 @@ class Context : public IContext {
     std::array<std::shared_ptr<ITexture>,
                static_cast<size_t>(DefaultTexture::Count)>
         _default_textures{};
+
+    std::unique_ptr<Lut> _lut{};
 };
 
 template <typename Func>

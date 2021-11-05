@@ -7,11 +7,7 @@ ToneMapping::ToneMapping(View *view, NamedRT src_rt, NamedRT dst_rt)
 }
 
 void ToneMapping::init_pipeline() {
-    auto ctx = _view->context();
-    auto shader = std::make_unique<Shader>(ctx, "ToneMapping.comp");
-    ComputePipelineInfo info{};
-    info.shader = shader.get();
-    _pipeline = std::make_unique<ComputePipeline>(ctx, info);
+    _pipeline = ComputePipeline::create(_view->context(), "ToneMapping.comp");
 }
 
 std::vector<PassDependency> ToneMapping::src_dependencies() {

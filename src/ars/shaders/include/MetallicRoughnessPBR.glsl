@@ -98,12 +98,76 @@ vec3 diffuse_BRDF(MetallicRoughnessPBR brdf) {
     return brdf.base_color * one_minus_reflectivity(brdf) / PI;
 }
 
-// vec3 environment_BRDF(MetallicRoughnessPBR brdf, float NoV) {
-//     // sample pre integrated BRDF lut
-//     float roughness = brdf.perceptual_roughness * brdf.perceptual_roughness;
-//     vec2 env_brdf_factor = texture(lut_tex, vec2(roughness, NoV)).xy;
-//     vec3 f0 = get_reflection(brdf);
-//     return f0 * env_brdf_factor.x + env_brdf_factor.y;
-// }
+vec3 environment_BRDF(MetallicRoughnessPBR brdf, sampler2D lut_tex, float NoV) {
+    // sample pre integrated BRDF lut
+    float roughness = brdf.perceptual_roughness * brdf.perceptual_roughness;
+    vec2 env_brdf_factor = texture(lut_tex, vec2(roughness, NoV)).xy;
+    vec3 f0 = get_reflection(brdf);
+    return f0 * env_brdf_factor.x + env_brdf_factor.y;
+}
+
+// Importance sampling D(h) (n.h)
+//
+// most of noise comes from GGX sampling
+// importance sampling other terms (like cosine sampling hemisphere) does not
+// help much
+//
+// u is a uniform random variable in [0, 1)
+float sample_NoH_from_D(float roughness, float u) {
+    // v in range (0, 1]
+    float v = 1.0 - u;
+    // the denorm will not be 0.0
+    return sqrt(v / (v + square(roughness) * (1.0 - v)));
+}
+
+// Importance sampling h from D(h) (n.h) with measure dh.
+// The macro normal n is (0, 1, 0)
+vec3 sample_h_from_D(float roughness, vec2 u) {
+    float NoH = sample_NoH_from_D(roughness, u.x);
+    float r = sqrt(max(1.0 - square(NoH), 0.0));
+    float phi = 2.0 * PI * u.y;
+    float y = NoH;
+    float x = cos(phi) * r;
+    float z = sin(phi) * r;
+    return vec3(x, y, z);
+}
+
+float calculate_dldh(vec3 v, vec3 l, vec3 h) {
+    return square(length(l + v)) / dot(l, h);
+}
+
+// n, v, h should be pre-nomalized.
+vec2 specular_env_BRDF_factor(float roughness, vec3 n, vec3 v, vec3 h) {
+    vec3 l = normalize(reflect(-v, h));
+
+    if (dot(n, l) < 0.0) {
+        return vec2(0.0);
+    }
+
+    float NoV = clamp01(abs(dot(n, v)));
+    float NoL = clamp01(dot(n, l));
+    float NoH = clamp01(dot(n, h));
+    float LoH = clamp01(dot(l, h));
+
+    // the Schlick approximation
+    // F_Schlick = f + f0 * (1 - f)
+    // f0 is calculated based on the base color and the metallic value
+    // we only pre-integrate the term f, thus the pre-computed result depends
+    // only on roughness and NoV the contribution of f0 can be added back in the
+    // actual env brdf calculation
+    float F = pow(1.0 - LoH, 5.0);
+    float V = V_SmithGGX(NoV, NoL, roughness);
+
+    // the actual pdf is D (n.h)
+    // but D is canceled out
+    float dldh = calculate_dldh(v, l, h);
+    float pdf = NoH;
+
+    vec2 result = vec2(1 - F, F) * V * NoL;
+    result *= dldh / pdf;
+
+    // remove NAN
+    return max(result, vec2(0.0));
+}
 
 #endif

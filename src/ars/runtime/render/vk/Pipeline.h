@@ -148,6 +148,9 @@ class ComputePipeline : public Pipeline {
   public:
     ComputePipeline(Context *context, const ComputePipelineInfo &info);
 
+    static std::unique_ptr<ComputePipeline> create(Context *context,
+                                                   const char *shader_name);
+
     [[nodiscard]] ShaderLocalSize local_size() const;
 
   private:
@@ -247,4 +250,5 @@ struct DescriptorEncoder {
     int _binding_indices[MAX_DESC_SET_COUNT][MAX_DESC_BINDING_COUNT]{};
     std::vector<BindingInfo> _bindings;
 };
+
 } // namespace ars::render::vk

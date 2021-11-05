@@ -357,10 +357,12 @@ VkImage Texture::image() const {
     return _image;
 }
 
-TextureCreateInfo TextureCreateInfo::sampled_2d(VkFormat format,
-                                                uint32_t width,
-                                                uint32_t height,
-                                                uint32_t mip_levels) {
+TextureCreateInfo
+TextureCreateInfo::sampled_2d(VkFormat format,
+                              uint32_t width,
+                              uint32_t height,
+                              uint32_t mip_levels,
+                              VkSamplerAddressMode address_mode) {
     TextureCreateInfo info{};
     info.aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT;
     info.view_type = VK_IMAGE_VIEW_TYPE_2D;
@@ -371,6 +373,9 @@ TextureCreateInfo TextureCreateInfo::sampled_2d(VkFormat format,
     info.mip_levels = mip_levels;
     info.array_layers = 1;
     info.extent = VkExtent3D{width, height, 1};
+    info.address_mode_u = address_mode;
+    info.address_mode_v = address_mode;
+    info.address_mode_w = address_mode;
 
     return info;
 }

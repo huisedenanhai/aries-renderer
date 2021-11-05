@@ -1,9 +1,9 @@
 #include "Entity.h"
-#include "../Log.h"
-#include "../gui/ImGui.h"
+#include <ars/runtime/core/Log.h>
+#include <ars/runtime/core/gui/ImGui.h>
 #include <cstdlib>
 
-namespace ars::scene {
+namespace ars::engine {
 std::string Entity::name() const {
     return _name;
 }
@@ -269,4 +269,4 @@ void register_component_type_entry(
     global_component_registry()->component_types.emplace(name,
                                                          std::move(entry));
 }
-} // namespace ars::scene
+} // namespace ars::engine

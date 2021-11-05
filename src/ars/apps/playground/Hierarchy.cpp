@@ -1,25 +1,22 @@
 #include <ars/runtime/core/Log.h>
-#include <ars/runtime/core/scene/Entity.Editor.h>
 #include <ars/runtime/engine/Engine.h>
+#include <ars/runtime/engine/Entity.Editor.h>
 #include <ars/runtime/render/IScene.h>
 #include <ars/runtime/render/IWindow.h>
-#include <ars/runtime/render/components/RenderSystemComponent.h>
 #include <imgui/imgui.h>
 #include <rttr/registration>
-#include <sstream>
 #include <utility>
 
 using namespace ars;
 
 class MeshFeatureProcessor
-    : public SoA<scene::Entity *, std::unique_ptr<render::IRenderObject>> {
+    : public SoA<engine::Entity *, std::unique_ptr<render::IRenderObject>> {
   public:
 };
 
-ARS_REGISTER_COMPONENT(ars::render::RenderSystemComponent);
-class MeshRenderer : public scene::IComponent {
+class MeshRenderer : public engine::IComponent {
   public:
-    void init(scene::Entity *entity) override {}
+    void init(engine::Entity *entity) override {}
 
     void on_inspector() override {
         ImGui::Text("Mesh Renderer");
@@ -30,12 +27,12 @@ class MeshRenderer : public scene::IComponent {
     MeshFeatureProcessor::Id _id{};
 };
 
-class MyComponent : public scene::IComponent {
-    ARS_COMPONENT(MyComponent, scene::IComponent);
+class MyComponent : public engine::IComponent {
+    ARS_COMPONENT(MyComponent, engine::IComponent);
 
   public:
     static void register_component() {
-        scene::register_component<MyComponent>("MyComponent")
+        engine::register_component<MyComponent>("MyComponent")
             .property("data", &MyComponent::data)
             .property("my_int", &MyComponent::my_int)
             .property("my_float", &MyComponent::my_float)
@@ -46,7 +43,7 @@ class MyComponent : public scene::IComponent {
             .property("my_xform", &MyComponent::my_xform);
     }
 
-    void init(scene::Entity *entity) override {
+    void init(engine::Entity *entity) override {
         ARS_LOG_INFO("Init");
     }
 
@@ -73,11 +70,11 @@ class HierarchyInspectorApplication : public engine::IApplication {
     }
 
     void start() override {
-        _scene = std::make_unique<scene::Scene>();
+        _scene = std::make_unique<engine::Scene>();
         _hierarchy_inspector =
-            std::make_unique<scene::editor::HierarchyInspector>();
+            std::make_unique<engine::editor::HierarchyInspector>();
         _hierarchy_inspector->set_scene(_scene.get());
-        _entity_inspector = std::make_unique<scene::editor::EntityInspector>();
+        _entity_inspector = std::make_unique<engine::editor::EntityInspector>();
 
         auto t = rttr::type::get<MyComponent>();
         for (auto &prop : t.get_properties()) {
@@ -102,9 +99,9 @@ class HierarchyInspectorApplication : public engine::IApplication {
     }
 
   private:
-    std::unique_ptr<scene::Scene> _scene{};
-    std::unique_ptr<scene::editor::HierarchyInspector> _hierarchy_inspector{};
-    std::unique_ptr<scene::editor::EntityInspector> _entity_inspector{};
+    std::unique_ptr<engine::Scene> _scene{};
+    std::unique_ptr<engine::editor::HierarchyInspector> _hierarchy_inspector{};
+    std::unique_ptr<engine::editor::EntityInspector> _entity_inspector{};
 };
 
 int main() {

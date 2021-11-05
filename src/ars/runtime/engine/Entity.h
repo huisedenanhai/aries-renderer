@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../math/Transform.h"
-#include "../misc/Macro.h"
-#include "../misc/SoA.h"
+#include <ars/runtime/core/math/Transform.h>
+#include <ars/runtime/core/misc/Macro.h>
+#include <ars/runtime/core/misc/SoA.h>
 #include <memory>
 #include <optional>
 #include <rttr/registration>
@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-namespace ars::scene {
+namespace ars::engine {
 class Entity;
 
 class IComponent {
@@ -62,7 +62,7 @@ template <typename T> struct ComponentAutoRegister {
 
 // Put this in a source file (rather than a header file)
 #define ARS_REGISTER_COMPONENT(ty)                                             \
-    static const ars::scene::details::ComponentAutoRegister<ty>                \
+    static const ars::engine::details::ComponentAutoRegister<ty>               \
         ARS_NAME_WITH_LINENO(auto_register__)
 
 class IComponentRegistryEntry {
@@ -189,4 +189,4 @@ class Entity final {
 };
 
 enum class ComponentMeta { SystemComponent };
-} // namespace ars::scene
+} // namespace ars::engine

@@ -1,7 +1,7 @@
 #include "Entity.Editor.h"
-#include "../gui/ImGui.h"
+#include <ars/runtime/core/gui/ImGui.h>
 
-namespace ars::scene::editor {
+namespace ars::engine::editor {
 Scene *HierarchyInspector::scene() const {
     return _scene;
 }
@@ -162,4 +162,4 @@ void EntityInspector::on_imgui() {
         }
     });
 }
-} // namespace ars::scene::editor
+} // namespace ars::engine::editor

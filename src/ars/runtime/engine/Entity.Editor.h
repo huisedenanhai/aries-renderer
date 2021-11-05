@@ -2,7 +2,7 @@
 
 #include "Entity.h"
 
-namespace ars::scene::editor {
+namespace ars::engine::editor {
 class HierarchyInspector {
   public:
     [[nodiscard]] Scene *scene() const;
@@ -33,4 +33,4 @@ class EntityInspector {
   private:
     Entity *_entity = nullptr;
 };
-} // namespace ars::scene::editor
+} // namespace ars::engine::editor

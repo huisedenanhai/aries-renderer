@@ -44,8 +44,12 @@ void OpaqueGeometry::render(CommandBuffer *cmd) {
     rd_objs.for_each_id([&](Scene::RenderObjects::Id id) {
         auto &matrix = rd_objs.get<glm::mat4>(id);
         auto &mesh = rd_objs.get<std::shared_ptr<Mesh>>(id);
+        if (mesh == nullptr) {
+            return;
+        }
         auto &mat_untyped = rd_objs.get<std::shared_ptr<IMaterial>>(id);
-        if (mat_untyped->type() != MaterialType::MetallicRoughnessPBR) {
+        if (mat_untyped == nullptr ||
+            mat_untyped->type() != MaterialType::MetallicRoughnessPBR) {
             return;
         }
         auto material =

@@ -61,8 +61,6 @@ class MyComponent : public engine::IComponent {
     math::XformTRS<float> my_xform{};
 };
 
-ARS_REGISTER_COMPONENT(MyComponent);
-
 class HierarchyInspectorApplication : public engine::IApplication {
   public:
     [[nodiscard]] std::string get_name() const override {
@@ -70,6 +68,8 @@ class HierarchyInspectorApplication : public engine::IApplication {
     }
 
     void start() override {
+        MyComponent::register_component();
+
         _scene = std::make_unique<engine::Scene>();
         _hierarchy_inspector =
             std::make_unique<engine::editor::HierarchyInspector>();

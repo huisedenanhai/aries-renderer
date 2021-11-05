@@ -1,4 +1,5 @@
 #include "Engine.h"
+#include "components/Components.h"
 #include <ars/runtime/core/Log.h>
 #include <ars/runtime/render/IContext.h>
 #include <ars/runtime/render/IScene.h>
@@ -79,6 +80,7 @@ class Engine {
 
     void run() {
         init_render();
+        register_components();
 
         _application->init(_main_window.get());
         _application->start();

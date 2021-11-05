@@ -1,4 +1,6 @@
 #include "Entity.h"
+#include "Engine.h"
+#include "components/RenderSystem.h"
 #include <ars/runtime/core/Log.h>
 #include <ars/runtime/core/gui/ImGui.h>
 #include <cstdlib>
@@ -143,17 +145,6 @@ void Entity::remove_component(const rttr::type &ty) {
 
 void Entity::add_component(const rttr::type &ty) {
     auto ty_name = ty.get_name().to_string();
-    if (this != _scene->root()) {
-        auto is_system_component =
-            ty.get_constructor().get_metadata(ComponentMeta::SystemComponent);
-        if (is_system_component.is_valid() &&
-            is_system_component.get_value<bool>()) {
-            ARS_LOG_ERROR("Try to add system component type \"{}\", but only "
-                          "the root entity can have system component.",
-                          ty_name);
-            return;
-        }
-    }
     const auto &regs = global_component_registry()->component_types;
     auto regs_it = regs.find(ty_name);
     if (regs_it == regs.end()) {
@@ -201,6 +192,7 @@ Entity *Scene::root() const {
 Scene::Scene() {
     _root = create_entity();
     _root->set_name("ROOT");
+    _render_system = std::make_unique<RenderSystem>(render_context());
 }
 
 void Scene::update_cached_world_xform() {
@@ -253,6 +245,10 @@ void Scene::destroy_entity_impl(Entity *entity, bool can_destroy_root) {
 
     entity->set_parent(nullptr);
     _entities.free(entity->id());
+}
+
+RenderSystem *Scene::render_system() const {
+    return _render_system.get();
 }
 
 void IComponent::on_inspector() {

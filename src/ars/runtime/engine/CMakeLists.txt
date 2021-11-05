@@ -11,3 +11,5 @@ target_link_libraries(engine PUBLIC
         core
         render
         )
+
+add_subdirectory(components)

@@ -12,6 +12,7 @@
 
 namespace ars::engine {
 class Entity;
+class RenderSystem;
 
 class IComponent {
     RTTR_ENABLE();
@@ -59,11 +60,6 @@ template <typename T> struct ComponentAutoRegister {
     }
 };
 } // namespace details
-
-// Put this in a source file (rather than a header file)
-#define ARS_REGISTER_COMPONENT(ty)                                             \
-    static const ars::engine::details::ComponentAutoRegister<ty>               \
-        ARS_NAME_WITH_LINENO(auto_register__)
 
 class IComponentRegistryEntry {
   public:
@@ -121,6 +117,8 @@ class Scene {
 
     void update_cached_world_xform();
 
+    [[nodiscard]] RenderSystem *render_system() const;
+
   private:
     void
     update_cached_world_xform_impl(Entity *entity,
@@ -129,6 +127,7 @@ class Scene {
 
     Container _entities{};
     Entity *_root{};
+    std::unique_ptr<RenderSystem> _render_system{};
 };
 
 using EntityId = Scene::EntityId;
@@ -187,6 +186,4 @@ class Entity final {
     std::vector<Entity *> _children{};
     std::map<rttr::type, std::unique_ptr<IComponent>> _components{};
 };
-
-enum class ComponentMeta { SystemComponent };
 } // namespace ars::engine

@@ -1,5 +1,5 @@
-#ifndef ARS_SAMPLEING_GLSL
-#define ARS_SAMPLEING_GLSL
+#ifndef ARS_SAMPLING_GLSL
+#define ARS_SAMPLING_GLSL
 
 // Low-discrepancy sequence for quasi monte carlo intergation
 float halton(float i, float base) {

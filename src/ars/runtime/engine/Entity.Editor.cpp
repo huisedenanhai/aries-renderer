@@ -85,6 +85,10 @@ void HierarchyInspector::right_click_pop_up() {
     }
 }
 
+void HierarchyInspector::set_current_selected(Entity *entity) {
+    _current_selected = entity;
+}
+
 Entity *EntityInspector::entity() const {
     return _entity;
 }

@@ -39,11 +39,17 @@ class MeshRenderer : public IComponent {
     static void register_component();
     void init(Entity *entity) override;
     void destroy() override;
-    [[nodiscard]] std::vector<std::unique_ptr<render::IRenderObject>> &
-    primitives() const;
+    // User data of IRenderObject is set to the pointer of entity.
+    [[nodiscard]] size_t primitive_count() const;
+    [[nodiscard]] render::IRenderObject *primitive(size_t index) const;
+    render::IRenderObject *add_primitive();
+    void remove_primitive(size_t index);
     [[nodiscard]] Entity *entity() const;
 
   private:
+    [[nodiscard]] std::vector<std::unique_ptr<render::IRenderObject>> &
+    primitives() const;
+
     RenderSystem *_render_system{};
     RenderSystem::Objects::Id _id{};
 };

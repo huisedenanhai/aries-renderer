@@ -165,10 +165,10 @@ class Application : public ars::engine::IApplication {
                                        static_cast<uint32_t>(pos.y),
                                        1,
                                        1);
-            ARS_LOG_INFO("Mouse Physical Position {}, {}. Selection count {}",
-                         pos.x,
-                         pos.y,
-                         selection.size());
+            if (!selection.empty()) {
+                _hierarchy_inspector->set_current_selected(
+                    reinterpret_cast<ars::engine::Entity *>(selection[0]));
+            }
         }
     }
 

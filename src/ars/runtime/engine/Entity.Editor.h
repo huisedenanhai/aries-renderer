@@ -9,6 +9,7 @@ class HierarchyInspector {
     void set_scene(Scene *scene);
 
     [[nodiscard]] Entity *current_selected() const;
+    void set_current_selected(Entity *entity);
 
     void on_imgui();
 

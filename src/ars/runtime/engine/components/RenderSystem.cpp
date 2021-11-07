@@ -27,6 +27,37 @@ Entity *MeshRenderer::entity() const {
     return _render_system->_objects.get<Entity *>(_id);
 }
 
+size_t MeshRenderer::primitive_count() const {
+    return primitives().size();
+}
+
+render::IRenderObject *MeshRenderer::primitive(size_t index) const {
+    if (index >= primitive_count()) {
+        ARS_LOG_ERROR(
+            "Out of range primitive index {}, only {} primitives exists.",
+            index,
+            primitive_count());
+        return nullptr;
+    }
+    return primitives()[index].get();
+}
+
+render::IRenderObject *MeshRenderer::add_primitive() {
+    static_assert(sizeof(void *) <= sizeof(uint64_t));
+    auto rd_obj = _render_system->render_scene()->create_render_object();
+    rd_obj->set_user_data(reinterpret_cast<uint64_t>(entity()));
+    primitives().emplace_back(std::move(rd_obj));
+    return primitives().back().get();
+}
+
+void MeshRenderer::remove_primitive(size_t index) {
+    auto &prims = primitives();
+    if (index >= prims.size()) {
+        return;
+    }
+    prims.erase(std::next(prims.begin(), static_cast<int>(index)));
+}
+
 void PointLight::register_component() {
     engine::register_component<PointLight>("ars::engine::PointLight");
 }
@@ -122,22 +153,17 @@ void load_node(Entity *parent,
     entity->set_parent(parent);
     entity->set_local_xform(n.local_to_parent);
 
-    auto rd_scene = parent->scene()->render_system()->render_scene();
-
     if (n.mesh.has_value()) {
         auto &m = model.meshes[n.mesh.value()];
         auto comp = entity->add_component<MeshRenderer>();
-        comp->primitives().reserve(m.primitives.size());
         for (auto &p : m.primitives) {
-            auto rd_obj = rd_scene->create_render_object();
+            auto rd_obj = comp->add_primitive();
             rd_obj->set_mesh(p.mesh);
 
             if (p.material.has_value()) {
                 auto &mat = model.materials[p.material.value()];
                 rd_obj->set_material(mat.material);
             }
-
-            comp->primitives().emplace_back(std::move(rd_obj));
         }
     }
 

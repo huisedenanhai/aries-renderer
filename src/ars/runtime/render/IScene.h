@@ -36,6 +36,9 @@ class IRenderObject {
     virtual std::shared_ptr<IMesh> mesh() = 0;
     virtual void set_mesh(std::shared_ptr<IMesh> mesh) = 0;
 
+    // For RenderObjects managed by MeshRenderers of engine::Scene, user data is
+    // set to Entity *. If the RenderObject is not managed, user data is
+    // nullptr.
     virtual uint64_t user_data() = 0;
     virtual void set_user_data(uint64_t user_data) = 0;
 

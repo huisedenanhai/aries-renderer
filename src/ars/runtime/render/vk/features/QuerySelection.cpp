@@ -185,7 +185,6 @@ std::vector<uint64_t> QuerySelection::query_selection(uint32_t x,
             auto b = byte_ptr[index + 2];
             auto a = byte_ptr[index + 3];
             auto id = decode_color_id(r, g, b, a);
-            ARS_LOG_INFO("Color ID {}, {}, {}, {}", r, g, b, a);
 
             if (id == 0 || id > rd_obj_count) {
                 // no object found or invalid id

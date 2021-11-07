@@ -12,6 +12,10 @@ struct Light {
     float intensity;
 };
 
+struct RenderObjectUserData {
+    uint64_t value = 0;
+};
+
 class Scene : public IScene {
   public:
     explicit Scene(Context *context);
@@ -23,8 +27,10 @@ class Scene : public IScene {
 
     [[nodiscard]] Context *context() const;
 
-    using RenderObjects =
-        SoA<glm::mat4, std::shared_ptr<Mesh>, std::shared_ptr<IMaterial>>;
+    using RenderObjects = SoA<glm::mat4,
+                              std::shared_ptr<Mesh>,
+                              std::shared_ptr<IMaterial>,
+                              RenderObjectUserData>;
     RenderObjects render_objects{};
 
     using DirectionalLights = SoA<math::XformTRS<float>, Light>;
@@ -93,6 +99,8 @@ class RenderObject : public IRenderObject {
     void set_mesh(std::shared_ptr<IMesh> mesh) override;
     std::shared_ptr<IMaterial> material() override;
     void set_material(std::shared_ptr<IMaterial> material) override;
+    uint64_t user_data() override;
+    void set_user_data(uint64_t user_data) override;
 
   private:
     template <typename T> T &get() {

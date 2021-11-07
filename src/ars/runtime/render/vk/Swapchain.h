@@ -36,6 +36,7 @@ class Swapchain : public IWindow {
 
     void present(ITexture *texture) override;
     Extent2D physical_size() override;
+    Extent2D logical_size() override;
     bool should_close() override;
     void
     set_imgui_callback(std::optional<std::function<void()>> callback) override;

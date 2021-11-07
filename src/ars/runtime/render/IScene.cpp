@@ -42,6 +42,29 @@ glm::mat4 ortho_reverse_z(float left,
 }
 } // namespace
 
+// Map scissor NDC region range [-1, 1]
+glm::mat4 projection_scissor_correction(uint32_t x,
+                                        uint32_t y,
+                                        uint32_t width,
+                                        uint32_t height,
+                                        uint32_t image_width,
+                                        uint32_t image_height) {
+    float ax = static_cast<float>(image_width) / static_cast<float>(width);
+    float ay = static_cast<float>(image_height) / static_cast<float>(height);
+    float bx =
+        -1.0f + ax - 2.0f * static_cast<float>(x) / static_cast<float>(width);
+    float by =
+        -1.0f + ay - 2.0f * static_cast<float>(y) / static_cast<float>(height);
+    return {
+        // clang-format off
+        ax, 0.0f, 0.0f, 0.0f,
+        0.0f, ay, 0.0f, 0.0f,
+        0.0f, 0.0f, 1.0f, 0.0f,
+        bx, by, 0.0f, 1.0f,
+        // clang-format on
+    };
+}
+
 glm::mat4 Perspective::projection_matrix(float w_div_h) const {
     if (z_far == 0.0f) {
         return perspective_reverse_z_infinite_z_far(y_fov, w_div_h, z_near);

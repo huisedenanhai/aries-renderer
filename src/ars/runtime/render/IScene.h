@@ -5,7 +5,7 @@
 #include <memory>
 #include <variant>
 
-// Aries uses right hand coordinates, with Y points up, the same as the
+// Aries uses right-hand coordinates, with Y points up, the same as the
 // convention of GLTF
 namespace ars::render {
 class IMesh;
@@ -13,6 +13,16 @@ class ITexture;
 class IMaterial;
 
 class IScene;
+
+// Map scissor NDC region range [-1, 1]
+// One can use this for projection jittering.
+// Or use a none standard projection matrix that frames in the center of view.
+glm::mat4 projection_scissor_correction(uint32_t x,
+                                        uint32_t y,
+                                        uint32_t width,
+                                        uint32_t height,
+                                        uint32_t image_width,
+                                        uint32_t image_height);
 
 class IRenderObject {
   public:
@@ -25,6 +35,9 @@ class IRenderObject {
 
     virtual std::shared_ptr<IMesh> mesh() = 0;
     virtual void set_mesh(std::shared_ptr<IMesh> mesh) = 0;
+
+    virtual uint64_t user_data() = 0;
+    virtual void set_user_data(uint64_t user_data) = 0;
 
     virtual std::shared_ptr<IMaterial> material() = 0;
     virtual void set_material(std::shared_ptr<IMaterial> material) = 0;
@@ -110,6 +123,12 @@ class IView {
     // Render and update the texture
     virtual void render() = 0;
     virtual ITexture *get_color_texture() = 0;
+
+    // Return all object user data touched by the scissor region
+    virtual std::vector<uint64_t> query_selection(uint32_t x,
+                                                  uint32_t y,
+                                                  uint32_t width,
+                                                  uint32_t height) = 0;
 };
 
 class IScene {

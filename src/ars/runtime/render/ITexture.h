@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Common.h"
+#include "IWindow.h"
+
 #include <memory>
 
 namespace ars::render {
@@ -67,4 +69,5 @@ class ITexture {
   protected:
     TextureInfo _info{};
 };
+
 } // namespace ars::render

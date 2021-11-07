@@ -51,6 +51,10 @@ class View : public IView {
     [[nodiscard]] RenderTargetInfo rt_info(NamedRT name) const;
     std::unique_ptr<RenderPass> create_single_pass_render_pass(
         NamedRT *colors, uint32_t color_count, NamedRT depth_stencil) const;
+    std::vector<uint64_t> query_selection(uint32_t x,
+                                          uint32_t y,
+                                          uint32_t width,
+                                          uint32_t height) override;
 
   private:
     void alloc_render_targets();

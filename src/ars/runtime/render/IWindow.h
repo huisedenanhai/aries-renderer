@@ -2,6 +2,7 @@
 
 #include "Common.h"
 #include <functional>
+#include <glm/glm.hpp>
 #include <memory>
 #include <optional>
 #include <string>
@@ -25,12 +26,20 @@ enum class CursorMode {
     HiddenCaptured,
 };
 
+glm::dvec2 convert_window_coord(const glm::dvec2 &pos,
+                                const Extent2D &from,
+                                const Extent2D &to);
+
 class IWindow {
   public:
     // Blit a 2d texture to screen and swap buffer.
     virtual void present(ITexture *texture) = 0;
 
     virtual Extent2D physical_size() = 0;
+    virtual Extent2D logical_size() = 0;
+
+    glm::dvec2 from_logical_to_physical(const glm::dvec2 &pos);
+    glm::dvec2 from_physical_to_logical(const glm::dvec2 &pos);
 
     virtual bool should_close() = 0;
 

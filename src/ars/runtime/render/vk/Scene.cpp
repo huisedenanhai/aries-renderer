@@ -101,6 +101,14 @@ RenderObject::~RenderObject() {
     _scene->render_objects.free(_id);
 }
 
+uint64_t RenderObject::user_data() {
+    return get<RenderObjectUserData>().value;
+}
+
+void RenderObject::set_user_data(uint64_t user_data) {
+    get<RenderObjectUserData>().value = user_data;
+}
+
 PointLight::PointLight(Scene *scene) : _scene(scene) {
     _id = _scene->point_lights.alloc();
 }

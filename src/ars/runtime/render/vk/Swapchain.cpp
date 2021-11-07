@@ -967,4 +967,13 @@ void Swapchain::set_cursor_mode(CursorMode mode) {
     _cursor_mode = mode;
     glfwSetInputMode(_window, GLFW_CURSOR, translate(mode));
 }
+
+Extent2D Swapchain::logical_size() {
+    int width, height;
+    glfwGetWindowSize(_window, &width, &height);
+    Extent2D size{};
+    size.width = width;
+    size.height = height;
+    return size;
+}
 } // namespace ars::render::vk

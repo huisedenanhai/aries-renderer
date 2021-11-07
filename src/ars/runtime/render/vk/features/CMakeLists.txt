@@ -1,4 +1,6 @@
 aries_target_sources(render PRIVATE
+        QuerySelection.cpp
+        QuerySelection.h
         Renderer.cpp
         Renderer.h
         ToneMapping.cpp

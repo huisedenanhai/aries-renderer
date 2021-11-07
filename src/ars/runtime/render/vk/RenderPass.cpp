@@ -77,6 +77,66 @@ const std::vector<VkSubpassDescription> &RenderPass::subpasses() const {
     return _subpasses;
 }
 
+std::unique_ptr<RenderPass> RenderPass::create_with_single_pass(
+    Context *context,
+    uint32_t color_count,
+    const RenderPassAttachmentInfo *color_info,
+    const RenderPassAttachmentInfo *depth_stencil_info) {
+    auto attach_count = color_count;
+    bool has_depth_stencil = depth_stencil_info != nullptr;
+    if (has_depth_stencil) {
+        attach_count += 1;
+    }
+
+    std::vector<VkAttachmentDescription> attachments{};
+    attachments.resize(attach_count);
+
+    auto init_attach_desc = [&](VkAttachmentDescription &desc,
+                                const RenderPassAttachmentInfo &info) {
+        desc.format = info.format;
+        desc.samples = info.samples;
+        desc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        desc.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        desc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        desc.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
+    };
+
+    for (int i = 0; i < color_count; i++) {
+        init_attach_desc(attachments[i], color_info[i]);
+    }
+    if (has_depth_stencil) {
+        init_attach_desc(attachments.back(), *depth_stencil_info);
+    }
+
+    std::vector<VkAttachmentReference> color_refs{};
+    color_refs.resize(color_count);
+    for (int i = 0; i < color_count; i++) {
+        auto &ref = color_refs[i];
+        ref.attachment = i;
+        ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    }
+
+    VkAttachmentReference depth_ref{};
+    depth_ref.attachment = color_count;
+    depth_ref.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpass{};
+    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.colorAttachmentCount = color_count;
+    subpass.pColorAttachments = color_refs.data();
+    if (has_depth_stencil) {
+        subpass.pDepthStencilAttachment = &depth_ref;
+    }
+
+    VkRenderPassCreateInfo info{VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO};
+    info.attachmentCount = static_cast<uint32_t>(std::size(attachments));
+    info.pAttachments = attachments.data();
+    info.subpassCount = 1;
+    info.pSubpasses = &subpass;
+
+    return std::make_unique<RenderPass>(context, info);
+}
+
 Framebuffer::~Framebuffer() {
     auto device = _context->device();
     if (_framebuffer != VK_NULL_HANDLE) {

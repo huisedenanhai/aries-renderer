@@ -13,10 +13,21 @@ struct RenderPassExecution {
     Framebuffer *framebuffer;
 };
 
+struct RenderPassAttachmentInfo {
+    VkFormat format;
+    VkSampleCountFlagBits samples;
+};
+
 class RenderPass {
   public:
     RenderPass(Context *context, const VkRenderPassCreateInfo &info);
     ~RenderPass();
+
+    static std::unique_ptr<RenderPass>
+    create_with_single_pass(Context *context,
+                            uint32_t color_count,
+                            const RenderPassAttachmentInfo *color_info,
+                            const RenderPassAttachmentInfo *depth_stencil_info);
 
     [[nodiscard]] VkRenderPass render_pass() const;
     [[nodiscard]] Context *context() const;

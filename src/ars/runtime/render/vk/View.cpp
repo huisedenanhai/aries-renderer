@@ -172,64 +172,38 @@ RenderTargetInfo View::rt_info(NamedRT name) const {
 
 std::unique_ptr<RenderPass> View::create_single_pass_render_pass(
     NamedRT *colors, uint32_t color_count, NamedRT depth_stencil) const {
-    auto attach_count = color_count;
-    bool has_depth_stencil = depth_stencil != NamedRT_Count;
-    if (has_depth_stencil) {
-        attach_count += 1;
-    }
+    std::vector<RenderPassAttachmentInfo> attachments{};
+    attachments.resize(color_count + 1);
 
-    std::vector<VkAttachmentDescription> attachments{};
-    attachments.resize(attach_count);
-    auto &depth_attach = attachments.back();
-
-    auto init_attach_desc = [&](VkAttachmentDescription &desc, NamedRT rt) {
+    auto init_attach_info = [&](RenderPassAttachmentInfo &attach, NamedRT rt) {
         auto info = rt_info(rt);
-        desc.format = info.texture.format;
-        desc.samples = info.texture.samples;
-        desc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        desc.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        desc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        desc.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
+        attach.format = info.texture.format;
+        attach.samples = info.texture.samples;
     };
 
     for (int i = 0; i < color_count; i++) {
-        init_attach_desc(attachments[i], colors[i]);
+        init_attach_info(attachments[i], colors[i]);
     }
+
+    bool has_depth_stencil = depth_stencil != NamedRT_Count;
     if (has_depth_stencil) {
-        init_attach_desc(depth_attach, depth_stencil);
+        init_attach_info(attachments.back(), depth_stencil);
     }
 
-    std::vector<VkAttachmentReference> color_refs{};
-    color_refs.resize(color_count);
-    for (int i = 0; i < color_count; i++) {
-        auto &ref = color_refs[i];
-        ref.attachment = i;
-        ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    }
-
-    VkAttachmentReference depth_ref{};
-    depth_ref.attachment = color_count;
-    depth_ref.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-    VkSubpassDescription subpass{};
-    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount = color_count;
-    subpass.pColorAttachments = color_refs.data();
-    if (has_depth_stencil) {
-        subpass.pDepthStencilAttachment = &depth_ref;
-    }
-
-    VkRenderPassCreateInfo info{VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO};
-    info.attachmentCount = static_cast<uint32_t>(std::size(attachments));
-    info.pAttachments = attachments.data();
-    info.subpassCount = 1;
-    info.pSubpasses = &subpass;
-
-    return std::make_unique<RenderPass>(context(), info);
+    return RenderPass::create_with_single_pass(
+        context(),
+        color_count,
+        attachments.data(),
+        has_depth_stencil ? &attachments.back() : nullptr);
 }
 
 glm::mat4 View::view_matrix() const {
     return glm::inverse(_xform.matrix_no_scale());
+}
+
+std::vector<uint64_t>
+View::query_selection(uint32_t x, uint32_t y, uint32_t width, uint32_t height) {
+    return _renderer->query_selection(x, y, width, height);
 }
 
 } // namespace ars::render::vk

@@ -1,3 +1,4 @@
+#include <ars/runtime/core/Log.h>
 #include <ars/runtime/core/input/Keyboard.h>
 #include <ars/runtime/core/input/Mouse.h>
 #include <ars/runtime/engine/Engine.h>
@@ -124,7 +125,8 @@ class Application : public ars::engine::IApplication {
             return;
         }
 
-        if (window()->mouse()->is_holding(ars::input::MouseButton::Right)) {
+        auto mouse = window()->mouse();
+        if (mouse->is_holding(ars::input::MouseButton::Right)) {
             window()->set_cursor_mode(CursorMode::HiddenCaptured);
             _fly_camera.handle_input(window(), dt);
         } else {
@@ -149,6 +151,25 @@ class Application : public ars::engine::IApplication {
         _entity_inspector->set_entity(_hierarchy_inspector->current_selected());
         _entity_inspector->on_imgui();
         ImGui::End();
+
+        if (ImGui::GetIO().WantCaptureMouse) {
+            return;
+        }
+
+        auto mouse = window()->mouse();
+        if (mouse->is_released(ars::input::MouseButton::Left)) {
+            auto pos =
+                window()->from_logical_to_physical(mouse->cursor_position());
+            auto selection =
+                _view->query_selection(static_cast<uint32_t>(pos.x),
+                                       static_cast<uint32_t>(pos.y),
+                                       1,
+                                       1);
+            ARS_LOG_INFO("Mouse Physical Position {}, {}. Selection count {}",
+                         pos.x,
+                         pos.y,
+                         selection.size());
+        }
     }
 
     void destroy() override {

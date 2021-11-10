@@ -4,6 +4,7 @@
 #include "Mesh.h"
 #include "Pipeline.h"
 #include "Scene.h"
+#include "features/OverlayRenderer.h"
 #include "features/Renderer.h"
 #include <ars/runtime/core/Log.h>
 
@@ -21,6 +22,12 @@ void View::render() {
     auto final_rt = ctx->queue()->submit_once(
         [&](CommandBuffer *cmd) { return _renderer->render(cmd); });
 
+    if (_overlay_renderer->need_render()) {
+        ctx->queue()->submit_once([&](CommandBuffer *cmd) {
+            _overlay_renderer->render(cmd, final_rt);
+        });
+    }
+
     update_color_tex_adapter(final_rt);
 }
 
@@ -35,6 +42,7 @@ View::View(Scene *scene, const Extent2D &size) : _scene(scene), _size(size) {
     alloc_render_targets();
 
     _renderer = std::make_unique<Renderer>(this);
+    _overlay_renderer = std::make_unique<OverlayRenderer>(this);
 }
 
 math::XformTRS<float> View::xform() {
@@ -206,4 +214,7 @@ View::query_selection(uint32_t x, uint32_t y, uint32_t width, uint32_t height) {
     return _renderer->query_selection(x, y, width, height);
 }
 
+IOverlay *View::overlay() {
+    return _overlay_renderer.get();
+}
 } // namespace ars::render::vk

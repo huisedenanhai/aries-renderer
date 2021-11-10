@@ -157,8 +157,8 @@ class Entity final {
     void remove_component(const rttr::type &ty);
     IComponent *add_component(const rttr::type &ty);
 
-    template <typename T> [[nodiscard]] IComponent *component() const {
-        return component(rttr::type::get<T>());
+    template <typename T> [[nodiscard]] T *component() const {
+        return dynamic_cast<T *>(component(rttr::type::get<T>()));
     }
     template <typename T> void remove_component() {
         remove_component(rttr::type::get<T>());

@@ -8,6 +8,7 @@ class Scene;
 class TextureAdapter;
 class GraphicsPipeline;
 class Renderer;
+class OverlayRenderer;
 class RenderPass;
 
 enum NamedRT {
@@ -41,6 +42,12 @@ class View : public IView {
 
     ITexture *get_color_texture() override;
 
+    std::vector<uint64_t> query_selection(uint32_t x,
+                                          uint32_t y,
+                                          uint32_t width,
+                                          uint32_t height) override;
+    IOverlay *overlay() override;
+
     [[nodiscard]] Context *context() const;
     [[nodiscard]] Scene *vk_scene() const;
     [[nodiscard]] glm::mat4 view_matrix() const;
@@ -49,12 +56,8 @@ class View : public IView {
     [[nodiscard]] RenderTargetManager *rt_manager() const;
     [[nodiscard]] RenderTargetId rt_id(NamedRT name) const;
     [[nodiscard]] RenderTargetInfo rt_info(NamedRT name) const;
-    std::unique_ptr<RenderPass> create_single_pass_render_pass(
+    [[nodiscard]] std::unique_ptr<RenderPass> create_single_pass_render_pass(
         NamedRT *colors, uint32_t color_count, NamedRT depth_stencil) const;
-    std::vector<uint64_t> query_selection(uint32_t x,
-                                          uint32_t y,
-                                          uint32_t width,
-                                          uint32_t height) override;
 
   private:
     void alloc_render_targets();
@@ -72,5 +75,6 @@ class View : public IView {
     std::unique_ptr<TextureAdapter> _color_tex_adapter{};
 
     std::unique_ptr<Renderer> _renderer{};
+    std::unique_ptr<OverlayRenderer> _overlay_renderer{};
 };
 } // namespace ars::render::vk

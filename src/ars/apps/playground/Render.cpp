@@ -133,10 +133,30 @@ class Application : public ars::engine::IApplication {
             window()->set_cursor_mode(CursorMode::Normal);
         }
 
+        draw_selected_object_outline();
+
         _view->set_size(window()->physical_size());
         _view->set_xform(_fly_camera.xform);
         _view->render();
         window()->present(_view->get_color_texture());
+    }
+
+    void draw_selected_object_outline() {
+        auto selected_entity = _hierarchy_inspector->current_selected();
+        if (selected_entity == nullptr) {
+            return;
+        }
+        auto mesh_renderer =
+            selected_entity->component<ars::engine::MeshRenderer>();
+        if (mesh_renderer == nullptr) {
+            return;
+        }
+        for (int i = 0; i < mesh_renderer->primitive_count(); i++) {
+            _view->overlay()->draw_outline(
+                0,
+                selected_entity->cached_world_xform(),
+                mesh_renderer->primitive(i)->mesh());
+        }
     }
 
     void on_imgui() override {

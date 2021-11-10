@@ -106,6 +106,22 @@ struct CameraData : std::variant<Perspective, Orthographic> {
     [[nodiscard]] glm::mat4 projection_matrix(float w_div_h) const;
 };
 
+class IOverlay {
+  public:
+    virtual ~IOverlay() = default;
+
+    // Outline color will be red by default
+    virtual glm::vec4 outline_color(uint8_t group) = 0;
+    virtual void set_outline_color(uint8_t group, const glm::vec4 &color) = 0;
+
+    // Draw functions
+    // All draw requests will be cached and executed on the next call to
+    // IView->render(), after that, all cached requests will be cleared.
+    virtual void draw_outline(uint8_t group,
+                              const math::XformTRS<float> &xform,
+                              const std::shared_ptr<IMesh> &mesh) = 0;
+};
+
 // A rect to render to.
 class IView {
   public:
@@ -132,6 +148,8 @@ class IView {
                                                   uint32_t y,
                                                   uint32_t width,
                                                   uint32_t height) = 0;
+
+    virtual IOverlay *overlay() = 0;
 };
 
 class IScene {

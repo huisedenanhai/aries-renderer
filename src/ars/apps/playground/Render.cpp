@@ -172,6 +172,14 @@ class Application : public ars::engine::IApplication {
         _entity_inspector->on_imgui();
         ImGui::End();
 
+        ImGui::Begin("Image");
+        ImGui::Image(_view->get_color_texture(),
+                     {
+                         _view->size().width * 0.2f,
+                         _view->size().height * 0.2f,
+                     });
+        ImGui::End();
+
         if (ImGui::GetIO().WantCaptureMouse) {
             return;
         }

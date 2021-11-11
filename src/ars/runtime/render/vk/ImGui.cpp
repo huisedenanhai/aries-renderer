@@ -24,6 +24,17 @@ class ImGuiRendererData {
         return reinterpret_cast<ImTextureID>(_reserved_space.get());
     }
 
+    [[nodiscard]] Texture *as_texture(ImTextureID tex_id) const {
+        if (tex_id == font_atlas_id()) {
+            return font_atlas();
+        }
+        if (tex_id == nullptr) {
+            return nullptr;
+        }
+
+        return upcast(reinterpret_cast<ITexture *>(tex_id)).get();
+    }
+
     [[nodiscard]] Texture *font_atlas() const {
         return _font_atlas.get();
     }
@@ -356,20 +367,32 @@ void ImGuiPass::draw(CommandBuffer *cmd, ImGuiViewport *viewport) {
     auto fb_width = static_cast<float>(fb_extent.width);
     auto fb_height = static_cast<float>(fb_extent.height);
 
+    Texture *current_texture = nullptr;
+
+    auto force_bind_texture = [&](Texture *tex) {
+        DescriptorEncoder desc{};
+        desc.set_texture(0, 0, tex);
+        desc.commit(cmd, vp_data->pipeline());
+        current_texture = tex;
+    };
+
+    auto try_bind_texture = [&](ImTextureID tex_id) {
+        auto bd = reinterpret_cast<ImGuiRendererData *>(
+            ImGui::GetIO().BackendRendererUserData);
+        auto tex = bd->as_texture(tex_id);
+        if (tex != nullptr && tex != current_texture) {
+            force_bind_texture(tex);
+        }
+    };
+
     auto setup_render_state = [&]() {
         auto bd = reinterpret_cast<ImGuiRendererData *>(
             ImGui::GetIO().BackendRendererUserData);
 
         auto pipeline = vp_data->pipeline();
 
-        // Bind pipeline and descriptor sets:
-        {
-            pipeline->bind(cmd);
-
-            DescriptorEncoder desc{};
-            desc.set_texture(0, 0, bd->font_atlas());
-            desc.commit(cmd, pipeline);
-        }
+        pipeline->bind(cmd);
+        force_bind_texture(bd->font_atlas());
 
         // Bind vertex and index buffers
         if (draw_data->TotalVtxCount > 0) {
@@ -451,6 +474,8 @@ void ImGuiPass::draw(CommandBuffer *cmd, ImGuiViewport *viewport) {
                     pcmd->UserCallback(cmd_list, pcmd);
                 }
             } else {
+                try_bind_texture(pcmd->TextureId);
+
                 // Project scissor/clipping rectangles into framebuffer space
                 ImVec2 clip_min((pcmd->ClipRect.x - clip_off.x) * clip_scale.x,
                                 (pcmd->ClipRect.y - clip_off.y) * clip_scale.y);

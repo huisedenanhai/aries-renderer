@@ -35,12 +35,9 @@ void OpaqueGeometry::render(CommandBuffer *cmd) {
 
     fb->set_viewport_scissor(cmd);
 
-    auto extent = fb->extent();
     auto &rd_objs = _view->vk_scene()->render_objects;
-    auto w_div_h =
-        static_cast<float>(extent.width) / static_cast<float>(extent.height);
     auto v_matrix = _view->view_matrix();
-    auto p_matrix = _view->camera().projection_matrix(w_div_h);
+    auto p_matrix = _view->projection_matrix();
     rd_objs.for_each_id([&](Scene::RenderObjects::Id id) {
         auto &matrix = rd_objs.get<glm::mat4>(id);
         auto &mesh = rd_objs.get<std::shared_ptr<Mesh>>(id);

@@ -223,4 +223,10 @@ IOverlay *View::overlay() {
 Drawer *View::drawer() const {
     return _drawer.get();
 }
+
+glm::mat4 View::projection_matrix() const {
+    auto w_div_h =
+        static_cast<float>(_size.width) / static_cast<float>(_size.height);
+    return _camera.projection_matrix(w_div_h);
+}
 } // namespace ars::render::vk

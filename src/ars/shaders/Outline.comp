@@ -1,0 +1,57 @@
+#version 450 core
+
+#include <Misc.glsl>
+
+layout(local_size_x = 32, local_size_y = 32) in;
+
+layout(set = 0, binding = 0) uniform usampler2D id_mask;
+
+layout(set = 0, binding = 1, r11f_g11f_b10f) uniform image2D output_image;
+
+layout(set = 1, binding = 0) uniform Param {
+    int width;
+    int height;
+    vec4 colors[256];
+};
+
+bool check_edge(uint ref_id, uint id, inout uint border_id) {
+    // If the pixel is not on any object, set it as the border of the
+    // surrounding object.
+    if (border_id == 0 && id != border_id) {
+        border_id = id;
+    }
+    return ref_id != id;
+}
+
+void main() {
+    ivec2 index = ivec2(gl_GlobalInvocationID.xy);
+    if (index.x >= width || index.y >= height) {
+        return;
+    }
+
+    vec2 inv_resolution = vec2(1.0 / width, 1.0 / height);
+    vec2 uv = index_to_uv(index, inv_resolution);
+
+    uvec3 id_ppc = textureGather(id_mask, uv + 0.5 * inv_resolution).zxw;
+    uvec2 id_nn = textureGather(id_mask, uv - 0.5 * inv_resolution).xz;
+
+    uint ref_id = id_ppc.z;
+    uint border_id = ref_id;
+    bool has_edge = false;
+
+    has_edge = has_edge || check_edge(ref_id, id_ppc.x, border_id);
+    has_edge = has_edge || check_edge(ref_id, id_ppc.y, border_id);
+    has_edge = has_edge || check_edge(ref_id, id_nn.x, border_id);
+    has_edge = has_edge || check_edge(ref_id, id_nn.y, border_id);
+
+    vec4 old_value = imageLoad(output_image, index);
+
+    vec4 new_value = old_value;
+
+    if (has_edge) {
+        vec4 edge_color = colors[border_id & 255];
+        new_value = mix(old_value, vec4(edge_color.rgb, 1.0), edge_color.a);
+    }
+
+    imageStore(output_image, index, new_value);
+}

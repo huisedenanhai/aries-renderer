@@ -45,9 +45,7 @@ void DeferredShading::render(CommandBuffer *cmd) {
         static_cast<int32_t>(_view->vk_scene()->directional_lights.size());
 
     auto v_matrix = _view->view_matrix();
-    auto w_div_h = static_cast<float>(final_color_extent.width) /
-                   static_cast<float>(final_color_extent.height);
-    auto p_matrix = _view->camera().projection_matrix(w_div_h);
+    auto p_matrix = _view->projection_matrix();
 
     param.I_P = glm::inverse(p_matrix);
 

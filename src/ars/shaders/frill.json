@@ -10,7 +10,8 @@
     "GeometryPass.frag",
     "ShadingPass.comp",
     "ToneMapping.comp",
-    "BRDFLut.comp"
+    "BRDFLut.comp",
+    "Outline.comp"
   ],
   "includes": [
     "include"

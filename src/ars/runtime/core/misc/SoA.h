@@ -16,6 +16,8 @@ class IndexPool {
 
     [[nodiscard]] uint64_t get_value(uint64_t index) const;
 
+    void clear();
+
   private:
     struct IndexSlot {
       public:
@@ -67,8 +69,16 @@ template <typename... Ts> struct SoA {
             return _value == rhs._value;
         }
 
+        bool operator!=(const Id &rhs) const {
+            return !(*this == rhs);
+        }
+
         [[nodiscard]] uint64_t value() const {
             return _value;
+        }
+
+        bool valid() const {
+            return *this != Id{};
         }
 
       private:
@@ -88,6 +98,9 @@ template <typename... Ts> struct SoA {
     }
 
     void free(Id id) {
+        if (!id.valid()) {
+            return;
+        }
         auto soa_index = _indices.get_value(id._value);
         auto moved_id = get_inverse_id().back().value;
         tuple_for_each(
@@ -113,11 +126,13 @@ template <typename... Ts> struct SoA {
     }
 
     template <typename T> T &get(Id id) {
+        assert(id.valid());
         auto soa_index = _indices.get_value(id._value);
         return get_array<T>()[soa_index];
     }
 
     template <typename T> const T &get(Id id) const {
+        assert(id.valid());
         auto soa_index = _indices.get_value(id._value);
         return get_array<T>()[soa_index];
     }
@@ -128,6 +143,11 @@ template <typename... Ts> struct SoA {
             auto id = Id(get_inverse_id()[i].value);
             func(id);
         }
+    }
+
+    void clear() {
+        tuple_for_each([&](auto &&v) { v.clear(); }, _soa);
+        _indices.clear();
     }
 
   private:

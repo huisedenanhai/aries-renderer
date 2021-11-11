@@ -47,6 +47,11 @@ uint64_t IndexPool::get_value(uint64_t index) const {
     return _indices[index].get_alloc().value();
 }
 
+void IndexPool::clear() {
+    _indices.clear();
+    _free_index = std::nullopt;
+}
+
 std::optional<uint64_t> IndexPool::IndexSlot::get_alloc() const {
     if (!is_free()) {
         return _value;

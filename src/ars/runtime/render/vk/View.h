@@ -52,6 +52,7 @@ class View : public IView {
     [[nodiscard]] Context *context() const;
     [[nodiscard]] Scene *vk_scene() const;
     [[nodiscard]] glm::mat4 view_matrix() const;
+    [[nodiscard]] glm::mat4 projection_matrix() const;
 
     [[nodiscard]] Handle<Texture> render_target(NamedRT name) const;
     [[nodiscard]] RenderTargetManager *rt_manager() const;

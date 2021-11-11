@@ -1,4 +1,6 @@
 aries_target_sources(render PRIVATE
+        Drawer.cpp
+        Drawer.h
         OverlayRenderer.cpp
         OverlayRenderer.h
         QuerySelection.cpp

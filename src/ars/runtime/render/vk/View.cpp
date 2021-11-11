@@ -4,6 +4,7 @@
 #include "Mesh.h"
 #include "Pipeline.h"
 #include "Scene.h"
+#include "features/Drawer.h"
 #include "features/OverlayRenderer.h"
 #include "features/Renderer.h"
 #include <ars/runtime/core/Log.h>
@@ -43,6 +44,7 @@ View::View(Scene *scene, const Extent2D &size) : _scene(scene), _size(size) {
 
     _renderer = std::make_unique<Renderer>(this);
     _overlay_renderer = std::make_unique<OverlayRenderer>(this);
+    _drawer = std::make_unique<Drawer>(this);
 }
 
 math::XformTRS<float> View::xform() {
@@ -216,5 +218,9 @@ View::query_selection(uint32_t x, uint32_t y, uint32_t width, uint32_t height) {
 
 IOverlay *View::overlay() {
     return _overlay_renderer.get();
+}
+
+Drawer *View::drawer() const {
+    return _drawer.get();
 }
 } // namespace ars::render::vk

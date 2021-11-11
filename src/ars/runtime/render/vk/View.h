@@ -10,6 +10,7 @@ class GraphicsPipeline;
 class Renderer;
 class OverlayRenderer;
 class RenderPass;
+class Drawer;
 
 enum NamedRT {
     NamedRT_GBuffer0, // for base color
@@ -59,6 +60,8 @@ class View : public IView {
     [[nodiscard]] std::unique_ptr<RenderPass> create_single_pass_render_pass(
         NamedRT *colors, uint32_t color_count, NamedRT depth_stencil) const;
 
+    [[nodiscard]] Drawer *drawer() const;
+
   private:
     void alloc_render_targets();
     void update_color_tex_adapter(NamedRT rt);
@@ -76,5 +79,6 @@ class View : public IView {
 
     std::unique_ptr<Renderer> _renderer{};
     std::unique_ptr<OverlayRenderer> _overlay_renderer{};
+    std::unique_ptr<Drawer> _drawer{};
 };
 } // namespace ars::render::vk

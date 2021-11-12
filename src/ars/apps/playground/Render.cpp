@@ -75,8 +75,10 @@ struct FlyCamera {
 
 class Application : public ars::engine::IApplication {
   public:
-    [[nodiscard]] std::string get_name() const override {
-        return "Playground Render";
+    ars::engine::IApplication::Info get_info() const override {
+        Info info{};
+        info.name = "Playground Render";
+        return info;
     }
 
     void start() override {

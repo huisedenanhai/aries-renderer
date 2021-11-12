@@ -45,8 +45,10 @@ class MyComponent : public engine::IComponent {
 
 class HierarchyInspectorApplication : public engine::IApplication {
   public:
-    [[nodiscard]] std::string get_name() const override {
-        return "Hierarchy Inspector";
+    engine::IApplication::Info get_info() const override {
+        Info info{};
+        info.name = "Hierarchy Editor";
+        return info;
     }
 
     void start() override {

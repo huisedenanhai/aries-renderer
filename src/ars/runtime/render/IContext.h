@@ -49,6 +49,8 @@ class IContext {
     create(WindowInfo *window_info);
 
     // This method returns nullptr if window creation fails
+    // If the window_info.logical_size is {0, 0}, a window with the size of the
+    // monitor will be created
     virtual std::unique_ptr<IWindow> create_window(const WindowInfo &info) = 0;
     virtual std::unique_ptr<IScene> create_scene() = 0;
 

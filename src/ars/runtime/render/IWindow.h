@@ -17,7 +17,7 @@ class ITexture;
 
 struct WindowInfo {
     std::string title{};
-    Extent2D logical_size{800, 600};
+    Extent2D logical_size{0, 0};
 };
 
 enum class CursorMode {

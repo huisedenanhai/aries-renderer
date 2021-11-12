@@ -11,6 +11,7 @@ class IContext;
 } // namespace render
 
 namespace engine {
+
 class IApplication {
   public:
     virtual ~IApplication() = default;
@@ -21,7 +22,14 @@ class IApplication {
     void quit();
     [[nodiscard]] bool want_to_quit() const;
 
-    [[nodiscard]] virtual std::string get_name() const;
+    struct Info {
+        std::string name{};
+        // window size 0, 0 will create a window of monitor size
+        uint32_t default_window_logical_width = 0;
+        uint32_t default_window_logical_height = 0;
+    };
+
+    [[nodiscard]] virtual Info get_info() const;
 
     // Callbacks to override
     virtual void start() {}

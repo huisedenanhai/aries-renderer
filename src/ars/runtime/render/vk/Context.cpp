@@ -585,8 +585,22 @@ Context::create_window_and_surface(const WindowInfo *info) {
 
     if (info != nullptr) {
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        window = glfwCreateWindow(static_cast<int>(info->logical_size.width),
-                                  static_cast<int>(info->logical_size.height),
+        auto logical_width = info->logical_size.width;
+        auto logical_height = info->logical_size.height;
+        int monitor_x, monitor_y, monitor_width, monitor_height;
+        glfwGetMonitorWorkarea(glfwGetPrimaryMonitor(),
+                               &monitor_x,
+                               &monitor_y,
+                               &monitor_width,
+                               &monitor_height);
+        if (logical_width == 0) {
+            logical_width = monitor_width;
+        }
+        if (logical_height == 0) {
+            logical_height = monitor_height;
+        }
+        window = glfwCreateWindow(static_cast<int>(logical_width),
+                                  static_cast<int>(logical_height),
                                   info->title.c_str(),
                                   nullptr,
                                   nullptr);

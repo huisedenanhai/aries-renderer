@@ -8,11 +8,11 @@
 #include <cassert>
 #include <chrono>
 #include <set>
-#include <utility>
 
 namespace ars::engine {
-std::string engine::IApplication::get_name() const {
-    return "";
+IApplication::Info engine::IApplication::get_info() const {
+    Info info{};
+    return info;
 }
 
 void IApplication::init(render::IWindow *window) {
@@ -139,14 +139,19 @@ class Engine {
     void init_render() {
         using namespace render;
 
-        ApplicationInfo app_info{};
-        app_info.app_name = _application->get_name();
+        auto info = _application->get_info();
+        render::ApplicationInfo app_info{};
+        app_info.app_name = info.name;
         app_info.enable_validation = true;
 
         init_render_backend(app_info);
 
         WindowInfo win_info{};
-        win_info.title = _application->get_name();
+        win_info.title = info.name;
+        win_info.logical_size = {
+            info.default_window_logical_width,
+            info.default_window_logical_height,
+        };
         auto [ctx, window] = IContext::create(&win_info);
 
         _render_context = std::move(ctx);

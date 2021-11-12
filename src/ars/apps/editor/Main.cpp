@@ -12,8 +12,10 @@ constexpr const char *ARS_ENTITY_INSPECTOR_ID = "Entity Inspector";
 
 class Editor : public engine::IApplication {
   public:
-    [[nodiscard]] std::string get_name() const override {
-        return "Aries Editor";
+    engine::IApplication::Info get_info() const override {
+        Info info{};
+        info.name = "Aries Engine";
+        return info;
     }
 
     void start() override {
@@ -77,7 +79,8 @@ class Editor : public engine::IApplication {
         _is_first_imgui_frame = false;
     }
 
-    void build_default_dock_layout(ImGuiID dock_space_id) {
+  private:
+    static void build_default_dock_layout(ImGuiID dock_space_id) {
         // Clear out existing layout
         ImGui::DockBuilderRemoveNode(dock_space_id);
         ImGui::DockBuilderAddNode(
@@ -97,7 +100,6 @@ class Editor : public engine::IApplication {
         ImGui::DockBuilderFinish(dock_space_id);
     }
 
-  private:
     std::shared_ptr<render::ITexture> _test_tex{};
     bool _have_stored_layout = false;
     bool _is_first_imgui_frame = true;

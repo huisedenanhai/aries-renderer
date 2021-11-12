@@ -252,6 +252,11 @@ RenderSystem *Scene::render_system() const {
     return _render_system.get();
 }
 
+void Scene::update() {
+    update_cached_world_xform();
+    render_system()->update();
+}
+
 void IComponent::on_inspector() {
     gui::input_instance(*this);
 }

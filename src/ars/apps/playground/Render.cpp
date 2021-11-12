@@ -119,8 +119,7 @@ class Application : public ars::engine::IApplication {
     }
 
     void update(double dt) override {
-        _scene->update_cached_world_xform();
-        _scene->render_system()->update();
+        _scene->update();
 
         if (window()->keyboard()->is_released(ars::input::Key::Escape)) {
             quit();

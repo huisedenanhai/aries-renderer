@@ -117,6 +117,9 @@ class Scene {
 
     void update_cached_world_xform();
 
+    // Call this in update
+    void update();
+
     [[nodiscard]] RenderSystem *render_system() const;
 
   private:

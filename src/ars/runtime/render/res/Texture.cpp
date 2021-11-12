@@ -39,6 +39,7 @@ std::shared_ptr<ITexture> load_texture(IContext *context,
 
     if (!data) {
         ARS_LOG_CRITICAL("Failed to load image {}", path.string());
+        return nullptr;
     }
 
     auto texture = context->create_texture_2d(

@@ -11,7 +11,9 @@
     "ShadingPass.comp",
     "ToneMapping.comp",
     "BRDFLut.comp",
-    "Outline.comp"
+    "Outline.comp",
+    "Billboard.vert",
+    "Billboard.frag"
   ],
   "includes": [
     "include"

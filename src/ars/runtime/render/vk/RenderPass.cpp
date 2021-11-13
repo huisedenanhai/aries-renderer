@@ -38,7 +38,9 @@ RenderPassExecution RenderPass::begin(CommandBuffer *cmd,
     rp_begin.renderPass = _render_pass;
     rp_begin.framebuffer = framebuffer->framebuffer();
     rp_begin.clearValueCount =
-        static_cast<uint32_t>(framebuffer->attachments().size());
+        clear_values == nullptr
+            ? 0
+            : static_cast<uint32_t>(framebuffer->attachments().size());
     rp_begin.pClearValues = clear_values;
     rp_begin.renderArea = {{0, 0}, framebuffer->extent()};
 
@@ -95,10 +97,10 @@ std::unique_ptr<RenderPass> RenderPass::create_with_single_pass(
                                 const RenderPassAttachmentInfo &info) {
         desc.format = info.format;
         desc.samples = info.samples;
-        desc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        desc.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        desc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        desc.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
+        desc.loadOp = info.load_op;
+        desc.storeOp = info.store_op;
+        desc.initialLayout = info.initial_layout;
+        desc.finalLayout = info.final_layout;
     };
 
     for (int i = 0; i < color_count; i++) {

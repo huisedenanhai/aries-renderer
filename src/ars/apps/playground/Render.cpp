@@ -109,6 +109,8 @@ class Application : public ars::engine::IApplication {
         _scene = std::make_unique<ars::engine::Scene>();
         _view = _scene->render_system()->render_scene()->create_view(
             window()->physical_size());
+        auto light_bulb_icon = ars::render::load_texture(ctx, "light-bulb.png");
+        _view->overlay()->set_light_gizmo(light_bulb_icon, 0.1f);
         _fly_camera.xform.set_translation({0, 0.3f, 2.0f});
         ars::engine::load_model(_scene->root(), model);
     }

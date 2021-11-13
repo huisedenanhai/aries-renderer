@@ -12,7 +12,7 @@ struct Light {
     float intensity;
 };
 
-struct RenderObjectUserData {
+struct UserData {
     uint64_t value = 0;
 };
 
@@ -30,13 +30,13 @@ class Scene : public IScene {
     using RenderObjects = SoA<glm::mat4,
                               std::shared_ptr<Mesh>,
                               std::shared_ptr<IMaterial>,
-                              RenderObjectUserData>;
+                              UserData>;
     RenderObjects render_objects{};
 
-    using DirectionalLights = SoA<math::XformTRS<float>, Light>;
+    using DirectionalLights = SoA<math::XformTRS<float>, Light, UserData>;
     DirectionalLights directional_lights{};
 
-    using PointLights = SoA<math::XformTRS<float>, Light>;
+    using PointLights = SoA<math::XformTRS<float>, Light, UserData>;
     PointLights point_lights{};
 
   private:
@@ -55,6 +55,8 @@ class DirectionalLight : public IDirectionalLight {
     float intensity() override;
     void set_intensity(float intensity) override;
     IScene *scene() override;
+    uint64_t user_data() override;
+    void set_user_data(uint64_t user_data) override;
 
   private:
     template <typename T> T &get() {
@@ -76,6 +78,8 @@ class PointLight : public IPointLight {
     void set_color(const glm::vec3 &color) override;
     float intensity() override;
     void set_intensity(float intensity) override;
+    uint64_t user_data() override;
+    void set_user_data(uint64_t user_data) override;
     IScene *scene() override;
 
   private:

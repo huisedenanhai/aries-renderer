@@ -114,7 +114,7 @@ std::vector<uint64_t> QuerySelection::query_selection(uint32_t x,
 
     std::set<uint64_t> result_set{};
 
-    auto user_data_arr = rd_objs.get_array<RenderObjectUserData>();
+    auto user_data_arr = rd_objs.get_array<UserData>();
 
     result_buffer->map_once([&](void *ptr) {
         auto id_ptr = reinterpret_cast<uint32_t *>(ptr);

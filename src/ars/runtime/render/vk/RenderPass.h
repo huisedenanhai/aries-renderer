@@ -14,8 +14,12 @@ struct RenderPassExecution {
 };
 
 struct RenderPassAttachmentInfo {
-    VkFormat format;
-    VkSampleCountFlagBits samples;
+    VkFormat format = VK_FORMAT_UNDEFINED;
+    VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT;
+    VkAttachmentLoadOp load_op = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    VkAttachmentStoreOp store_op = VK_ATTACHMENT_STORE_OP_STORE;
+    VkImageLayout initial_layout = VK_IMAGE_LAYOUT_UNDEFINED;
+    VkImageLayout final_layout = VK_IMAGE_LAYOUT_GENERAL;
 };
 
 class RenderPass {

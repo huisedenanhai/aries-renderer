@@ -57,6 +57,9 @@ class IDirectionalLight {
     virtual void set_color(const glm::vec3 &color) = 0;
     virtual float intensity() = 0;
     virtual void set_intensity(float intensity) = 0;
+    // The user data of managed lights is the Entity* in editor.
+    virtual uint64_t user_data() = 0;
+    virtual void set_user_data(uint64_t user_data) = 0;
 
     virtual IScene *scene() = 0;
 };
@@ -71,6 +74,9 @@ class IPointLight {
     virtual void set_color(const glm::vec3 &color) = 0;
     virtual float intensity() = 0;
     virtual void set_intensity(float intensity) = 0;
+    // The user data of managed lights is the Entity* in editor.
+    virtual uint64_t user_data() = 0;
+    virtual void set_user_data(uint64_t user_data) = 0;
 
     virtual IScene *scene() = 0;
 };
@@ -113,6 +119,11 @@ class IOverlay {
     // Outline color will be red by default
     virtual glm::vec4 outline_color(uint8_t group) = 0;
     virtual void set_outline_color(uint8_t group, const glm::vec4 &color) = 0;
+
+    // The light gizmo will be rendered as a billboard in world space.
+    // The light gizmo will affect object selection query.
+    virtual void set_light_gizmo(const std::shared_ptr<ITexture> &texture,
+                                 float width) = 0;
 
     // Draw functions
     // All draw requests will be cached and executed on the next call to

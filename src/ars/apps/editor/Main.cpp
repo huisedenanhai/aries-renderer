@@ -36,6 +36,9 @@ class Editor : public engine::IApplication {
         _view->set_xform(
             math::XformTRS<float>::from_translation({0, 0.3f, 2.0f}));
 
+        auto light_bulb_icon = render::load_texture(ctx, "light-bulb.png");
+        _view->overlay()->set_light_gizmo(light_bulb_icon, 0.1f);
+
         engine::load_model(_scene->root(), model);
     }
 

@@ -229,4 +229,19 @@ glm::mat4 View::projection_matrix() const {
         static_cast<float>(_size.width) / static_cast<float>(_size.height);
     return _camera.projection_matrix(w_div_h);
 }
+
+glm::mat4 View::billboard_MV_matrix(const glm::vec3 &center_ws,
+                                    float width,
+                                    float height) const {
+    auto v_matrix = view_matrix();
+    auto center_vs = math::transform_position(v_matrix, center_ws);
+    return {
+        // clang-format off
+        width, 0.0, 0.0, 0.0,
+        0.0, -height, 0.0, 0.0,
+        0.0, 0.0, 1.0, 0.0,
+        center_vs.x, center_vs.y, center_vs.z, 1.0,
+        // clang-format on
+    };
+}
 } // namespace ars::render::vk

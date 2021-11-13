@@ -67,8 +67,10 @@ void PointLight::init(Entity *entity) {
     auto &point_lights = _render_system->_point_lights;
     _id = point_lights.alloc();
     point_lights.get<Entity *>(_id) = entity;
+    auto rd_light = _render_system->_render_scene->create_point_light();
+    rd_light->set_user_data(reinterpret_cast<uint64_t>(entity));
     point_lights.get<std::unique_ptr<render::IPointLight>>(_id) =
-        _render_system->_render_scene->create_point_light();
+        std::move(rd_light);
 }
 
 void PointLight::destroy() {
@@ -95,8 +97,10 @@ void DirectionalLight::init(Entity *entity) {
     auto &lights = _render_system->_directional_lights;
     _id = lights.alloc();
     lights.get<Entity *>(_id) = entity;
+    auto rd_light = _render_system->_render_scene->create_directional_light();
+    rd_light->set_user_data(reinterpret_cast<uint64_t>(entity));
     lights.get<std::unique_ptr<render::IDirectionalLight>>(_id) =
-        _render_system->_render_scene->create_directional_light();
+        std::move(rd_light);
 }
 
 void DirectionalLight::destroy() {

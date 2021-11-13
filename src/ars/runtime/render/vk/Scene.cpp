@@ -65,6 +65,14 @@ void DirectionalLight::set_intensity(float intensity) {
     get<Light>().intensity = intensity;
 }
 
+uint64_t DirectionalLight::user_data() {
+    return get<UserData>().value;
+}
+
+void DirectionalLight::set_user_data(uint64_t user_data) {
+    get<UserData>().value = user_data;
+}
+
 math::XformTRS<float> RenderObject::xform() {
     return math::XformTRS<float>(get<glm::mat4>());
 }
@@ -102,11 +110,11 @@ RenderObject::~RenderObject() {
 }
 
 uint64_t RenderObject::user_data() {
-    return get<RenderObjectUserData>().value;
+    return get<UserData>().value;
 }
 
 void RenderObject::set_user_data(uint64_t user_data) {
-    get<RenderObjectUserData>().value = user_data;
+    get<UserData>().value = user_data;
 }
 
 PointLight::PointLight(Scene *scene) : _scene(scene) {
@@ -143,5 +151,13 @@ float PointLight::intensity() {
 
 void PointLight::set_intensity(float intensity) {
     get<Light>().intensity = intensity;
+}
+
+uint64_t PointLight::user_data() {
+    return get<UserData>().value;
+}
+
+void PointLight::set_user_data(uint64_t user_data) {
+    get<UserData>().value = user_data;
 }
 } // namespace ars::render::vk

@@ -3,59 +3,71 @@
 #include <imgui/imgui.h>
 
 namespace ars::editor {
-void Scene3DView::set_scene(engine::Scene *scene) {
-    if (_scene == scene) {
-        return;
-    }
-    _scene = scene;
-    _view = nullptr;
-    _current_selected = nullptr;
-}
-
-void Scene3DView::set_selected(engine::Entity *entity) {
-    _current_selected = entity;
-}
-
-void Scene3DView::set_view(render::IView *view) {
-    _view = view;
-}
-
-void Scene3DView::on_imgui() {
-    if (_view == nullptr || _scene == nullptr) {
-        return;
-    }
-
-    draw_selected_object_outline();
-
-    auto size = ImGui::GetContentRegionAvail();
-    render::Extent2D framebuffer_size = {
-        static_cast<uint32_t>(size.x * _framebuffer_scale),
-        static_cast<uint32_t>(size.y * _framebuffer_scale),
-    };
-
-    _view->set_size(framebuffer_size);
-    _view->render();
-
-    ImGui::Image(_view->get_color_texture(), size);
-}
-
-void Scene3DView::set_framebuffer_scale(float scale) {
-    _framebuffer_scale = scale;
-}
-
-void Scene3DView::draw_selected_object_outline() {
-    if (_current_selected == nullptr) {
+namespace {
+void draw_selected_object_outline(render::IView *view,
+                                  engine::Entity *current_selected) {
+    if (current_selected == nullptr) {
         return;
     }
     auto mesh_renderer =
-        _current_selected->component<ars::engine::MeshRenderer>();
+        current_selected->component<ars::engine::MeshRenderer>();
     if (mesh_renderer == nullptr) {
         return;
     }
     for (int i = 0; i < mesh_renderer->primitive_count(); i++) {
-        _view->overlay()->draw_outline(0,
-                                       _current_selected->cached_world_xform(),
-                                       mesh_renderer->primitive(i)->mesh());
+        view->overlay()->draw_outline(0,
+                                      current_selected->cached_world_xform(),
+                                      mesh_renderer->primitive(i)->mesh());
     }
+}
+
+void click_selection(render::IView *view,
+                     float framebuffer_scale,
+                     engine::Entity *&current_selected) {
+    if (!ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+        return;
+    }
+    auto mouse_pos = ImGui::GetMousePos();
+    auto window_pos = ImGui::GetWindowPos();
+    auto region_min = ImGui::GetWindowContentRegionMin();
+    ImVec2 mouse_pos_local = {
+        mouse_pos.x - window_pos.x - region_min.x,
+        mouse_pos.y - window_pos.y - region_min.y,
+    };
+
+    auto selection = view->query_selection(
+        static_cast<uint32_t>(framebuffer_scale * mouse_pos_local.x),
+        static_cast<uint32_t>(framebuffer_scale * mouse_pos_local.y),
+        1,
+        1);
+    if (!selection.empty()) {
+        current_selected =
+            reinterpret_cast<ars::engine::Entity *>(selection[0]);
+    }
+}
+} // namespace
+
+void scene_3d_view(engine::Scene *scene,
+                   render::IView *view,
+                   float framebuffer_scale,
+                   engine::Entity *&current_selected) {
+    if (view == nullptr || scene == nullptr) {
+        return;
+    }
+
+    draw_selected_object_outline(view, current_selected);
+
+    auto size = ImGui::GetContentRegionAvail();
+    render::Extent2D framebuffer_size = {
+        static_cast<uint32_t>(size.x * framebuffer_scale),
+        static_cast<uint32_t>(size.y * framebuffer_scale),
+    };
+
+    view->set_size(framebuffer_size);
+    view->render();
+
+    ImGui::Image(view->get_color_texture(), size);
+
+    click_selection(view, framebuffer_scale, current_selected);
 }
 } // namespace ars::editor

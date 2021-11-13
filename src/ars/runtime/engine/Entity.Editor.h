@@ -3,35 +3,6 @@
 #include "Entity.h"
 
 namespace ars::engine::editor {
-class HierarchyInspector {
-  public:
-    [[nodiscard]] Scene *scene() const;
-    void set_scene(Scene *scene);
-
-    [[nodiscard]] Entity *current_selected() const;
-    void set_current_selected(Entity *entity);
-
-    void on_imgui();
-
-  private:
-    Entity *create_entity();
-    void draw_entity(Entity *entity);
-    // need to call ImGui::TreePop after this method returns true
-    bool begin_entity_tree_node(Entity *entity);
-    void right_click_pop_up();
-
-    Scene *_scene{};
-    Entity *_current_selected{};
-};
-
-class EntityInspector {
-  public:
-    [[nodiscard]] Entity *entity() const;
-    void set_entity(Entity *entity);
-
-    void on_imgui();
-
-  private:
-    Entity *_entity = nullptr;
-};
+void hierarchy_inspector(Scene *scene, Entity *&current_selected);
+void entity_inspector(Entity *entity);
 } // namespace ars::engine::editor

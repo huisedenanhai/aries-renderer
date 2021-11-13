@@ -37,10 +37,6 @@ class Editor : public engine::IApplication {
             math::XformTRS<float>::from_translation({0, 0.3f, 2.0f}));
 
         engine::load_model(_scene->root(), model);
-        _hierarchy_inspector =
-            std::make_unique<engine::editor::HierarchyInspector>();
-        _entity_inspector = std::make_unique<engine::editor::EntityInspector>();
-        _scene_3d_view = std::make_unique<editor::Scene3DView>();
     }
 
     void update(double dt) override {
@@ -74,21 +70,19 @@ class Editor : public engine::IApplication {
             static_cast<float>(window()->physical_size().width) /
             static_cast<float>(window()->logical_size().width);
         ImGui::Begin(ARS_3D_VIEW_ID);
-        _scene_3d_view->set_scene(_scene.get());
-        _scene_3d_view->set_selected(_hierarchy_inspector->current_selected());
-        _scene_3d_view->set_view(_view.get());
-        _scene_3d_view->set_framebuffer_scale(framebuffer_scale);
-        _scene_3d_view->on_imgui();
+        editor::scene_3d_view(_scene.get(),
+                              _view.get(),
+                              framebuffer_scale,
+                              _current_selected_entity);
         ImGui::End();
 
         ImGui::Begin(ARS_ENTITY_INSPECTOR_ID);
-        _entity_inspector->set_entity(_hierarchy_inspector->current_selected());
-        _entity_inspector->on_imgui();
+        engine::editor::entity_inspector(_current_selected_entity);
         ImGui::End();
 
         ImGui::Begin(ARS_HIERARCHY_INSPECTOR_ID);
-        _hierarchy_inspector->set_scene(_scene.get());
-        _hierarchy_inspector->on_imgui();
+        engine::editor::hierarchy_inspector(_scene.get(),
+                                            _current_selected_entity);
         ImGui::End();
 
         bool need_reset_layout = _is_first_imgui_frame && !_have_stored_layout;
@@ -141,9 +135,7 @@ class Editor : public engine::IApplication {
 
     std::unique_ptr<render::IView> _view{};
     std::unique_ptr<engine::Scene> _scene{};
-    std::unique_ptr<engine::editor::HierarchyInspector> _hierarchy_inspector{};
-    std::unique_ptr<engine::editor::EntityInspector> _entity_inspector{};
-    std::unique_ptr<editor::Scene3DView> _scene_3d_view{};
+    engine::Entity *_current_selected_entity = nullptr;
 };
 
 int main() {

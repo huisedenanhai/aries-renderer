@@ -55,11 +55,6 @@ class HierarchyInspectorApplication : public engine::IApplication {
         MyComponent::register_component();
 
         _scene = std::make_unique<engine::Scene>();
-        _hierarchy_inspector =
-            std::make_unique<engine::editor::HierarchyInspector>();
-        _hierarchy_inspector->set_scene(_scene.get());
-        _entity_inspector = std::make_unique<engine::editor::EntityInspector>();
-
         auto t = rttr::type::get<MyComponent>();
         for (auto &prop : t.get_properties()) {
             ARS_LOG_INFO("name: {}", prop.get_name().to_string());
@@ -73,19 +68,17 @@ class HierarchyInspectorApplication : public engine::IApplication {
 
     void on_imgui() override {
         ImGui::Begin("Hierarchy");
-        _hierarchy_inspector->on_imgui();
+        engine::editor::hierarchy_inspector(_scene.get(), _current_selected);
         ImGui::End();
 
         ImGui::Begin("Entity");
-        _entity_inspector->set_entity(_hierarchy_inspector->current_selected());
-        _entity_inspector->on_imgui();
+        engine::editor::entity_inspector(_current_selected);
         ImGui::End();
     }
 
   private:
     std::unique_ptr<engine::Scene> _scene{};
-    std::unique_ptr<engine::editor::HierarchyInspector> _hierarchy_inspector{};
-    std::unique_ptr<engine::editor::EntityInspector> _entity_inspector{};
+    engine::Entity *_current_selected = nullptr;
 };
 
 int main() {

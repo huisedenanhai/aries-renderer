@@ -111,11 +111,6 @@ class Application : public ars::engine::IApplication {
             window()->physical_size());
         _fly_camera.xform.set_translation({0, 0.3f, 2.0f});
         ars::engine::load_model(_scene->root(), model);
-
-        _hierarchy_inspector =
-            std::make_unique<ars::engine::editor::HierarchyInspector>();
-        _entity_inspector =
-            std::make_unique<ars::engine::editor::EntityInspector>();
     }
 
     void update(double dt) override {
@@ -143,19 +138,18 @@ class Application : public ars::engine::IApplication {
     }
 
     void draw_selected_object_outline() {
-        auto selected_entity = _hierarchy_inspector->current_selected();
-        if (selected_entity == nullptr) {
+        if (_current_selected == nullptr) {
             return;
         }
         auto mesh_renderer =
-            selected_entity->component<ars::engine::MeshRenderer>();
+            _current_selected->component<ars::engine::MeshRenderer>();
         if (mesh_renderer == nullptr) {
             return;
         }
         for (int i = 0; i < mesh_renderer->primitive_count(); i++) {
             _view->overlay()->draw_outline(
                 0,
-                selected_entity->cached_world_xform(),
+                _current_selected->cached_world_xform(),
                 mesh_renderer->primitive(i)->mesh());
         }
     }
@@ -164,13 +158,12 @@ class Application : public ars::engine::IApplication {
         ImGui::ShowDemoWindow();
 
         ImGui::Begin("Hierarchy");
-        _hierarchy_inspector->set_scene(_scene.get());
-        _hierarchy_inspector->on_imgui();
+        ars::engine::editor::hierarchy_inspector(_scene.get(),
+                                                 _current_selected);
         ImGui::End();
 
         ImGui::Begin("Entity");
-        _entity_inspector->set_entity(_hierarchy_inspector->current_selected());
-        _entity_inspector->on_imgui();
+        ars::engine::editor::entity_inspector(_current_selected);
         ImGui::End();
 
         ImGui::Begin("Image");
@@ -195,8 +188,8 @@ class Application : public ars::engine::IApplication {
                                        1,
                                        1);
             if (!selection.empty()) {
-                _hierarchy_inspector->set_current_selected(
-                    reinterpret_cast<ars::engine::Entity *>(selection[0]));
+                _current_selected =
+                    reinterpret_cast<ars::engine::Entity *>(selection[0]);
             }
         }
     }
@@ -210,10 +203,7 @@ class Application : public ars::engine::IApplication {
     FlyCamera _fly_camera{};
     std::unique_ptr<IView> _view{};
     std::unique_ptr<ars::engine::Scene> _scene{};
-
-    std::unique_ptr<ars::engine::editor::HierarchyInspector>
-        _hierarchy_inspector{};
-    std::unique_ptr<ars::engine::editor::EntityInspector> _entity_inspector{};
+    ars::engine::Entity *_current_selected = nullptr;
 };
 
 int main() {

@@ -33,8 +33,6 @@ void OpaqueGeometry::render(CommandBuffer *cmd) {
 
     _pipeline->bind(cmd);
 
-    fb->set_viewport_scissor(cmd);
-
     auto &rd_objs = _view->vk_scene()->render_objects;
     auto v_matrix = _view->view_matrix();
     auto p_matrix = _view->projection_matrix();

@@ -123,6 +123,14 @@ template <typename T> struct Handle {
         return _ptr.get();
     }
 
+    bool operator==(std::nullptr_t) const {
+        return _ptr == nullptr;
+    }
+
+    bool operator!=(std::nullptr_t) const {
+        return _ptr != nullptr;
+    }
+
   private:
     friend Context;
 

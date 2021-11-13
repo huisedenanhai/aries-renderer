@@ -244,4 +244,8 @@ glm::mat4 View::billboard_MV_matrix(const glm::vec3 &center_ws,
         // clang-format on
     };
 }
+
+OverlayRenderer *View::vk_overlay() const {
+    return _overlay_renderer.get();
+}
 } // namespace ars::render::vk

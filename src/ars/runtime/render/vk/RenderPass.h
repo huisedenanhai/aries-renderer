@@ -44,6 +44,10 @@ class RenderPass {
                               Framebuffer *framebuffer,
                               const VkClearValue *clear_values,
                               VkSubpassContents contents);
+    RenderPassExecution begin(CommandBuffer *cmd,
+                              const std::vector<Handle<Texture>> &attachments,
+                              VkSubpassContents contents);
+
     void end(const RenderPassExecution &execution);
 
   private:

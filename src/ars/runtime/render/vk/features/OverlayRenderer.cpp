@@ -202,13 +202,12 @@ void OverlayRenderer::render_outline(CommandBuffer *cmd,
     auto outline_id = rt_manager->get(_outline_id_rt);
     auto outline_depth = rt_manager->get(_outline_depth_rt);
 
-    _view->drawer()->draw_ids(cmd,
-                              outline_id,
-                              outline_depth,
-                              outline_request_count,
-                              mvp_arr.data(),
-                              ids.data(),
-                              meshes.data());
+    auto id_rp = _view->drawer()->draw_id_render_pass();
+    auto id_rp_exec = id_rp->begin(
+        cmd, {outline_id, outline_depth}, VK_SUBPASS_CONTENTS_INLINE);
+    _view->drawer()->draw_ids(
+        cmd, outline_request_count, mvp_arr.data(), ids.data(), meshes.data());
+    id_rp->end(id_rp_exec);
 
     VkImageMemoryBarrier barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
     barrier.image = outline_id->image();
@@ -269,15 +268,11 @@ bool OverlayRenderer::need_render_billboard() const {
 
 void OverlayRenderer::render_billboard(CommandBuffer *cmd,
                                        const Handle<Texture> &dst_rt) {
-    auto ctx = _view->context();
     auto depth_rt = _view->render_target(NamedRT_Depth);
-    auto fb = ctx->create_tmp_framebuffer(_overlay_forward_pass.get(),
-                                          {dst_rt, depth_rt});
     auto rp_exec = _overlay_forward_pass->begin(
-        cmd, fb, nullptr, VK_SUBPASS_CONTENTS_INLINE);
+        cmd, {dst_rt, depth_rt}, VK_SUBPASS_CONTENTS_INLINE);
 
     _billboard_pipeline->bind(cmd);
-    fb->set_viewport_scissor(cmd);
 
     auto tex = _light_gizmo.texture;
     auto tex_extent = tex->info().extent;

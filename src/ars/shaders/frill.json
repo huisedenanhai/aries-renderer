@@ -13,7 +13,8 @@
     "BRDFLut.comp",
     "Outline.comp",
     "Billboard.vert",
-    "Billboard.frag"
+    "Billboard.frag",
+    "BillboardObjectId.frag"
   ],
   "includes": [
     "include"

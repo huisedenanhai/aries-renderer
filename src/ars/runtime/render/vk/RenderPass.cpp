@@ -46,6 +46,8 @@ RenderPassExecution RenderPass::begin(CommandBuffer *cmd,
 
     cmd->BeginRenderPass(&rp_begin, contents);
 
+    framebuffer->set_viewport_scissor(cmd);
+
     RenderPassExecution execution{};
     execution.command_buffer = cmd;
     execution.framebuffer = framebuffer;
@@ -137,6 +139,16 @@ std::unique_ptr<RenderPass> RenderPass::create_with_single_pass(
     info.pSubpasses = &subpass;
 
     return std::make_unique<RenderPass>(context, info);
+}
+
+RenderPassExecution
+RenderPass::begin(CommandBuffer *cmd,
+                  const std::vector<Handle<Texture>> &attachments,
+                  VkSubpassContents contents) {
+    auto fb = _context->create_tmp_framebuffer(this, attachments);
+    std::vector<VkClearValue> clear_values{};
+    clear_values.resize(attachments.size());
+    return begin(cmd, fb, clear_values.data(), contents);
 }
 
 Framebuffer::~Framebuffer() {

@@ -48,6 +48,7 @@ class View : public IView {
                                           uint32_t width,
                                           uint32_t height) override;
     IOverlay *overlay() override;
+    OverlayRenderer *vk_overlay() const;
 
     [[nodiscard]] Context *context() const;
     [[nodiscard]] Scene *vk_scene() const;
@@ -55,8 +56,9 @@ class View : public IView {
     [[nodiscard]] glm::mat4 projection_matrix() const;
     // Transform a quad with object space position (-0.5, -0.5) to (0.5, 0.5) to
     // HClip space
-    [[nodiscard]] glm::mat4
-    billboard_MV_matrix(const glm::vec3 &center_ws, float width, float height) const;
+    [[nodiscard]] glm::mat4 billboard_MV_matrix(const glm::vec3 &center_ws,
+                                                float width,
+                                                float height) const;
 
     [[nodiscard]] Handle<Texture> render_target(NamedRT name) const;
     [[nodiscard]] RenderTargetManager *rt_manager() const;

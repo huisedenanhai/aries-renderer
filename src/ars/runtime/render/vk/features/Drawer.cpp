@@ -11,8 +11,6 @@ struct PushConstant {
 } // namespace
 
 void vk::Drawer::draw_ids(CommandBuffer *cmd,
-                          const Handle<Texture> &id_color,
-                          const Handle<Texture> &depth,
                           uint32_t count,
                           const glm::mat4 *mvp_arr,
                           const uint32_t *ids,
@@ -21,17 +19,7 @@ void vk::Drawer::draw_ids(CommandBuffer *cmd,
     assert(ids != nullptr);
     assert(mvp_arr != nullptr);
 
-    auto ctx = _view->context();
-    auto fb =
-        ctx->create_tmp_framebuffer(_render_pass.get(), {id_color, depth});
-
-    // Clear all rts to zero
-    VkClearValue clear_values[5]{};
-    auto rp_exec =
-        _render_pass->begin(cmd, fb, clear_values, VK_SUBPASS_CONTENTS_INLINE);
-
-    _pipeline->bind(cmd);
-    fb->set_viewport_scissor(cmd);
+    _draw_id_pipeline->bind(cmd);
 
     for (int i = 0; i < count; i++) {
         auto &mesh = meshes[i];
@@ -48,7 +36,7 @@ void vk::Drawer::draw_ids(CommandBuffer *cmd,
         push_constant.MVP = mvp_arr[i];
         push_constant.color_id = ids[i];
 
-        cmd->PushConstants(_pipeline->pipeline_layout(),
+        cmd->PushConstants(_draw_id_pipeline->pipeline_layout(),
                            VK_SHADER_STAGE_VERTEX_BIT |
                                VK_SHADER_STAGE_FRAGMENT_BIT,
                            0,
@@ -62,13 +50,12 @@ void vk::Drawer::draw_ids(CommandBuffer *cmd,
             mesh->index_buffer()->buffer(), 0, VK_INDEX_TYPE_UINT32);
         cmd->DrawIndexed(mesh->triangle_count() * 3, 1, 0, 0, 0);
     }
-
-    _render_pass->end(rp_exec);
 }
 
 Drawer::Drawer(View *view) : _view(view) {
     init_render_pass();
-    init_pipeline();
+    init_draw_id_pipeline();
+    init_draw_id_billboard_alpha_clip();
 }
 
 void Drawer::init_render_pass() {
@@ -84,7 +71,7 @@ void Drawer::init_render_pass() {
         _view->context(), 1, &color_info, &depth_info);
 }
 
-void Drawer::init_pipeline() {
+void Drawer::init_draw_id_pipeline() {
     auto ctx = _view->context();
     auto vert_shader = std::make_unique<Shader>(ctx, "ObjectId.vert");
     auto frag_shader = std::make_unique<Shader>(ctx, "ObjectId.frag");
@@ -128,6 +115,77 @@ void Drawer::init_pipeline() {
     info.push_constant_range_count = 1;
     info.push_constant_ranges = &push_constant_range;
 
-    _pipeline = std::make_unique<GraphicsPipeline>(ctx, info);
+    _draw_id_pipeline = std::make_unique<GraphicsPipeline>(ctx, info);
+}
+
+void Drawer::draw_ids_billboard_alpha_clip(
+    CommandBuffer *cmd,
+    uint32_t count,
+    const glm::mat4 *mvp_arr,
+    const uint32_t *ids,
+    const Handle<Texture> *textures) const {
+    assert(textures != nullptr);
+    assert(ids != nullptr);
+    assert(mvp_arr != nullptr);
+
+    _draw_id_billboard_alpha_clip_pipeline->bind(cmd);
+
+    for (int i = 0; i < count; i++) {
+        auto texture = textures[i];
+        if (texture == nullptr) {
+            continue;
+        }
+
+        cmd->PushConstants(
+            _draw_id_billboard_alpha_clip_pipeline->pipeline_layout(),
+            VK_SHADER_STAGE_VERTEX_BIT,
+            0,
+            sizeof(glm::mat4),
+            mvp_arr + i);
+
+        DescriptorEncoder desc{};
+        desc.set_texture(0, 0, texture.get());
+
+        struct Param {
+            uint32_t color_id;
+            float alpha_clip;
+        };
+        Param param{};
+        param.color_id = ids[i];
+        param.alpha_clip = 0.1f;
+        desc.set_buffer_data(0, 1, param);
+
+        desc.commit(cmd, _draw_id_billboard_alpha_clip_pipeline.get());
+
+        cmd->Draw(6, 1, 0, 0);
+    }
+}
+
+RenderPass *Drawer::draw_id_render_pass() const {
+    return _render_pass.get();
+}
+
+void Drawer::init_draw_id_billboard_alpha_clip() {
+    auto ctx = _view->context();
+    auto vert_shader = std::make_unique<Shader>(ctx, "Billboard.vert");
+    auto frag_shader = std::make_unique<Shader>(ctx, "BillboardObjectId.frag");
+
+    auto depth_stencil = enabled_depth_stencil_state();
+
+    VkPushConstantRange push_constant_range = {
+        VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4)};
+
+    GraphicsPipelineInfo info{};
+    info.shaders.push_back(vert_shader.get());
+    info.shaders.push_back(frag_shader.get());
+    info.render_pass = _render_pass.get();
+    info.subpass = 0;
+    info.depth_stencil = &depth_stencil;
+
+    info.push_constant_range_count = 1;
+    info.push_constant_ranges = &push_constant_range;
+
+    _draw_id_billboard_alpha_clip_pipeline =
+        std::make_unique<GraphicsPipeline>(ctx, info);
 }
 } // namespace ars::render::vk

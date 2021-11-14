@@ -71,11 +71,9 @@ void transform_gizmo(render::IView *view, engine::Entity *current_selected) {
         view_matrix;
     if (ImGuizmo::Manipulate(&view_matrix_imguizmo[0][0],
                              &proj_matrix[0][0],
-                             ImGuizmo::TRANSLATE,
+                             ImGuizmo::UNIVERSAL,
                              ImGuizmo::WORLD,
-                             &model_matrix[0][0],
-                             nullptr,
-                             nullptr)) {
+                             &model_matrix[0][0])) {
         current_selected->set_world_xform(
             ars::math::XformTRS<float>(model_matrix));
     }

@@ -59,7 +59,10 @@ void MeshRenderer::remove_primitive(size_t index) {
 }
 
 void PointLight::register_component() {
-    engine::register_component<PointLight>("ars::engine::PointLight");
+    engine::register_component<PointLight>("ars::engine::PointLight")
+        .property("color", &PointLight::color, &PointLight::set_color)
+        .property(
+            "intensity", &PointLight::intensity, &PointLight::set_intensity);
 }
 
 void PointLight::init(Entity *entity) {
@@ -87,9 +90,30 @@ Entity *PointLight::entity() const {
     return _render_system->_point_lights.get<Entity *>(_id);
 }
 
+glm::vec3 PointLight::color() const {
+    return light()->color();
+}
+
+void PointLight::set_color(glm::vec3 color) {
+    light()->set_color(color);
+}
+
+float PointLight::intensity() const {
+    return light()->intensity();
+}
+
+void PointLight::set_intensity(float intensity) {
+    light()->set_intensity(intensity);
+}
+
 void DirectionalLight::register_component() {
     engine::register_component<DirectionalLight>(
-        "ars::engine::DirectionalLight");
+        "ars::engine::DirectionalLight")
+        .property(
+            "color", &DirectionalLight::color, &DirectionalLight::set_color)
+        .property("intensity",
+                  &DirectionalLight::intensity,
+                  &DirectionalLight::set_intensity);
 }
 
 void DirectionalLight::init(Entity *entity) {
@@ -115,6 +139,22 @@ render::IDirectionalLight *DirectionalLight::light() const {
 
 Entity *DirectionalLight::entity() const {
     return _render_system->_directional_lights.get<Entity *>(_id);
+}
+
+glm::vec3 DirectionalLight::color() const {
+    return light()->color();
+}
+
+void DirectionalLight::set_color(glm::vec3 color) {
+    light()->set_color(color);
+}
+
+float DirectionalLight::intensity() const {
+    return light()->intensity();
+}
+
+void DirectionalLight::set_intensity(float intensity) {
+    light()->set_intensity(intensity);
 }
 
 RenderSystem::RenderSystem(render::IContext *context) {

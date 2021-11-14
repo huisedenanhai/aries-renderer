@@ -103,6 +103,7 @@ void scene_3d_view(engine::Scene *scene,
 
     ImGui::Image(view->get_color_texture(), size);
 
+    // TODO do not let click selection happen on gizmo release
     transform_gizmo(view, current_selected);
     if (!ImGuizmo::IsUsing() && !ImGuizmo::IsOver()) {
         click_selection(view, framebuffer_scale, current_selected);

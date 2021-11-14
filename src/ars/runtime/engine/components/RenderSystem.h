@@ -63,6 +63,10 @@ class PointLight : public IComponent {
     void destroy() override;
     [[nodiscard]] render::IPointLight *light() const;
     [[nodiscard]] Entity *entity() const;
+    [[nodiscard]] glm::vec3 color() const;
+    void set_color(glm::vec3 color);
+    [[nodiscard]] float intensity() const;
+    void set_intensity(float intensity);
 
   private:
     RenderSystem *_render_system{};
@@ -78,6 +82,10 @@ class DirectionalLight : public IComponent {
     void destroy() override;
     [[nodiscard]] render::IDirectionalLight *light() const;
     [[nodiscard]] Entity *entity() const;
+    [[nodiscard]] glm::vec3 color() const;
+    void set_color(glm::vec3 color);
+    [[nodiscard]] float intensity() const;
+    void set_intensity(float intensity);
 
   private:
     RenderSystem *_render_system{};

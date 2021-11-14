@@ -1,6 +1,7 @@
 #include "Scene3DView.h"
 #include <ars/runtime/engine/components/RenderSystem.h>
 #include <imgui/imgui.h>
+#include <imguizmo/ImGuizmo.h>
 
 namespace ars::editor {
 namespace {
@@ -45,6 +46,40 @@ void click_selection(render::IView *view,
             reinterpret_cast<ars::engine::Entity *>(selection[0]);
     }
 }
+
+void transform_gizmo(render::IView *view, engine::Entity *current_selected) {
+    if (current_selected == nullptr) {
+        return;
+    }
+
+    ImGuiIO &io = ImGui::GetIO();
+    auto win_pos = ImGui::GetWindowPos();
+    auto region_min = ImGui::GetWindowContentRegionMin();
+    auto region_max = ImGui::GetWindowContentRegionMax();
+
+    ImGuizmo::SetRect(win_pos.x + region_min.x,
+                      win_pos.y + region_min.y,
+                      region_max.x - region_min.x,
+                      region_max.y - region_min.y);
+    auto proj_matrix = view->camera().projection_matrix(
+        static_cast<float>(view->size().width) /
+        static_cast<float>(view->size().height));
+    auto model_matrix = current_selected->world_xform().matrix();
+    auto view_matrix = glm::inverse(view->xform().matrix_no_scale());
+    auto view_matrix_imguizmo =
+        glm::mat4(-1, 0, 0, 0, 0, 1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 1) *
+        view_matrix;
+    if (ImGuizmo::Manipulate(&view_matrix_imguizmo[0][0],
+                             &proj_matrix[0][0],
+                             ImGuizmo::TRANSLATE,
+                             ImGuizmo::WORLD,
+                             &model_matrix[0][0],
+                             nullptr,
+                             nullptr)) {
+        current_selected->set_world_xform(
+            ars::math::XformTRS<float>(model_matrix));
+    }
+}
 } // namespace
 
 void scene_3d_view(engine::Scene *scene,
@@ -68,6 +103,9 @@ void scene_3d_view(engine::Scene *scene,
 
     ImGui::Image(view->get_color_texture(), size);
 
-    click_selection(view, framebuffer_scale, current_selected);
+    transform_gizmo(view, current_selected);
+    if (!ImGuizmo::IsUsing() && !ImGuizmo::IsOver()) {
+        click_selection(view, framebuffer_scale, current_selected);
+    }
 }
 } // namespace ars::editor

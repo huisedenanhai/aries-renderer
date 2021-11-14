@@ -7,6 +7,7 @@
 #include <ars/runtime/render/res/Texture.h>
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
+#include <imguizmo/ImGuizmo.h>
 
 #include "Scene3DView.h"
 

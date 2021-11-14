@@ -101,7 +101,7 @@ void Entity::set_local_xform(const math::XformTRS<float> &xform) {
 
 void Entity::set_world_xform(const math::XformTRS<float> &xform) {
     if (parent() != nullptr) {
-        set_local_xform(xform * parent()->world_xform().inverse());
+        set_local_xform(parent()->world_xform().inverse() * xform);
         return;
     }
     set_local_xform(xform);

@@ -40,27 +40,56 @@ bool input_xform(const char *label, math::XformTRS<float> &xform) {
     ImGui::Text("%s", label);
     ImGui::SameLine();
     bool dirty = false;
-    if (ImGui::Button("Reset")) {
-        xform = {};
-        dirty = true;
-    }
-    auto t = xform.translation();
-    if (input_vec3("T", t)) {
-        xform.set_translation(t);
-        dirty = true;
-    }
+    int id = 0;
+    auto group = [&](auto &&func) {
+        ImGui::PushID(id++);
+        func();
+        ImGui::PopID();
+    };
 
-    auto r = xform.rotation();
-    if (input_rotation("R", r)) {
-        xform.set_rotation(r);
-        dirty = true;
-    }
+    group([&]() {
+        if (ImGui::Button("Reset")) {
+            xform = {};
+            dirty = true;
+        }
+    });
+    group([&]() {
+        auto t = xform.translation();
+        if (input_vec3("T", t)) {
+            xform.set_translation(t);
+            dirty = true;
+        }
 
-    auto s = xform.scale();
-    if (input_vec3("S", s)) {
-        xform.set_scale(s);
-        dirty = true;
-    }
+        ImGui::SameLine();
+        if (ImGui::Button("Reset")) {
+            xform.set_translation({});
+            dirty = true;
+        }
+    });
+    group([&]() {
+        auto r = xform.rotation();
+        if (input_rotation("R", r)) {
+            xform.set_rotation(r);
+            dirty = true;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Reset")) {
+            xform.set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
+            dirty = true;
+        }
+    });
+    group([&]() {
+        auto s = xform.scale();
+        if (input_vec3("S", s)) {
+            xform.set_scale(s);
+            dirty = true;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Reset")) {
+            xform.set_scale({1.0f, 1.0f, 1.0f});
+            dirty = true;
+        }
+    });
     return dirty;
 }
 

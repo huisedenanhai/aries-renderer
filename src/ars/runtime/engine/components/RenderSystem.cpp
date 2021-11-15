@@ -1,5 +1,6 @@
 #include "RenderSystem.h"
 #include <ars/runtime/core/Log.h>
+#include <ars/runtime/core/gui/ImGui.h>
 
 namespace ars::engine {
 void MeshRenderer::register_component() {
@@ -59,8 +60,10 @@ void MeshRenderer::remove_primitive(size_t index) {
 }
 
 void PointLight::register_component() {
+    using namespace gui;
     engine::register_component<PointLight>("ars::engine::PointLight")
-        .property("color", &PointLight::color, &PointLight::set_color)
+        .property("color", &PointLight::color, &PointLight::set_color)(
+            rttr::metadata(PropertyAttribute::Display, PropertyDisplay::Color))
         .property(
             "intensity", &PointLight::intensity, &PointLight::set_intensity);
 }
@@ -107,10 +110,12 @@ void PointLight::set_intensity(float intensity) {
 }
 
 void DirectionalLight::register_component() {
+    using namespace gui;
     engine::register_component<DirectionalLight>(
         "ars::engine::DirectionalLight")
         .property(
-            "color", &DirectionalLight::color, &DirectionalLight::set_color)
+            "color", &DirectionalLight::color, &DirectionalLight::set_color)(
+            rttr::metadata(PropertyAttribute::Display, PropertyDisplay::Color))
         .property("intensity",
                   &DirectionalLight::intensity,
                   &DirectionalLight::set_intensity);

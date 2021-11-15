@@ -27,6 +27,14 @@ bool input_vec4(const char *label, glm::vec4 &v) {
     return ImGui::InputFloat4(label, &v[0]);
 }
 
+bool input_color3(const char *label, glm::vec3 &v) {
+    return ImGui::ColorEdit3(label, &v[0]);
+}
+
+bool input_color4(const char *label, glm::vec4 &v) {
+    return ImGui::ColorEdit4(label, &v[0]);
+}
+
 bool input_rotation(const char *label, glm::quat &q) {
     auto euler_deg = glm::degrees(glm::eulerAngles(q));
     if (ImGui::InputFloat3(label, &euler_deg[0])) {
@@ -144,12 +152,26 @@ bool input_property(rttr::instance instance, rttr::property property) {
             instance, property, changed, input_vec2)) {
         return changed;
     }
+
+    std::optional<PropertyDisplay> display{};
+    auto display_attr = property.get_metadata(PropertyAttribute::Display);
+    if (display_attr.is_valid() &&
+        display_attr.can_convert<PropertyDisplay>()) {
+        display = display_attr.get_value<PropertyDisplay>();
+    }
+
     if (input_property_type<glm::vec3>(
-            instance, property, changed, input_vec3)) {
+            instance,
+            property,
+            changed,
+            display == PropertyDisplay::Color ? input_color3 : input_vec3)) {
         return changed;
     }
     if (input_property_type<glm::vec4>(
-            instance, property, changed, input_vec4)) {
+            instance,
+            property,
+            changed,
+            display == PropertyDisplay::Color ? input_color4 : input_vec4)) {
         return changed;
     }
     if (input_property_type<glm::quat>(

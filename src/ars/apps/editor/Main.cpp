@@ -77,7 +77,8 @@ class Editor : public engine::IApplication {
             static_cast<float>(window()->physical_size().width) /
             static_cast<float>(window()->logical_size().width);
         ImGui::Begin(ARS_3D_VIEW_ID, nullptr, ImGuiWindowFlags_MenuBar);
-        editor::scene_3d_view(_scene.get(),
+        editor::scene_3d_view(_3d_view_state,
+                              _scene.get(),
                               _view.get(),
                               framebuffer_scale,
                               _current_selected_entity);
@@ -142,6 +143,7 @@ class Editor : public engine::IApplication {
 
     std::unique_ptr<render::IView> _view{};
     std::unique_ptr<engine::Scene> _scene{};
+    editor::Scene3DViewState _3d_view_state{};
     engine::Entity *_current_selected_entity = nullptr;
 };
 

@@ -47,7 +47,9 @@ void click_selection(render::IView *view,
     }
 }
 
-void transform_gizmo(render::IView *view, engine::Entity *current_selected) {
+void transform_gizmo(Scene3DViewState &state,
+                     render::IView *view,
+                     engine::Entity *current_selected) {
     if (current_selected == nullptr) {
         return;
     }
@@ -70,18 +72,85 @@ void transform_gizmo(render::IView *view, engine::Entity *current_selected) {
     auto view_matrix_imguizmo =
         glm::mat4(-1, 0, 0, 0, 0, 1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 1) *
         view_matrix;
-    if (ImGuizmo::Manipulate(&view_matrix_imguizmo[0][0],
-                             &proj_matrix[0][0],
-                             ImGuizmo::UNIVERSAL,
-                             ImGuizmo::WORLD,
-                             &model_matrix[0][0])) {
+    float translate_snap[3] = {
+        state.translate_snap,
+        state.translate_snap,
+        state.translate_snap,
+    };
+    if (ImGuizmo::Manipulate(
+            &view_matrix_imguizmo[0][0],
+            &proj_matrix[0][0],
+            state.gizmo_op,
+            state.gizmo_mode,
+            &model_matrix[0][0],
+            nullptr,
+            state.enable_translate_snap ? translate_snap : nullptr,
+            state.enable_angle_snap ? &state.angle_snap : nullptr,
+            state.enable_scale_snap ? &state.scale_snap : nullptr)) {
         current_selected->set_world_xform(
             ars::math::XformTRS<float>(model_matrix));
     }
 }
+
+void gizmo_menu(Scene3DViewState &state) {
+    if (ImGui::BeginMenuBar()) {
+        if (ImGui::BeginMenu("Gizmo")) {
+            ImGui::Text("Operation");
+            bool translate_enabled = (state.gizmo_op & ImGuizmo::TRANSLATE);
+            ImGui::Checkbox("Translate", &translate_enabled);
+            bool rotate_enabled = (state.gizmo_op & ImGuizmo::ROTATE);
+            ImGui::Checkbox("Rotate", &rotate_enabled);
+            bool scale_enabled = (state.gizmo_op & ImGuizmo::SCALEU);
+            ImGui::Checkbox("Scale", &scale_enabled);
+
+            ImGuizmo::OPERATION op{};
+            if (translate_enabled) {
+                op = op | ImGuizmo::TRANSLATE;
+            }
+            if (rotate_enabled) {
+                op = op | ImGuizmo::ROTATE;
+            }
+            if (scale_enabled) {
+                op = op | ImGuizmo::SCALEU;
+            }
+
+            state.gizmo_op = op;
+
+            int mode = state.gizmo_mode;
+            const char *mode_names[2] = {"Local", "World"};
+            if (ImGui::Combo("Mode",
+                             &mode,
+                             mode_names,
+                             static_cast<int>(std::size(mode_names)))) {
+                state.gizmo_mode = static_cast<ImGuizmo::MODE>(mode);
+            }
+
+            int id = 0;
+            auto checkbox_float_input =
+                [&](const char *label, bool *enabled, float *value) {
+                    ImGui::PushID(id++);
+                    ImGui::Checkbox("", enabled);
+                    ImGui::SameLine();
+                    ImGui::InputFloat(label, value);
+                    ImGui::PopID();
+                };
+            checkbox_float_input("Translate Snap",
+                                 &state.enable_translate_snap,
+                                 &state.translate_snap);
+            checkbox_float_input(
+                "Angle Snap", &state.enable_angle_snap, &state.angle_snap);
+            checkbox_float_input(
+                "Scale Snap", &state.enable_scale_snap, &state.scale_snap);
+
+            ImGui::EndMenu();
+        }
+        ImGui::EndMenuBar();
+    }
+}
 } // namespace
 
-void scene_3d_view(engine::Scene *scene,
+void scene_3d_view(Scene3DViewState &state,
+                   engine::Scene *scene,
                    render::IView *view,
                    float framebuffer_scale,
                    engine::Entity *&current_selected) {
@@ -89,13 +158,7 @@ void scene_3d_view(engine::Scene *scene,
         return;
     }
 
-    if (ImGui::BeginMenuBar()) {
-        if (ImGui::BeginMenu("View")) {
-            ImGui::MenuItem("Foo");
-            ImGui::EndMenu();
-        }
-        ImGui::EndMenuBar();
-    }
+    gizmo_menu(state);
 
     draw_selected_object_outline(view, current_selected);
 
@@ -110,7 +173,7 @@ void scene_3d_view(engine::Scene *scene,
 
     ImGui::Image(view->get_color_texture(), size);
 
-    transform_gizmo(view, current_selected);
+    transform_gizmo(state, view, current_selected);
     if (!ImGuizmo::IsUsing() && !ImGuizmo::IsOver()) {
         click_selection(view, framebuffer_scale, current_selected);
     }

@@ -25,7 +25,7 @@ void draw_selected_object_outline(render::IView *view,
 void click_selection(render::IView *view,
                      float framebuffer_scale,
                      engine::Entity *&current_selected) {
-    if (!ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+    if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
         return;
     }
     auto mouse_pos = ImGui::GetMousePos();
@@ -61,6 +61,7 @@ void transform_gizmo(render::IView *view, engine::Entity *current_selected) {
                       win_pos.y + region_min.y,
                       region_max.x - region_min.x,
                       region_max.y - region_min.y);
+    ImGuizmo::SetDrawlist(ImGui::GetWindowDrawList());
     auto proj_matrix = view->camera().projection_matrix(
         static_cast<float>(view->size().width) /
         static_cast<float>(view->size().height));
@@ -88,6 +89,14 @@ void scene_3d_view(engine::Scene *scene,
         return;
     }
 
+    if (ImGui::BeginMenuBar()) {
+        if (ImGui::BeginMenu("View")) {
+            ImGui::MenuItem("Foo");
+            ImGui::EndMenu();
+        }
+        ImGui::EndMenuBar();
+    }
+
     draw_selected_object_outline(view, current_selected);
 
     auto size = ImGui::GetContentRegionAvail();
@@ -101,7 +110,6 @@ void scene_3d_view(engine::Scene *scene,
 
     ImGui::Image(view->get_color_texture(), size);
 
-    // TODO do not let click selection happen on gizmo release
     transform_gizmo(view, current_selected);
     if (!ImGuizmo::IsUsing() && !ImGuizmo::IsOver()) {
         click_selection(view, framebuffer_scale, current_selected);

@@ -41,6 +41,9 @@ class Editor : public engine::IApplication {
         _view->overlay()->set_light_gizmo(light_bulb_icon, 0.1f);
 
         engine::load_model(_scene->root(), model);
+
+        auto &io = ImGui::GetIO();
+        io.ConfigWindowsMoveFromTitleBarOnly = true;
     }
 
     void update(double dt) override {
@@ -73,7 +76,7 @@ class Editor : public engine::IApplication {
         float framebuffer_scale =
             static_cast<float>(window()->physical_size().width) /
             static_cast<float>(window()->logical_size().width);
-        ImGui::Begin(ARS_3D_VIEW_ID);
+        ImGui::Begin(ARS_3D_VIEW_ID, nullptr, ImGuiWindowFlags_MenuBar);
         editor::scene_3d_view(_scene.get(),
                               _view.get(),
                               framebuffer_scale,

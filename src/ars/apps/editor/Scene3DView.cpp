@@ -1,4 +1,5 @@
 #include "Scene3DView.h"
+#include <ars/runtime/core/input/Keyboard.h>
 #include <ars/runtime/engine/components/RenderSystem.h>
 #include <imgui/imgui.h>
 #include <imguizmo/ImGuizmo.h>
@@ -141,15 +142,71 @@ void gizmo_menu(Scene3DViewState &state) {
                 "Angle Snap", &state.enable_angle_snap, &state.angle_snap);
             checkbox_float_input(
                 "Scale Snap", &state.enable_scale_snap, &state.scale_snap);
-
             ImGui::EndMenu();
         }
         ImGui::EndMenuBar();
     }
 }
+
+void orbit_camera(Scene3DViewState &state, render::IView *view) {
+    auto xform = view->xform();
+    auto center = xform.translation() + xform.forward() * state.focus_distance;
+    xform.set_translation(-xform.forward() * state.focus_distance);
+
+    auto delta = ImGui::GetIO().MouseDelta;
+    auto qx = glm::angleAxis(glm::radians(-delta.y), xform.right());
+    auto qy =
+        glm::angleAxis(glm::radians(-delta.x), glm::vec3(0.0f, 1.0f, 0.0f));
+
+    xform = math::XformTRS<float>::from_rotation(glm::cross(qy, qx)) * xform;
+    xform.set_translation(center - xform.forward() * state.focus_distance);
+
+    view->set_xform(xform);
+}
+
+void pan_camera(Scene3DViewState &state,
+                float framebuffer_scale,
+                render::IView *view) {
+    auto delta = ImGui::GetIO().MouseDelta;
+    delta.x *= -framebuffer_scale;
+    delta.y *= -framebuffer_scale;
+    auto size = view->size();
+    auto delta_hclip =
+        2.0f * glm::vec2(delta.x / static_cast<float>(size.width),
+                         delta.y / static_cast<float>(size.height));
+
+    auto proj_mat = view->projection_matrix();
+    auto focus_center_hclip =
+        proj_mat * glm::vec4(0, 0, -state.focus_distance, 1.0f);
+    auto focus_center_z = focus_center_hclip.z / focus_center_hclip.w;
+
+    auto delta_view =
+        glm::inverse(proj_mat) * glm::vec4(delta_hclip, focus_center_z, 1.0f);
+    auto xform = view->xform();
+    auto trans = xform.translation();
+    trans += delta_view.x / delta_view.w * xform.right();
+    trans += delta_view.y / delta_view.w * xform.up();
+    xform.set_translation(trans);
+    view->set_xform(xform);
+}
+
+void control_view_camera(Scene3DViewState &state,
+                         render::IWindow *window,
+                         float framebuffer_scale,
+                         render::IView *view) {
+    if (ImGui::IsMouseDragging(ImGuiMouseButton_Right)) {
+        if (window->keyboard()->is_holding(input::Key::LeftShift) ||
+            window->keyboard()->is_holding(input::Key::RightShift)) {
+            pan_camera(state, framebuffer_scale, view);
+        } else {
+            orbit_camera(state, view);
+        }
+    }
+}
 } // namespace
 
 void scene_3d_view(Scene3DViewState &state,
+                   render::IWindow *window,
                    engine::Scene *scene,
                    render::IView *view,
                    float framebuffer_scale,
@@ -177,5 +234,6 @@ void scene_3d_view(Scene3DViewState &state,
     if (!ImGuizmo::IsUsing() && !ImGuizmo::IsOver()) {
         click_selection(view, framebuffer_scale, current_selected);
     }
+    control_view_camera(state, window, framebuffer_scale, view);
 }
 } // namespace ars::editor

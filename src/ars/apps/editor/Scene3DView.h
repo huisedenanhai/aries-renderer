@@ -2,6 +2,7 @@
 
 #include <ars/runtime/engine/Entity.h>
 #include <ars/runtime/render/IScene.h>
+#include <ars/runtime/render/IWindow.h>
 #include <imgui/imgui.h>
 #include <imguizmo/ImGuizmo.h>
 
@@ -15,9 +16,12 @@ struct Scene3DViewState {
     float scale_snap = 0.1f;
     bool enable_angle_snap = false;
     float angle_snap = 5.0f;
+
+    float focus_distance = 2.0f;
 };
 
 void scene_3d_view(Scene3DViewState &state,
+                   render::IWindow *window,
                    engine::Scene *scene,
                    render::IView *view,
                    float framebuffer_scale,

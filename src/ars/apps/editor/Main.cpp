@@ -78,6 +78,7 @@ class Editor : public engine::IApplication {
             static_cast<float>(window()->logical_size().width);
         ImGui::Begin(ARS_3D_VIEW_ID, nullptr, ImGuiWindowFlags_MenuBar);
         editor::scene_3d_view(_3d_view_state,
+                              window(),
                               _scene.get(),
                               _view.get(),
                               framebuffer_scale,

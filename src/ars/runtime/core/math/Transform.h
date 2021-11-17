@@ -75,6 +75,12 @@ template <typename T> struct XformTRS {
         return xform;
     }
 
+    static XformTRS from_rotation(const Quat &r) {
+        XformTRS xform{};
+        xform.set_rotation(r);
+        return xform;
+    }
+
     Vec3 forward() const {
         return _rotation * glm::vec3(0.0f, 0.0f, -1.0f);
     }

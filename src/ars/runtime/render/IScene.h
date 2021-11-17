@@ -161,6 +161,13 @@ class IView {
                                                   uint32_t height) = 0;
 
     virtual IOverlay *overlay() = 0;
+
+    [[nodiscard]] glm::mat4 view_matrix();
+    [[nodiscard]] glm::mat4 projection_matrix();
+    // Transform a quad with object space position (-0.5, -0.5) to (0.5, 0.5) to
+    // HClip space
+    [[nodiscard]] glm::mat4
+    billboard_MV_matrix(const glm::vec3 &center_ws, float width, float height);
 };
 
 class IScene {

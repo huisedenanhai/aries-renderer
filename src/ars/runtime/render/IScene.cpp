@@ -90,4 +90,30 @@ float CameraData::z_far() const {
 float CameraData::z_near() const {
     return std::visit([](auto &&d) { return d.z_near; }, *this);
 }
+
+glm::mat4 IView::projection_matrix() {
+    auto w_div_h =
+        static_cast<float>(size().width) / static_cast<float>(size().height);
+    return camera().projection_matrix(w_div_h);
+}
+
+glm::mat4 IView::view_matrix() {
+    return glm::inverse(xform().matrix_no_scale());
+}
+
+glm::mat4 IView::billboard_MV_matrix(const glm::vec3 &center_ws,
+                                     float width,
+                                     float height) {
+    auto v_matrix = view_matrix();
+    auto center_vs = math::transform_position(v_matrix, center_ws);
+    return {
+        // clang-format off
+        width, 0.0, 0.0, 0.0,
+        0.0, -height, 0.0, 0.0,
+        0.0, 0.0, 1.0, 0.0,
+        center_vs.x, center_vs.y, center_vs.z, 1.0,
+        // clang-format on
+    };
+}
+
 } // namespace ars::render

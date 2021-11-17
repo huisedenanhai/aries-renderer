@@ -242,6 +242,10 @@ void GraphicsPipeline::init_pipeline(const GraphicsPipelineInfo &info) {
         VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO};
     raster.cullMode = info.cull_mode;
     raster.polygonMode = VK_POLYGON_MODE_FILL;
+    // Metal hates wide line.
+    // https://community.khronos.org/t/macos-vulkan-at-runtime-vkcreatedevice-fails-when-vkphysicaldevicefeatures-widelines-vk-ture-and-doestnt-support-vkcmdsetlinewidth-api-as-well/106443/4
+    // There should be a software implementation of line drawing by manually
+    // emitting polygons for lines
     raster.lineWidth = 1.0f;
 
     create_info.pRasterizationState = &raster;

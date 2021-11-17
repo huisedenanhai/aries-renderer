@@ -200,6 +200,23 @@ void pan_camera(Scene3DViewState &state,
     view->set_xform(xform);
 }
 
+void zoom_camera(Scene3DViewState &state, render::IView *view) {
+    auto scroll = ImGui::GetIO().MouseWheel;
+    if (scroll == 0) {
+        return;
+    }
+    auto sensitivity = 0.1f;
+    auto scale = std::clamp(scroll * sensitivity + 1.0f, 0.1f, 2.0f);
+    auto distance = scale * state.focus_distance;
+    auto delta = distance - state.focus_distance;
+    auto xform = view->xform();
+    auto t = xform.translation();
+    t -= delta * xform.forward();
+    xform.set_translation(t);
+    view->set_xform(xform);
+    state.focus_distance = distance;
+}
+
 void control_view_camera(Scene3DViewState &state,
                          render::IWindow *window,
                          float framebuffer_scale,
@@ -212,6 +229,7 @@ void control_view_camera(Scene3DViewState &state,
             orbit_camera(state, view);
         }
     }
+    zoom_camera(state, view);
 }
 
 void draw_ground_wire_frame(Scene3DViewState &state, render::IView *view) {

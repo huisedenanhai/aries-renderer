@@ -236,6 +236,8 @@ float estimate_radius(engine::Entity *entity, glm::vec3 &center) {
             auto aabb = math::transform_aabb(mat, mesh->aabb());
             combined_aabb.extend_aabb(aabb);
         }
+        // The gizmos should also be inside the view when focus to object
+        combined_aabb.extend_point(xform.translation());
         center = combined_aabb.center();
         return glm::length(combined_aabb.extent()) * 0.5f;
     }

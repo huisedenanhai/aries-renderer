@@ -34,6 +34,8 @@ class Mesh : public IMesh {
     void set_indices(glm::u32vec3 *indices,
                      size_t elem_offset,
                      size_t elem_count) override;
+    math::AABB<float> aabb() override;
+    void set_aabb(const math::AABB<float> &aabb) override;
 
     [[nodiscard]] Handle<Buffer> position_buffer() const;
     [[nodiscard]] Handle<Buffer> normal_buffer() const;
@@ -51,6 +53,7 @@ class Mesh : public IMesh {
 
     Handle<Buffer> _index_buffer{};
     size_t _triangle_count = 0;
+    math::AABB<float> _aabb{};
 };
 
 std::shared_ptr<Mesh> upcast(const std::shared_ptr<IMesh> &mesh);

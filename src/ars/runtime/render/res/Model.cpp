@@ -128,6 +128,9 @@ void load_meshes(IContext *context,
                 [&](const std::string &attr, auto &&reader, size_t num) {
                     if (attr == ATTR_NAME_POSITION) {
                         auto v = read_to_vec<glm::vec3>(reader, num);
+                        auto aabb =
+                            math::AABB<float>::from_points(v.begin(), v.end());
+                        m->set_aabb(aabb);
                         m->set_position(v.data(), 0, num);
                     }
                     if (attr == ATTR_NAME_NORMAL) {

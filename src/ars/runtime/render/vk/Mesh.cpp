@@ -83,6 +83,14 @@ Handle<Buffer> Mesh::index_buffer() const {
     return _index_buffer;
 }
 
+math::AABB<float> Mesh::aabb() {
+    return _aabb;
+}
+
+void Mesh::set_aabb(const math::AABB<float> &aabb) {
+    _aabb = aabb;
+}
+
 std::shared_ptr<Mesh> upcast(const std::shared_ptr<IMesh> &mesh) {
     return std::reinterpret_pointer_cast<Mesh>(mesh);
 }

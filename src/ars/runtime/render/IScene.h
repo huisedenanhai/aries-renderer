@@ -135,6 +135,11 @@ class IOverlay {
     virtual void draw_line(const glm::vec3 &from,
                            const glm::vec3 &to,
                            const glm::vec4 &color) = 0;
+
+    void draw_wire_box(const math::XformTRS<float> &xform,
+                       const glm::vec3 &center,
+                       const glm::vec3 &extent,
+                       const glm::vec4 &color);
 };
 
 // A rect to render to.

@@ -2,6 +2,7 @@
 #include <ars/runtime/core/gui/ImGui.h>
 #include <ars/runtime/core/input/Keyboard.h>
 #include <ars/runtime/engine/components/RenderSystem.h>
+#include <ars/runtime/render/IMesh.h>
 #include <imgui/imgui.h>
 #include <imguizmo/ImGuizmo.h>
 
@@ -18,9 +19,14 @@ void draw_selected_object_outline(render::IView *view,
         return;
     }
     for (int i = 0; i < mesh_renderer->primitive_count(); i++) {
-        view->overlay()->draw_outline(0,
-                                      current_selected->cached_world_xform(),
-                                      mesh_renderer->primitive(i)->mesh());
+        auto overlay = view->overlay();
+        auto mesh = mesh_renderer->primitive(i)->mesh();
+        overlay->draw_outline(0, current_selected->cached_world_xform(), mesh);
+        auto aabb = mesh->aabb();
+        overlay->draw_wire_box(current_selected->cached_world_xform(),
+                               aabb.center(),
+                               aabb.extent(),
+                               {0.0f, 1.0f, 0.0f, 1.0f});
     }
 }
 
@@ -217,10 +223,47 @@ void zoom_camera(Scene3DViewState &state, render::IView *view) {
     state.focus_distance = distance;
 }
 
+float estimate_radius(engine::Entity *entity, glm::vec3 &center) {
+    assert(entity != nullptr);
+    auto mesh_renderer = entity->component<engine::MeshRenderer>();
+    auto xform = entity->cached_world_xform();
+    auto mat = xform.matrix();
+    if (mesh_renderer != nullptr && mesh_renderer->primitive_count() > 0) {
+        auto combined_aabb = math::transform_aabb(
+            mat, mesh_renderer->primitive(0)->mesh()->aabb());
+        for (int i = 1; i < mesh_renderer->primitive_count(); i++) {
+            auto mesh = mesh_renderer->primitive(i)->mesh();
+            auto aabb = math::transform_aabb(mat, mesh->aabb());
+            combined_aabb.extend_aabb(aabb);
+        }
+        center = combined_aabb.center();
+        return glm::length(combined_aabb.extent()) * 0.5f;
+    }
+
+    center = xform.translation();
+    return 0.2f;
+}
+
+void focus_camera(Scene3DViewState &state,
+                  render::IView *view,
+                  engine::Entity *current_selected) {
+    if (current_selected == nullptr) {
+        return;
+    }
+    glm::vec3 center;
+    auto radius = estimate_radius(current_selected, center);
+    auto xform = view->xform();
+    state.focus_distance = radius * 4.0f;
+    auto t = center - state.focus_distance * xform.forward();
+    xform.set_translation(t);
+    view->set_xform(xform);
+}
+
 void control_view_camera(Scene3DViewState &state,
                          render::IWindow *window,
                          float framebuffer_scale,
-                         render::IView *view) {
+                         render::IView *view,
+                         engine::Entity *current_selected) {
     if (ImGui::IsMouseDragging(ImGuiMouseButton_Right)) {
         if (window->keyboard()->is_holding(input::Key::LeftShift) ||
             window->keyboard()->is_holding(input::Key::RightShift)) {
@@ -228,8 +271,12 @@ void control_view_camera(Scene3DViewState &state,
         } else {
             orbit_camera(state, view);
         }
+    } else {
+        zoom_camera(state, view);
+        if (window->keyboard()->is_pressed(input::Key::F)) {
+            focus_camera(state, view, current_selected);
+        }
     }
-    zoom_camera(state, view);
 }
 
 void draw_ground_wire_frame(Scene3DViewState &state, render::IView *view) {
@@ -282,6 +329,7 @@ void scene_3d_view(Scene3DViewState &state,
     if (!ImGuizmo::IsUsing() && !ImGuizmo::IsOver()) {
         click_selection(view, framebuffer_scale, current_selected);
     }
-    control_view_camera(state, window, framebuffer_scale, view);
+    control_view_camera(
+        state, window, framebuffer_scale, view, current_selected);
 }
 } // namespace ars::editor

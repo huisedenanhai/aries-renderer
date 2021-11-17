@@ -116,4 +116,37 @@ glm::mat4 IView::billboard_MV_matrix(const glm::vec3 &center_ws,
     };
 }
 
+void IOverlay::draw_wire_box(const math::XformTRS<float> &xform,
+                             const glm::vec3 &center,
+                             const glm::vec3 &extent,
+                             const glm::vec4 &color) {
+
+    auto m = xform.matrix();
+    glm::vec3 points_norm[8] = {
+        {-0.5f, -0.5f, -0.5f},
+        {-0.5f, -0.5f, 0.5f},
+        {0.5f, -0.5f, 0.5f},
+        {0.5f, -0.5f, -0.5f},
+        {-0.5f, 0.5f, -0.5f},
+        {-0.5f, 0.5f, 0.5f},
+        {0.5f, 0.5f, 0.5f},
+        {0.5f, 0.5f, -0.5f},
+    };
+
+    auto get_point = [&](int index) {
+        return glm::vec3(
+            math::transform_position(m, center + points_norm[index] * extent));
+    };
+
+    for (int i = 0; i < 4; i++) {
+        auto a0 = get_point(i);
+        auto b0 = get_point((i + 1) % 4);
+        auto a1 = get_point(i + 4);
+        auto b1 = get_point((i + 1) % 4 + 4);
+        draw_line(a0, b0, color);
+        draw_line(a1, b1, color);
+        draw_line(a0, a1, color);
+        draw_line(b0, b1, color);
+    }
+}
 } // namespace ars::render

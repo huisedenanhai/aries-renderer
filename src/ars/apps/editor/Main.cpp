@@ -2,12 +2,10 @@
 #include <ars/runtime/engine/Entity.Editor.h>
 #include <ars/runtime/engine/Entity.h>
 #include <ars/runtime/engine/components/RenderSystem.h>
-#include <ars/runtime/render/IWindow.h>
 #include <ars/runtime/render/res/Model.h>
 #include <ars/runtime/render/res/Texture.h>
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
-#include <imguizmo/ImGuizmo.h>
 
 #include "Scene3DView.h"
 

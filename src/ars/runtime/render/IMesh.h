@@ -1,6 +1,7 @@
 #pragma once
 
 #include "IContext.h"
+#include <ars/runtime/core/math/AABB.h>
 #include <glm/glm.hpp>
 #include <memory>
 
@@ -36,6 +37,9 @@ class IMesh {
     virtual void set_indices(glm::u32vec3 *indices,
                              size_t elem_offset,
                              size_t elem_count) = 0;
+
+    virtual math::AABB<float> aabb() = 0;
+    virtual void set_aabb(const math::AABB<float> &aabb) = 0;
 
     virtual ~IMesh() = default;
 

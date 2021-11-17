@@ -18,6 +18,10 @@ struct Scene3DViewState {
     float angle_snap = 5.0f;
 
     float focus_distance = 2.0f;
+
+    bool show_ground_wire_grid = true;
+    float ground_wire_grid_spacing = 0.1f;
+    glm::vec4 ground_wire_grid_color{0.2f, 0.2f, 0.2f, 0.9f};
 };
 
 void scene_3d_view(Scene3DViewState &state,

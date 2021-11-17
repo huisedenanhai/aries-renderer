@@ -1,4 +1,5 @@
 #include "Scene3DView.h"
+#include <ars/runtime/core/gui/ImGui.h>
 #include <ars/runtime/core/input/Keyboard.h>
 #include <ars/runtime/engine/components/RenderSystem.h>
 #include <imgui/imgui.h>
@@ -142,6 +143,15 @@ void gizmo_menu(Scene3DViewState &state) {
                 "Angle Snap", &state.enable_angle_snap, &state.angle_snap);
             checkbox_float_input(
                 "Scale Snap", &state.enable_scale_snap, &state.scale_snap);
+
+            ImGui::Separator();
+            ImGui::Text("Ground Wire Grid");
+            ImGui::PushID(id++);
+            ImGui::Checkbox("Show", &state.show_ground_wire_grid);
+            ImGui::InputFloat("Spacing", &state.ground_wire_grid_spacing);
+            gui::input_color4("Color", state.ground_wire_grid_color);
+            ImGui::PopID();
+
             ImGui::EndMenu();
         }
         ImGui::EndMenuBar();
@@ -203,6 +213,25 @@ void control_view_camera(Scene3DViewState &state,
         }
     }
 }
+
+void draw_ground_wire_frame(Scene3DViewState &state, render::IView *view) {
+    if (!state.show_ground_wire_grid) {
+        return;
+    }
+    auto overlay = view->overlay();
+    int count = 20;
+    auto half_length =
+        static_cast<float>(count) * state.ground_wire_grid_spacing;
+    for (int x = -count; x <= count; x++) {
+        auto fx = static_cast<float>(x) * state.ground_wire_grid_spacing;
+        overlay->draw_line({fx, 0.0f, -half_length},
+                           {fx, 0.0f, half_length},
+                           state.ground_wire_grid_color);
+        overlay->draw_line({-half_length, 0.0f, fx},
+                           {half_length, 0.0f, fx},
+                           state.ground_wire_grid_color);
+    }
+}
 } // namespace
 
 void scene_3d_view(Scene3DViewState &state,
@@ -218,6 +247,7 @@ void scene_3d_view(Scene3DViewState &state,
     gizmo_menu(state);
 
     draw_selected_object_outline(view, current_selected);
+    draw_ground_wire_frame(state, view);
 
     auto size = ImGui::GetContentRegionAvail();
     render::Extent2D framebuffer_size = {

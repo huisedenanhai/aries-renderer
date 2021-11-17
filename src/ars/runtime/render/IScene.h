@@ -131,6 +131,10 @@ class IOverlay {
     virtual void draw_outline(uint8_t group,
                               const math::XformTRS<float> &xform,
                               const std::shared_ptr<IMesh> &mesh) = 0;
+
+    virtual void draw_line(const glm::vec3 &from,
+                           const glm::vec3 &to,
+                           const glm::vec4 &color) = 0;
 };
 
 // A rect to render to.

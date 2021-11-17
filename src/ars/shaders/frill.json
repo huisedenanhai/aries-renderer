@@ -14,7 +14,9 @@
     "Outline.comp",
     "Billboard.vert",
     "Billboard.frag",
-    "BillboardObjectId.frag"
+    "BillboardObjectId.frag",
+    "VertexColor.vert",
+    "VertexColor.frag"
   ],
   "includes": [
     "include"

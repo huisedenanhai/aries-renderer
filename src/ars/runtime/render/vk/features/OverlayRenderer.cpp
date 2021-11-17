@@ -20,6 +20,7 @@ OverlayRenderer::OverlayRenderer(View *view) : _view(view) {
 
     init_forward_render_pass();
     init_billboard_pipeline();
+    init_line_pipeline();
 }
 
 glm::vec4 OverlayRenderer::outline_color(uint8_t group) {
@@ -41,17 +42,17 @@ void OverlayRenderer::draw_outline(uint8_t group,
 }
 
 bool OverlayRenderer::need_render() const {
-    return need_render_billboard() || need_render_outline();
+    return need_forward_pass() || need_render_outline();
 }
 
 void OverlayRenderer::render(CommandBuffer *cmd, NamedRT dst_rt_name) {
     auto rd_outline = need_render_outline();
-    auto rd_billboard = need_render_billboard();
+    auto rd_forward = need_forward_pass();
     auto dst_rt = _view->render_target(dst_rt_name);
     if (rd_outline) {
         render_outline(cmd, dst_rt);
     }
-    if (rd_outline && rd_billboard) {
+    if (rd_outline && rd_forward) {
         VkImageMemoryBarrier barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
         barrier.image = dst_rt->image();
         barrier.subresourceRange = dst_rt->subresource_range();
@@ -72,8 +73,13 @@ void OverlayRenderer::render(CommandBuffer *cmd, NamedRT dst_rt_name) {
                              1,
                              &barrier);
     }
-    if (rd_billboard) {
-        render_billboard(cmd, dst_rt);
+    if (rd_forward) {
+        auto depth_rt = _view->render_target(NamedRT_Depth);
+        auto rp_exec = _overlay_forward_pass->begin(
+            cmd, {dst_rt, depth_rt}, VK_SUBPASS_CONTENTS_INLINE);
+        render_line(cmd);
+        render_billboard(cmd);
+        _overlay_forward_pass->end(rp_exec);
     }
 }
 
@@ -266,12 +272,10 @@ bool OverlayRenderer::need_render_billboard() const {
     return _light_gizmo.texture.get() != nullptr;
 }
 
-void OverlayRenderer::render_billboard(CommandBuffer *cmd,
-                                       const Handle<Texture> &dst_rt) {
-    auto depth_rt = _view->render_target(NamedRT_Depth);
-    auto rp_exec = _overlay_forward_pass->begin(
-        cmd, {dst_rt, depth_rt}, VK_SUBPASS_CONTENTS_INLINE);
-
+void OverlayRenderer::render_billboard(CommandBuffer *cmd) {
+    if (!need_render_billboard()) {
+        return;
+    }
     _billboard_pipeline->bind(cmd);
 
     auto tex = _light_gizmo.texture;
@@ -309,7 +313,126 @@ void OverlayRenderer::render_billboard(CommandBuffer *cmd,
     draw_light_icons(point_lights);
     auto directional_lights = _view->vk_scene()->directional_lights;
     draw_light_icons(directional_lights);
+}
 
-    _overlay_forward_pass->end(rp_exec);
+void OverlayRenderer::draw_line(const glm::vec3 &from,
+                                const glm::vec3 &to,
+                                const glm::vec4 &color) {
+    _line_vert_pos.push_back(from);
+    _line_vert_pos.push_back(to);
+    _line_vert_color.push_back(color);
+    _line_vert_color.push_back(color);
+}
+
+void OverlayRenderer::init_line_pipeline() {
+    auto ctx = _view->context();
+    auto vert_shader = std::make_unique<Shader>(ctx, "VertexColor.vert");
+    auto frag_shader = std::make_unique<Shader>(ctx, "VertexColor.frag");
+
+    VkPipelineColorBlendAttachmentState attachment_blend =
+        create_attachment_blend_state(VK_BLEND_FACTOR_SRC_ALPHA,
+                                      VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA);
+    VkPipelineColorBlendStateCreateInfo blend{
+        VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO};
+    blend.attachmentCount = 1;
+    blend.pAttachments = &attachment_blend;
+
+    VkPushConstantRange push_constant{};
+    push_constant.size = sizeof(glm::mat4);
+    push_constant.offset = 0;
+    push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+    auto depth_stencil = enabled_depth_stencil_state(false);
+
+    VkPipelineVertexInputStateCreateInfo vertex_input{
+        VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
+
+    VkVertexInputBindingDescription vert_bindings[2] = {
+        {0,
+         static_cast<uint32_t>(sizeof(glm::vec3)),
+         VK_VERTEX_INPUT_RATE_VERTEX},
+        {1,
+         static_cast<uint32_t>(sizeof(glm::vec4)),
+         VK_VERTEX_INPUT_RATE_VERTEX},
+    };
+
+    VkVertexInputAttributeDescription vert_attrs[2] = {
+        {0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0},
+        {1, 1, VK_FORMAT_R32G32B32A32_SFLOAT, 0},
+    };
+
+    vertex_input.vertexAttributeDescriptionCount =
+        static_cast<uint32_t>(std::size(vert_attrs));
+    vertex_input.pVertexAttributeDescriptions = vert_attrs;
+
+    vertex_input.vertexBindingDescriptionCount =
+        static_cast<uint32_t>(std::size(vert_bindings));
+    vertex_input.pVertexBindingDescriptions = vert_bindings;
+
+    GraphicsPipelineInfo info{};
+    info.shaders.push_back(vert_shader.get());
+    info.shaders.push_back(frag_shader.get());
+    info.render_pass = _overlay_forward_pass.get();
+    info.vertex_input = &vertex_input;
+    info.depth_stencil = &depth_stencil;
+    info.blend = &blend;
+    info.push_constant_range_count = 1;
+    info.push_constant_ranges = &push_constant;
+    info.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+    info.subpass = 0;
+
+    _line_pipeline = std::make_unique<GraphicsPipeline>(ctx, info);
+}
+
+bool OverlayRenderer::need_render_line() const {
+    return !_line_vert_pos.empty();
+}
+
+void OverlayRenderer::render_line(CommandBuffer *cmd) {
+    ARS_DEFER([&]() {
+        _line_vert_pos.clear();
+        _line_vert_color.clear();
+    });
+    if (!need_render_line()) {
+        return;
+    }
+
+    _line_pipeline->bind(cmd);
+    auto vert_count = _line_vert_pos.size();
+    assert(vert_count == _line_vert_color.size());
+    auto ctx = _view->context();
+    auto position_buffer = ctx->create_buffer(sizeof(glm::vec3) * vert_count,
+                                              VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                                              VMA_MEMORY_USAGE_CPU_TO_GPU);
+    auto color_buffer = ctx->create_buffer(sizeof(glm::vec4) * vert_count,
+                                           VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                                           VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+    position_buffer->map_once([&](void *ptr) {
+        std::memcpy(ptr, _line_vert_pos.data(), sizeof(glm::vec3) * vert_count);
+    });
+    color_buffer->map_once([&](void *ptr) {
+        std::memcpy(
+            ptr, _line_vert_color.data(), sizeof(glm::vec4) * vert_count);
+    });
+
+    VkBuffer vert_buffers[2] = {position_buffer->buffer(),
+                                color_buffer->buffer()};
+    VkDeviceSize offset[2] = {};
+
+    cmd->BindVertexBuffers(0, 2, vert_buffers, offset);
+
+    glm::mat4 mvp = _view->projection_matrix() * _view->view_matrix();
+    cmd->PushConstants(_line_pipeline->pipeline_layout(),
+                       VK_SHADER_STAGE_VERTEX_BIT,
+                       0,
+                       sizeof(glm::mat4),
+                       &mvp);
+
+    cmd->Draw(vert_count, 1, 0, 0);
+}
+
+bool OverlayRenderer::need_forward_pass() const {
+    return need_render_billboard() || need_render_line();
 }
 } // namespace ars::render::vk

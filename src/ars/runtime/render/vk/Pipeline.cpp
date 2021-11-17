@@ -220,7 +220,7 @@ void GraphicsPipeline::init_pipeline(const GraphicsPipelineInfo &info) {
 
     VkPipelineInputAssemblyStateCreateInfo input_assembly{
         VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO};
-    input_assembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    input_assembly.topology = info.topology;
 
     create_info.pInputAssemblyState = &input_assembly;
 
@@ -240,7 +240,7 @@ void GraphicsPipeline::init_pipeline(const GraphicsPipelineInfo &info) {
 
     VkPipelineRasterizationStateCreateInfo raster{
         VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO};
-    raster.cullMode = VK_CULL_MODE_NONE;
+    raster.cullMode = info.cull_mode;
     raster.polygonMode = VK_POLYGON_MODE_FILL;
     raster.lineWidth = 1.0f;
 

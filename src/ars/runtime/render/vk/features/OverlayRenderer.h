@@ -22,6 +22,9 @@ class OverlayRenderer : public IOverlay {
     void draw_outline(uint8_t group,
                       const math::XformTRS<float> &xform,
                       const std::shared_ptr<IMesh> &mesh) override;
+    void draw_line(const glm::vec3 &from,
+                   const glm::vec3 &to,
+                   const glm::vec4 &color) override;
 
     [[nodiscard]] LightGizmo light_gizmo() const;
 
@@ -31,11 +34,15 @@ class OverlayRenderer : public IOverlay {
   private:
     void init_forward_render_pass();
     void init_billboard_pipeline();
+    void init_line_pipeline();
     void ensure_outline_rts();
     void render_outline(CommandBuffer *cmd, const Handle<Texture> &dst_rt);
-    void render_billboard(CommandBuffer *cmd, const Handle<Texture> &dst_rt);
+    void render_billboard(CommandBuffer *cmd);
+    void render_line(CommandBuffer *cmd);
     bool need_render_outline() const;
+    bool need_forward_pass() const;
     bool need_render_billboard() const;
+    bool need_render_line() const;
 
     View *_view = nullptr;
     std::array<glm::vec4, 256> _outline_colors{};
@@ -55,5 +62,9 @@ class OverlayRenderer : public IOverlay {
 
     std::unique_ptr<RenderPass> _overlay_forward_pass;
     std::unique_ptr<GraphicsPipeline> _billboard_pipeline;
+
+    std::vector<glm::vec3> _line_vert_pos{};
+    std::vector<glm::vec4> _line_vert_color{};
+    std::unique_ptr<GraphicsPipeline> _line_pipeline;
 };
 } // namespace ars::render::vk

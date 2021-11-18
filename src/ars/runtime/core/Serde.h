@@ -59,8 +59,8 @@ template <typename T> struct adl_serializer<ars::math::AABB<T>> {
     }
 
     static void from_json(const json &js, AABB &v) {
-        js.at("min").get_to(v.min);
-        js.at("max").get_to(v.max);
+        js["min"].get_to(v.min);
+        js["max"].get_to(v.max);
     }
 };
 
@@ -78,12 +78,12 @@ template <typename T> struct adl_serializer<ars::math::XformTRS<T>> {
         auto t = v.translation();
         auto r = v.rotation();
         auto s = v.scale();
-        js.at("T").get_to(t);
-        js.at("R").get_to(r);
-        js.at("S").get_to(s);
+        js["T"].get_to(t);
+        js["R"].get_to(r);
+        js["S"].get_to(s);
         v.set_translation(t);
-        v.set_translation(r);
-        v.set_translation(s);
+        v.set_rotation(r);
+        v.set_scale(s);
     }
 };
 } // namespace nlohmann

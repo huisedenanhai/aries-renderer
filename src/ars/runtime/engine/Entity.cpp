@@ -184,13 +184,31 @@ nlohmann::json serialize_one_entity(Entity *entity) {
 } // namespace
 
 void Entity::save(const std::filesystem::path &path) {
-    using namespace nlohmann;
-    auto js = json::array();
-    visit_preorder(
-        [&](Entity *entity) { js.push_back(serialize_one_entity(entity)); });
+    std::vector<Entity *> entities{};
+    std::map<Entity *, int> indices{};
+    visit_preorder([&](Entity *entity) {
+        // Notice the order
+        indices[entity] = static_cast<int>(entities.size());
+        entities.push_back(entity);
+    });
+    auto entities_js = nlohmann::json::array();
+    for (auto entity : entities) {
+        auto e_js = serialize_one_entity(entity);
+        auto child_indices_js = nlohmann::json::array();
+        for (auto child : entity->_children) {
+            child_indices_js.push_back(indices[child]);
+        }
+        e_js["children"] = child_indices_js;
+        entities_js.emplace_back(std::move(e_js));
+    }
+    auto js = nlohmann::json{
+        {"root", 0},
+        {"entities", entities_js},
+    };
     std::ofstream os(path);
     os << std::setw(2) << js << std::endl;
     os.close();
+    ARS_LOG_INFO("Save entity {} to {}", name(), path.string());
 }
 
 void Entity::load(const std::filesystem::path &path) {}

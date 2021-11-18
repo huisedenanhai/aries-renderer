@@ -171,6 +171,10 @@ IComponent *Entity::add_component(const rttr::type &ty) {
     return comp_ptr;
 }
 
+void Entity::save(const std::filesystem::path &path) const {}
+
+void Entity::load(const std::filesystem::path &path) {}
+
 Entity *Scene::create_entity() {
     auto id = _entities.alloc();
     auto &entity = _entities.get<std::unique_ptr<Entity>>(id);

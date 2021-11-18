@@ -3,6 +3,7 @@
 #include <ars/runtime/core/math/Transform.h>
 #include <ars/runtime/core/misc/Macro.h>
 #include <ars/runtime/core/misc/SoA.h>
+#include <filesystem>
 #include <memory>
 #include <optional>
 #include <rttr/registration>
@@ -178,6 +179,15 @@ class Entity final {
     // Value only valid after call to Scene::update_cached_world_xform
     [[nodiscard]] math::XformTRS<float> cached_world_xform() const;
     void set_cached_world_xform(const math::XformTRS<float> &xform);
+
+    // A save file have only one root.
+    // Save the entity and all its children to file.
+    // The transform of this entity is ignored.
+    void save(const std::filesystem::path &path) const;
+    // Load saved entity. This method will modify components on the current
+    // entity.
+    // The transform of this entity is ignored.
+    void load(const std::filesystem::path &path);
 
   private:
     math::XformTRS<float> _local_to_parent{};

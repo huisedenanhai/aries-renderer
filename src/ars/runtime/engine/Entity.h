@@ -183,11 +183,18 @@ class Entity final {
     // A save file have only one root.
     // Save the entity and all its children to file.
     // The transform of this entity is ignored.
-    void save(const std::filesystem::path &path) const;
+    void save(const std::filesystem::path &path);
     // Load saved entity. This method will modify components on the current
     // entity.
     // The transform of this entity is ignored.
     void load(const std::filesystem::path &path);
+
+    template <typename Func> void visit_preorder(Func &&func) {
+        func(this);
+        for (auto child : _children) {
+            child->template visit_preorder(func);
+        }
+    }
 
   private:
     math::XformTRS<float> _local_to_parent{};

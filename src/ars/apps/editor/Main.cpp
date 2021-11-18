@@ -94,6 +94,12 @@ class Editor : public engine::IApplication {
 
         bool need_reset_layout = _is_first_imgui_frame && !_have_stored_layout;
         if (ImGui::BeginMenuBar()) {
+            if (ImGui::BeginMenu("File")) {
+                if (ImGui::MenuItem("Save")) {
+                    _scene->root()->save("Scene.ascene");
+                }
+                ImGui::EndMenu();
+            }
             if (ImGui::BeginMenu("Options")) {
                 if (ImGui::MenuItem("Reset Default Layout")) {
                     need_reset_layout = true;

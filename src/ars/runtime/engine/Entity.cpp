@@ -2,8 +2,10 @@
 #include "Engine.h"
 #include "components/RenderSystem.h"
 #include <ars/runtime/core/Log.h>
+#include <ars/runtime/core/Serde.h>
 #include <ars/runtime/core/gui/ImGui.h>
 #include <cstdlib>
+#include <fstream>
 
 namespace ars::engine {
 std::string Entity::name() const {
@@ -171,7 +173,25 @@ IComponent *Entity::add_component(const rttr::type &ty) {
     return comp_ptr;
 }
 
-void Entity::save(const std::filesystem::path &path) const {}
+namespace {
+nlohmann::json serialize_one_entity(Entity *entity) {
+    assert(entity != nullptr);
+    return {
+        {"name", entity->name()},
+        {"xform", entity->local_xform()},
+    };
+}
+} // namespace
+
+void Entity::save(const std::filesystem::path &path) {
+    using namespace nlohmann;
+    auto js = json::array();
+    visit_preorder(
+        [&](Entity *entity) { js.push_back(serialize_one_entity(entity)); });
+    std::ofstream os(path);
+    os << std::setw(2) << js << std::endl;
+    os.close();
+}
 
 void Entity::load(const std::filesystem::path &path) {}
 

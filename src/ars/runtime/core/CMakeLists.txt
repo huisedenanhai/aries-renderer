@@ -1,4 +1,5 @@
 add_library(core
+        Serde.h
         Log.cpp
         Log.h
         )
@@ -8,7 +9,8 @@ target_link_libraries(core PUBLIC
         glm
         imgui
         RTTR::Core_Lib
-        spdlog)
+        spdlog
+        json)
 
 add_subdirectory(math)
 add_subdirectory(gui)

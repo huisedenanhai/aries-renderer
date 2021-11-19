@@ -27,32 +27,64 @@ class Editor : public engine::IApplication {
     }
 
     void start() override {
-        auto ctx = engine::render_context();
         _have_stored_layout = std::filesystem::exists("imgui.ini");
-
-        auto model = render::load_gltf(
-            ctx, "FlightHelmetWithLight/FlightHelmetWithLight.gltf");
-        _scene = std::make_unique<engine::Scene>();
-        _view = _scene->render_system()->render_scene()->create_view(
-            window()->physical_size());
-        _view->set_xform(
-            math::XformTRS<float>::from_translation({0, 0.3f, 2.0f}));
-
-        auto light_bulb_icon = render::load_texture(ctx, "light-bulb.png");
-        _view->overlay()->set_light_gizmo(light_bulb_icon, 0.1f);
-
-        engine::load_model(_scene->root(), model);
-
         auto &io = ImGui::GetIO();
         io.ConfigWindowsMoveFromTitleBarOnly = true;
 
+        edit_scene(std::nullopt);
+
         _file_browser_state.file_open_callback =
             [&](const std::filesystem::path &path) {
-                ARS_LOG_INFO("Open {}", path.string());
+                auto ext = path.extension();
+                if (ext == ".gltf") {
+                    edit_scene(path);
+                }
             };
     }
 
+    auto reset_edit_scene() {
+        _view.reset();
+        _scene.reset();
+        _scene_save_dir = std::nullopt;
+        _current_selected_entity = nullptr;
+    }
+
+    void edit_scene(const std::optional<std::filesystem::path> &path) {
+        // on_imgui requires current view to be alive. This method will destroy
+        // current view, delay it to next frame update.
+        _update_tasks.emplace_back([this, path]() {
+            reset_edit_scene();
+
+            auto ctx = engine::render_context();
+            _scene = std::make_unique<engine::Scene>();
+            _view = _scene->render_system()->render_scene()->create_view(
+                window()->physical_size());
+            _view->set_xform(
+                math::XformTRS<float>::from_translation({0, 0.3f, 2.0f}));
+            _3d_view_state.focus_distance = 2.0f;
+
+            auto light_bulb_icon = render::load_texture(ctx, "light-bulb.png");
+            _view->overlay()->set_light_gizmo(light_bulb_icon, 0.1f);
+
+            if (path.has_value()) {
+                auto ext = path->extension();
+                if (ext == ".gltf") {
+                    auto model = render::load_gltf(ctx, path.value());
+                    engine::load_model(_scene->root(), model);
+                }
+            }
+        });
+    }
+
+    void flush_update_tasks() {
+        for (auto &t : _update_tasks) {
+            t();
+        }
+        _update_tasks.clear();
+    }
+
     void update(double dt) override {
+        flush_update_tasks();
         _scene->update();
         window()->present(nullptr);
     }
@@ -130,8 +162,7 @@ class Editor : public engine::IApplication {
     }
 
     void destroy() override {
-        _view.reset();
-        _scene.reset();
+        reset_edit_scene();
     }
 
   private:
@@ -161,8 +192,12 @@ class Editor : public engine::IApplication {
     bool _have_stored_layout = false;
     bool _is_first_imgui_frame = true;
 
+    std::vector<std::function<void()>> _update_tasks{};
+
     std::unique_ptr<render::IView> _view{};
     std::unique_ptr<engine::Scene> _scene{};
+    std::optional<std::filesystem::path> _scene_save_dir{};
+
     editor::Scene3DViewState _3d_view_state{};
     editor::FileBrowserState _file_browser_state{};
     std::filesystem::path _current_selected_file{};

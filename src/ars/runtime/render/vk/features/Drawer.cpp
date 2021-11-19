@@ -15,6 +15,9 @@ void vk::Drawer::draw_ids(CommandBuffer *cmd,
                           const glm::mat4 *mvp_arr,
                           const uint32_t *ids,
                           const std::shared_ptr<Mesh> *meshes) const {
+    if (count == 0) {
+        return;
+    }
     assert(meshes != nullptr);
     assert(ids != nullptr);
     assert(mvp_arr != nullptr);
@@ -124,6 +127,9 @@ void Drawer::draw_ids_billboard_alpha_clip(
     const glm::mat4 *mvp_arr,
     const uint32_t *ids,
     const Handle<Texture> *textures) const {
+    if (count == 0) {
+        return;
+    }
     assert(textures != nullptr);
     assert(ids != nullptr);
     assert(mvp_arr != nullptr);

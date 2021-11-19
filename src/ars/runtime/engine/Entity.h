@@ -187,6 +187,9 @@ class Entity final {
     // Load saved entity. This method will modify components on the current
     // entity.
     // The transform of this entity is ignored.
+    // If the stored configuration contains existing component on this entity,
+    // the existing one will be removed and recreated based on the stored
+    // configuration.
     void load(const std::filesystem::path &path);
 
     template <typename Func> void visit_preorder(Func &&func) {

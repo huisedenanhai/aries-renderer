@@ -207,6 +207,9 @@ void pan_camera(Scene3DViewState &state,
 }
 
 void zoom_camera(Scene3DViewState &state, render::IView *view) {
+    if (!ImGui::IsWindowFocused()) {
+        return;
+    }
     auto scroll = ImGui::GetIO().MouseWheel;
     if (scroll == 0) {
         return;

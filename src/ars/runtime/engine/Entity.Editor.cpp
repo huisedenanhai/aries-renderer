@@ -4,20 +4,11 @@
 namespace ars::engine::editor {
 namespace {
 bool begin_entity_tree_node(Entity *entity, Entity *&current_selected) {
-    ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnDoubleClick;
-    flags |= entity == current_selected ? ImGuiTreeNodeFlags_Selected : 0;
-    auto is_leaf = entity->child_count() == 0;
-    flags |= is_leaf ? ImGuiTreeNodeFlags_Leaf : 0;
-
-    bool opened =
-        ImGui::TreeNodeEx(entity, flags, "%s", entity->name().c_str());
-
-    if (ImGui::IsItemClicked(ImGuiMouseButton_Left) ||
-        ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
-        current_selected = entity;
-    }
-
-    return opened;
+    return gui::begin_selectable_tree_node(entity,
+                                           entity->name().c_str(),
+                                           entity->child_count() == 0,
+                                           entity,
+                                           current_selected);
 }
 
 void draw_entity(Entity *entity, Entity *&current_selected) {

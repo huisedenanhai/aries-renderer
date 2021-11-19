@@ -7,6 +7,7 @@
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
 
+#include "FileBrowser.h"
 #include "Scene3DView.h"
 
 using namespace ars;
@@ -14,6 +15,7 @@ using namespace ars;
 constexpr const char *ARS_3D_VIEW_ID = "3D View";
 constexpr const char *ARS_HIERARCHY_INSPECTOR_ID = "Hierarchy";
 constexpr const char *ARS_ENTITY_INSPECTOR_ID = "Entity Inspector";
+constexpr const char *ARS_FILE_BROWSER_ID = "File Browser";
 
 class Editor : public engine::IApplication {
   public:
@@ -92,6 +94,10 @@ class Editor : public engine::IApplication {
                                             _current_selected_entity);
         ImGui::End();
 
+        ImGui::Begin(ARS_FILE_BROWSER_ID);
+        editor::file_browser(_file_browser_state, ".", _current_selected_file);
+        ImGui::End();
+
         bool need_reset_layout = _is_first_imgui_frame && !_have_stored_layout;
         if (ImGui::BeginMenuBar()) {
             if (ImGui::BeginMenu("File")) {
@@ -135,11 +141,14 @@ class Editor : public engine::IApplication {
             dock_main_id, ImGuiDir_Left, 0.80f, nullptr, &dock_main_id);
         auto dock_id_inspector = ImGui::DockBuilderSplitNode(
             dock_main_id, ImGuiDir_Down, 0.50f, nullptr, &dock_main_id);
+        auto dock_file_browser = ImGui::DockBuilderSplitNode(
+            dock_id_3d_view, ImGuiDir_Down, 0.20f, nullptr, &dock_id_3d_view);
 
         ImGui::DockBuilderDockWindow(ARS_3D_VIEW_ID, dock_id_3d_view);
         ImGui::DockBuilderDockWindow(ARS_HIERARCHY_INSPECTOR_ID, dock_main_id);
         ImGui::DockBuilderDockWindow(ARS_ENTITY_INSPECTOR_ID,
                                      dock_id_inspector);
+        ImGui::DockBuilderDockWindow(ARS_FILE_BROWSER_ID, dock_file_browser);
         ImGui::DockBuilderFinish(dock_space_id);
     }
 
@@ -149,6 +158,8 @@ class Editor : public engine::IApplication {
     std::unique_ptr<render::IView> _view{};
     std::unique_ptr<engine::Scene> _scene{};
     editor::Scene3DViewState _3d_view_state{};
+    editor::FileBrowserState _file_browser_state{};
+    std::filesystem::path _current_selected_file{};
     engine::Entity *_current_selected_entity = nullptr;
 };
 

@@ -28,4 +28,22 @@ enum class PropertyAttribute {
 };
 
 bool input_property(rttr::instance instance, rttr::property property);
+
+template <typename T, typename Id>
+bool begin_selectable_tree_node(
+    Id id, const char *name, bool is_leaf, const T &v, T &current_selected) {
+    ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnDoubleClick;
+    flags |= v == current_selected ? ImGuiTreeNodeFlags_Selected : 0;
+    flags |= is_leaf ? ImGuiTreeNodeFlags_Leaf : 0;
+
+    bool opened = ImGui::TreeNodeEx(id, flags, "%s", name);
+
+    if (ImGui::IsItemClicked(ImGuiMouseButton_Left) ||
+        ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
+        current_selected = v;
+    }
+
+    return opened;
+}
+
 } // namespace ars::gui

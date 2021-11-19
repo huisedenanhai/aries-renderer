@@ -1,3 +1,4 @@
+#include <ars/runtime/core/Log.h>
 #include <ars/runtime/engine/Engine.h>
 #include <ars/runtime/engine/Entity.Editor.h>
 #include <ars/runtime/engine/Entity.h>
@@ -44,6 +45,11 @@ class Editor : public engine::IApplication {
 
         auto &io = ImGui::GetIO();
         io.ConfigWindowsMoveFromTitleBarOnly = true;
+
+        _file_browser_state.file_open_callback =
+            [&](const std::filesystem::path &path) {
+                ARS_LOG_INFO("Open {}", path.string());
+            };
     }
 
     void update(double dt) override {
@@ -142,7 +148,7 @@ class Editor : public engine::IApplication {
         auto dock_id_inspector = ImGui::DockBuilderSplitNode(
             dock_main_id, ImGuiDir_Down, 0.50f, nullptr, &dock_main_id);
         auto dock_file_browser = ImGui::DockBuilderSplitNode(
-            dock_id_3d_view, ImGuiDir_Down, 0.20f, nullptr, &dock_id_3d_view);
+            dock_id_3d_view, ImGuiDir_Down, 0.30f, nullptr, &dock_id_3d_view);
 
         ImGui::DockBuilderDockWindow(ARS_3D_VIEW_ID, dock_id_3d_view);
         ImGui::DockBuilderDockWindow(ARS_HIERARCHY_INSPECTOR_ID, dock_main_id);

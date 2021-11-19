@@ -3,7 +3,10 @@
 #include <filesystem>
 
 namespace ars::editor {
-struct FileBrowserState {};
+struct FileBrowserState {
+    std::function<void(const std::filesystem::path &)> file_open_callback =
+        [](auto &&) {};
+};
 
 void file_browser(FileBrowserState &state,
                   const std::filesystem::path &root,

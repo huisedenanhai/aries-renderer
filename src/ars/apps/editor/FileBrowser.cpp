@@ -4,7 +4,8 @@
 
 namespace ars::editor {
 namespace {
-void tree_view_directory(const std::filesystem::path &root,
+void tree_view_directory(FileBrowserState &state,
+                         const std::filesystem::path &root,
                          std::filesystem::path &current_selected) {
     for (auto const &entry : std::filesystem::directory_iterator{root}) {
         const auto &path = entry.path();
@@ -18,7 +19,12 @@ void tree_view_directory(const std::filesystem::path &root,
                                             path,
                                             current_selected)) {
             if (entry.is_directory()) {
-                tree_view_directory(path, current_selected);
+                tree_view_directory(state, path, current_selected);
+            } else {
+                if (ImGui::IsItemHovered() &&
+                    ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
+                    state.file_open_callback(path);
+                }
             }
             ImGui::TreePop();
         }
@@ -33,6 +39,6 @@ void file_browser(FileBrowserState &state,
         return;
     }
 
-    tree_view_directory(root, current_selected);
+    tree_view_directory(state, root, current_selected);
 }
 } // namespace ars::editor

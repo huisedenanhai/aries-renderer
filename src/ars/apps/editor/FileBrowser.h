@@ -4,7 +4,7 @@
 
 namespace ars::editor {
 struct FileBrowserState {
-    std::function<void(const std::filesystem::path &)> file_open_callback =
+    std::function<void(const std::filesystem::path &)> on_file_open =
         [](auto &&) {};
 };
 

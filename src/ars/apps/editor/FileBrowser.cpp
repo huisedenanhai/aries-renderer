@@ -23,7 +23,7 @@ void tree_view_directory(FileBrowserState &state,
             } else {
                 if (ImGui::IsItemHovered() &&
                     ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
-                    state.file_open_callback(path);
+                    state.on_file_open(path);
                 }
             }
             ImGui::TreePop();

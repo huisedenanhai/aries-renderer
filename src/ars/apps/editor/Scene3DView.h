@@ -24,6 +24,10 @@ struct Scene3DViewState {
     glm::vec4 ground_wire_grid_color{0.2f, 0.2f, 0.2f, 0.9f};
 };
 
+void focus_camera(Scene3DViewState &state,
+                  render::IView *view,
+                  engine::Entity *target);
+
 void scene_3d_view(Scene3DViewState &state,
                    render::IWindow *window,
                    engine::Scene *scene,

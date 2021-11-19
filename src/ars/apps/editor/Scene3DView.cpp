@@ -207,9 +207,6 @@ void pan_camera(Scene3DViewState &state,
 }
 
 void zoom_camera(Scene3DViewState &state, render::IView *view) {
-    if (!ImGui::IsWindowFocused()) {
-        return;
-    }
     auto scroll = ImGui::GetIO().MouseWheel;
     if (scroll == 0) {
         return;
@@ -249,21 +246,6 @@ float estimate_radius(engine::Entity *entity, glm::vec3 &center) {
     return 0.2f;
 }
 
-void focus_camera(Scene3DViewState &state,
-                  render::IView *view,
-                  engine::Entity *current_selected) {
-    if (current_selected == nullptr) {
-        return;
-    }
-    glm::vec3 center;
-    auto radius = estimate_radius(current_selected, center);
-    auto xform = view->xform();
-    state.focus_distance = radius * 4.0f;
-    auto t = center - state.focus_distance * xform.forward();
-    xform.set_translation(t);
-    view->set_xform(xform);
-}
-
 void control_view_camera(Scene3DViewState &state,
                          render::IWindow *window,
                          float framebuffer_scale,
@@ -277,9 +259,11 @@ void control_view_camera(Scene3DViewState &state,
             orbit_camera(state, view);
         }
     } else {
-        zoom_camera(state, view);
-        if (window->keyboard()->is_pressed(input::Key::F)) {
-            focus_camera(state, view, current_selected);
+        if (ImGui::IsWindowFocused()) {
+            zoom_camera(state, view);
+            if (window->keyboard()->is_pressed(input::Key::F)) {
+                focus_camera(state, view, current_selected);
+            }
         }
     }
 }
@@ -303,6 +287,21 @@ void draw_ground_wire_frame(Scene3DViewState &state, render::IView *view) {
     }
 }
 } // namespace
+
+void focus_camera(Scene3DViewState &state,
+                  render::IView *view,
+                  engine::Entity *target) {
+    if (target == nullptr) {
+        return;
+    }
+    glm::vec3 center;
+    auto radius = estimate_radius(target, center);
+    auto xform = view->xform();
+    state.focus_distance = radius * 4.0f;
+    auto t = center - state.focus_distance * xform.forward();
+    xform.set_translation(t);
+    view->set_xform(xform);
+}
 
 void scene_3d_view(Scene3DViewState &state,
                    render::IWindow *window,

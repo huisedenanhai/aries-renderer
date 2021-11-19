@@ -34,7 +34,7 @@ class Editor : public engine::IApplication {
 
         edit_scene(std::nullopt);
 
-        _file_browser_state.file_open_callback =
+        _file_browser_state.on_file_open =
             [&](const std::filesystem::path &path) {
                 auto ext = path.extension();
                 if (ext == ".gltf") {
@@ -90,6 +90,16 @@ class Editor : public engine::IApplication {
         window()->present(nullptr);
     }
 
+    void save_current_scene() {
+        constexpr const char *SAVE_AS_MODAL_ID = "Save As";
+        if (_scene_save_dir.has_value()) {
+            _scene->root()->save(*_scene_save_dir);
+        } else {
+            editor::open_save_as_modal(
+                _save_as_state, SAVE_AS_MODAL_ID, ".aspawn", _scene->root());
+        }
+    }
+
     void on_imgui() override {
         ImGuiWindowFlags window_flags =
             ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
@@ -137,20 +147,11 @@ class Editor : public engine::IApplication {
         editor::file_browser(_file_browser_state, ".", _current_selected_file);
         ImGui::End();
 
-        constexpr const char *SAVE_AS_MODAL_ID = "Save As";
-
         bool need_reset_layout = _is_first_imgui_frame && !_have_stored_layout;
         if (ImGui::BeginMenuBar()) {
             if (ImGui::BeginMenu("File")) {
                 if (ImGui::MenuItem("Save")) {
-                    if (_scene_save_dir.has_value()) {
-                        _scene->root()->save(*_scene_save_dir);
-                    } else {
-                        editor::open_save_as_modal(_save_as_state,
-                                                   SAVE_AS_MODAL_ID,
-                                                   ".ascene",
-                                                   _scene->root());
-                    }
+                    save_current_scene();
                 }
                 ImGui::EndMenu();
             }

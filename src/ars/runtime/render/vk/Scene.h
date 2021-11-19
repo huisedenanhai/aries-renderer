@@ -8,8 +8,8 @@ class Mesh;
 class Context;
 
 struct Light {
-    glm::vec3 color;
-    float intensity;
+    glm::vec3 color{1.0f, 1.0f, 1.0f};
+    float intensity = 1.0f;
 };
 
 struct UserData {

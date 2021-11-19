@@ -53,8 +53,10 @@ class IDirectionalLight {
     // The light points at local -Z, i.e., the forward direction of the tranform
     virtual math::XformTRS<float> xform() = 0;
     virtual void set_xform(const math::XformTRS<float> &xform) = 0;
+    // {1.0f, 1.0f, 1.0f} by default
     virtual glm::vec3 color() = 0;
     virtual void set_color(const glm::vec3 &color) = 0;
+    // 1.0f by default
     virtual float intensity() = 0;
     virtual void set_intensity(float intensity) = 0;
     // The user data of managed lights is the Entity* in editor.
@@ -70,8 +72,10 @@ class IPointLight {
 
     virtual math::XformTRS<float> xform() = 0;
     virtual void set_xform(const math::XformTRS<float> &xform) = 0;
+    // {1.0f, 1.0f, 1.0f} by default
     virtual glm::vec3 color() = 0;
     virtual void set_color(const glm::vec3 &color) = 0;
+    // 1.0f by default
     virtual float intensity() = 0;
     virtual void set_intensity(float intensity) = 0;
     // The user data of managed lights is the Entity* in editor.

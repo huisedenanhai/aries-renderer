@@ -176,9 +176,20 @@ IComponent *Entity::add_component(const rttr::type &ty) {
 namespace {
 nlohmann::json serialize_one_entity(Entity *entity) {
     assert(entity != nullptr);
+    auto comps = entity->components();
+    auto comps_js = nlohmann::json::array();
+    for (auto comp : comps) {
+        nlohmann::json c_js = {
+            {"type", comp->type().get_name().to_string()},
+            {"value", rttr::instance(comp)},
+        };
+
+        comps_js.emplace_back(std::move(c_js));
+    }
     return {
         {"name", entity->name()},
         {"xform", entity->local_xform()},
+        {"components", comps_js},
     };
 }
 } // namespace

@@ -3,6 +3,7 @@
 #include "math/AABB.h"
 #include "math/Transform.h"
 #include <nlohmann/json.hpp>
+#include <rttr/type>
 
 namespace nlohmann {
 template <typename T> nlohmann::json as_json_array_like(const T &v, int count) {
@@ -85,5 +86,73 @@ template <typename T> struct adl_serializer<ars::math::XformTRS<T>> {
         v.set_rotation(r);
         v.set_scale(s);
     }
+};
+
+template <> struct adl_serializer<rttr::instance> {
+    using SerializerRegistry = std::map<
+        rttr::type,
+        std::function<json(const rttr::instance &, const rttr::property &)>>;
+
+    template <typename T> static void register_type(SerializerRegistry &reg) {
+        reg[rttr::type::get<T>()] = [](const rttr::instance &ins,
+                                       const rttr::property &prop) {
+            return prop.get_value(ins).template get_value<T>();
+        };
+    }
+
+    static SerializerRegistry serializer_callbacks() {
+        SerializerRegistry reg{};
+        register_type<size_t>(reg);
+        register_type<uint8_t>(reg);
+        register_type<uint16_t>(reg);
+        register_type<uint32_t>(reg);
+        register_type<uint64_t>(reg);
+        register_type<int8_t>(reg);
+        register_type<int16_t>(reg);
+        register_type<int32_t>(reg);
+        register_type<int64_t>(reg);
+        register_type<char>(reg);
+        register_type<short>(reg);
+        register_type<int>(reg);
+        register_type<long>(reg);
+        register_type<long long>(reg);
+        register_type<unsigned char>(reg);
+        register_type<unsigned short>(reg);
+        register_type<unsigned int>(reg);
+        register_type<unsigned long>(reg);
+        register_type<unsigned long long>(reg);
+        register_type<float>(reg);
+        register_type<double>(reg);
+        register_type<std::string>(reg);
+        register_type<glm::vec2>(reg);
+        register_type<glm::vec3>(reg);
+        register_type<glm::vec4>(reg);
+        register_type<glm::dvec2>(reg);
+        register_type<glm::dvec3>(reg);
+        register_type<glm::quat>(reg);
+        register_type<glm::dquat>(reg);
+        register_type<ars::math::XformTRS<float>>(reg);
+        register_type<ars::math::XformTRS<double>>(reg);
+        register_type<ars::math::AABB<float>>(reg);
+        register_type<ars::math::AABB<double>>(reg);
+
+        return reg;
+    }
+
+    static void to_json(json &js, const rttr::instance &v) {
+        js = json::object();
+        auto ty = v.get_derived_type();
+        static auto serializers = serializer_callbacks();
+        for (auto &prop : ty.get_properties()) {
+            auto prop_ty = prop.get_type();
+            auto ser_it = serializers.find(prop_ty);
+            if (ser_it == serializers.end()) {
+                continue;
+            }
+            js[prop.get_name().to_string()] = ser_it->second(v, prop);
+        }
+    }
+
+    static void from_json(const json &js, rttr::instance &v) {}
 };
 } // namespace nlohmann

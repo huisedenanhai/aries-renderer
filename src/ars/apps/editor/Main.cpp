@@ -91,12 +91,11 @@ class Editor : public engine::IApplication {
     }
 
     void save_current_scene() {
-        constexpr const char *SAVE_AS_MODAL_ID = "Save As";
         if (_scene_save_dir.has_value()) {
             _scene->root()->save(*_scene_save_dir);
         } else {
             editor::open_save_as_modal(
-                _save_as_state, SAVE_AS_MODAL_ID, ".aspawn", _scene->root());
+                _save_as_state, "Save As", ".aspawn", _scene->root());
         }
     }
 

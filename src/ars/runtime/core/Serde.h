@@ -93,6 +93,11 @@ template <> struct adl_serializer<rttr::instance> {
         rttr::type,
         std::function<json(const rttr::instance &, const rttr::property &)>>;
 
+    using DeserializerRegistry = std::map<
+        rttr::type,
+        std::function<void(
+            const json &, const rttr::instance &, const rttr::property &)>>;
+
     template <typename T> static void register_type(SerializerRegistry &reg) {
         reg[rttr::type::get<T>()] = [](const rttr::instance &ins,
                                        const rttr::property &prop) {
@@ -100,8 +105,16 @@ template <> struct adl_serializer<rttr::instance> {
         };
     }
 
-    static SerializerRegistry serializer_callbacks() {
-        SerializerRegistry reg{};
+    template <typename T> static void register_type(DeserializerRegistry &reg) {
+        reg[rttr::type::get<T>()] = [](const json &js,
+                                       const rttr::instance &ins,
+                                       const rttr::property &prop) {
+            prop.set_value(ins, js.template get<T>());
+        };
+    }
+
+    template <typename Reg> static Reg register_callbacks() {
+        Reg reg{};
         register_type<size_t>(reg);
         register_type<uint8_t>(reg);
         register_type<uint16_t>(reg);
@@ -142,7 +155,7 @@ template <> struct adl_serializer<rttr::instance> {
     static void to_json(json &js, const rttr::instance &v) {
         js = json::object();
         auto ty = v.get_derived_type();
-        static auto serializers = serializer_callbacks();
+        static auto serializers = register_callbacks<SerializerRegistry>();
         for (auto &prop : ty.get_properties()) {
             auto prop_ty = prop.get_type();
             auto ser_it = serializers.find(prop_ty);
@@ -153,6 +166,21 @@ template <> struct adl_serializer<rttr::instance> {
         }
     }
 
-    static void from_json(const json &js, rttr::instance &v) {}
+    static void from_json(const json &js, rttr::instance &v) {
+        auto ty = v.get_derived_type();
+        static auto deserializers = register_callbacks<DeserializerRegistry>();
+        for (auto &prop : ty.get_properties()) {
+            auto prop_ty = prop.get_type();
+            auto key = prop.get_name().to_string();
+            if (js.find(key) == js.end()) {
+                continue;
+            }
+            auto de_it = deserializers.find(prop_ty);
+            if (de_it == deserializers.end()) {
+                continue;
+            }
+            de_it->second(js[key], v, prop);
+        }
+    }
 };
 } // namespace nlohmann

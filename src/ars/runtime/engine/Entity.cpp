@@ -223,12 +223,46 @@ void Entity::save(const std::filesystem::path &path) {
 }
 
 void Entity::load(const std::filesystem::path &path) {
-    std::ifstream is(path);
     nlohmann::json js{};
+    std::ifstream is(path);
     is >> js;
     is.close();
-    for (auto &[k, v] : js.items()) {
-        ARS_LOG_INFO("key {}", k);
+    auto entities_js = js["entities"];
+    auto root_index = js["root"].get<int>();
+
+    auto entity_count = entities_js.size();
+    if (root_index >= entity_count) {
+        ARS_LOG_ERROR("Failed to load {}: root index >= entity count",
+                      path.string());
+        return;
+    }
+    std::vector<Entity *> entities{};
+    entities.reserve(entity_count);
+    for (int i = 0; i < entity_count; i++) {
+        entities.push_back(i == root_index ? this : _scene->create_entity());
+    }
+    for (int i = 0; i < entity_count; i++) {
+        const auto &e_js = entities_js[i];
+        auto e = entities[i];
+        auto children = e_js["children"].get<std::vector<int>>();
+        for (auto child_index : children) {
+            entities[child_index]->set_parent(e);
+        }
+        if (i != root_index) {
+            e->set_name(e_js["name"].get<std::string>());
+            e->set_local_xform(e_js["xform"].get<math::XformTRS<float>>());
+        }
+        const auto &comps_js = e_js["components"];
+        for (auto &c_js : comps_js) {
+            auto ty_name = c_js["type"].get<std::string>();
+            auto ty = rttr::type::get_by_name(ty_name);
+            if (component(ty) != nullptr) {
+                remove_component(ty);
+            }
+            auto comp = e->add_component(ty);
+            rttr::instance comp_inst(comp);
+            c_js["value"].get_to(comp_inst);
+        }
     }
 }
 

@@ -222,7 +222,15 @@ void Entity::save(const std::filesystem::path &path) {
     ARS_LOG_INFO("Save entity {} to {}", name(), path.string());
 }
 
-void Entity::load(const std::filesystem::path &path) {}
+void Entity::load(const std::filesystem::path &path) {
+    std::ifstream is(path);
+    nlohmann::json js{};
+    is >> js;
+    is.close();
+    for (auto &[k, v] : js.items()) {
+        ARS_LOG_INFO("key {}", k);
+    }
+}
 
 Entity *Scene::create_entity() {
     auto id = _entities.alloc();

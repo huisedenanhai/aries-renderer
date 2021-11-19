@@ -19,6 +19,8 @@ constexpr const char *ARS_HIERARCHY_INSPECTOR_ID = "Hierarchy";
 constexpr const char *ARS_ENTITY_INSPECTOR_ID = "Entity Inspector";
 constexpr const char *ARS_FILE_BROWSER_ID = "File Browser";
 
+constexpr const char *ARS_SPAWNABLE_EXTENSION = ".aspawn";
+
 class Editor : public engine::IApplication {
   public:
     engine::IApplication::Info get_info() const override {
@@ -37,7 +39,7 @@ class Editor : public engine::IApplication {
         _file_browser_state.on_file_open =
             [&](const std::filesystem::path &path) {
                 auto ext = path.extension();
-                if (ext == ".gltf") {
+                if (ext == ".gltf" || ext == ARS_SPAWNABLE_EXTENSION) {
                     edit_scene(path);
                 }
             };
@@ -73,6 +75,10 @@ class Editor : public engine::IApplication {
                     auto model = render::load_gltf(ctx, path.value());
                     engine::load_model(_scene->root(), model);
                 }
+                if (ext == ARS_SPAWNABLE_EXTENSION) {
+                    _scene->root()->load(path.value());
+                    _scene_save_dir = path;
+                }
             }
         });
     }
@@ -94,8 +100,10 @@ class Editor : public engine::IApplication {
         if (_scene_save_dir.has_value()) {
             _scene->root()->save(*_scene_save_dir);
         } else {
-            editor::open_save_as_modal(
-                _save_as_state, "Save As", ".aspawn", _scene->root());
+            editor::open_save_as_modal(_save_as_state,
+                                       "Save As",
+                                       ARS_SPAWNABLE_EXTENSION,
+                                       _scene->root());
         }
     }
 

@@ -1,6 +1,8 @@
 add_executable(aries_editor
         FileBrowser.cpp
         FileBrowser.h
+        SaveAsModal.cpp
+        SaveAsModal.h
         Scene3DView.cpp
         Scene3DView.h
         Main.cpp)

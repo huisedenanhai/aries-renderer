@@ -9,6 +9,7 @@
 #include <imgui/imgui_internal.h>
 
 #include "FileBrowser.h"
+#include "SaveAsModal.h"
 #include "Scene3DView.h"
 
 using namespace ars;
@@ -136,11 +137,20 @@ class Editor : public engine::IApplication {
         editor::file_browser(_file_browser_state, ".", _current_selected_file);
         ImGui::End();
 
+        constexpr const char *SAVE_AS_MODAL_ID = "Save As";
+
         bool need_reset_layout = _is_first_imgui_frame && !_have_stored_layout;
         if (ImGui::BeginMenuBar()) {
             if (ImGui::BeginMenu("File")) {
                 if (ImGui::MenuItem("Save")) {
-                    _scene->root()->save("Scene.ascene");
+                    if (_scene_save_dir.has_value()) {
+                        _scene->root()->save(*_scene_save_dir);
+                    } else {
+                        editor::open_save_as_modal(_save_as_state,
+                                                   SAVE_AS_MODAL_ID,
+                                                   ".ascene",
+                                                   _scene->root());
+                    }
                 }
                 ImGui::EndMenu();
             }
@@ -152,6 +162,8 @@ class Editor : public engine::IApplication {
             }
             ImGui::EndMenuBar();
         }
+
+        editor::save_as_modal(_save_as_state, _scene_save_dir);
 
         if (need_reset_layout) {
             build_default_dock_layout(dock_space_id);
@@ -200,6 +212,7 @@ class Editor : public engine::IApplication {
 
     editor::Scene3DViewState _3d_view_state{};
     editor::FileBrowserState _file_browser_state{};
+    editor::SaveAsModalState _save_as_state{};
     std::filesystem::path _current_selected_file{};
     engine::Entity *_current_selected_entity = nullptr;
 };

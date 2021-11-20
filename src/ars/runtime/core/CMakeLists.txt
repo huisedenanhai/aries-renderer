@@ -1,5 +1,7 @@
 add_library(core
         Serde.h
+        Res.cpp
+        Res.h
         Log.cpp
         Log.h
         )

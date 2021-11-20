@@ -1,4 +1,5 @@
 #include <ars/runtime/core/Log.h>
+#include <ars/runtime/core/Res.h>
 #include <ars/runtime/engine/Engine.h>
 #include <ars/runtime/engine/Entity.Editor.h>
 #include <ars/runtime/render/IScene.h>
@@ -43,6 +44,15 @@ class MyComponent : public engine::IComponent {
     math::XformTRS<float> my_xform{};
 };
 
+struct Hello {
+    Hello() {
+        ARS_LOG_INFO("Init");
+    }
+    ~Hello() {
+        ARS_LOG_INFO("Dispose");
+    }
+};
+
 class HierarchyInspectorApplication : public engine::IApplication {
   public:
     engine::IApplication::Info get_info() const override {
@@ -59,6 +69,13 @@ class HierarchyInspectorApplication : public engine::IApplication {
         for (auto &prop : t.get_properties()) {
             ARS_LOG_INFO("name: {}", prop.get_name().to_string());
         }
+
+        _shared_ptr_var = std::make_shared<Hello>();
+
+        ARS_LOG_INFO("{}", canonical_res_path(""));
+        ARS_LOG_INFO("{}", canonical_res_path("////HE/sc"));
+        ARS_LOG_INFO("{}", canonical_res_path("/Era///s//s////"));
+        ARS_LOG_INFO("{}", canonical_res_path("/Era///s//s"));
     }
 
     void update(double dt) override {
@@ -77,6 +94,8 @@ class HierarchyInspectorApplication : public engine::IApplication {
     }
 
   private:
+    rttr::variant _shared_ptr_var{};
+    Resources _resources{};
     std::unique_ptr<engine::Scene> _scene{};
     engine::Entity *_current_selected = nullptr;
 };

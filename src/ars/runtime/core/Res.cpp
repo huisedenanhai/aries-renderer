@@ -1,4 +1,5 @@
 #include "Res.h"
+#include "Log.h"
 #include "misc/Visitor.h"
 
 namespace ars {
@@ -21,8 +22,44 @@ std::string canonical_res_path(const std::string &path) {
     return {cs.get()};
 }
 
-ResHandle Resources::load(const rttr::type &ty, const std::string &url) {
-    return {};
+bool starts_with(const std::string &str, const std::string &prefix) {
+    if (prefix.size() > str.size()) {
+        return false;
+    }
+    auto prefix_size = prefix.size();
+    for (int i = 0; i < prefix_size; i++) {
+        if (str[i] != prefix[i]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+ResHandle Resources::load(const rttr::type &ty, const std::string &path) {
+    std::string relative_path{};
+    auto provider = resolve_path(path, relative_path);
+    if (provider == nullptr) {
+        ARS_LOG_ERROR("Failed to load resources {}: No data provider found.",
+                      path);
+        return {};
+    }
+
+    auto loader_it = _res_loaders.find(ty);
+    if (loader_it == _res_loaders.end()) {
+        ARS_LOG_ERROR(
+            "Failed to load resources {}: No loader registered for type {}.",
+            path,
+            ty.get_name().to_string());
+        return {};
+    }
+    auto data = provider->load(relative_path);
+    if (data.has_value()) {
+        ARS_LOG_ERROR("Failed to load resources {}: Failed to load data.",
+                      path);
+        return {};
+    }
+
+    return loader_it->second->load(std::move(data));
 }
 
 void Resources::mount(const std::string &path,
@@ -37,6 +74,26 @@ void Resources::register_res_loader(const rttr::type &ty,
 
 IDataProvider *Resources::resolve_path(const std::string &path,
                                        std::string &relative_path) {
-    return nullptr;
+    auto canonical_path = canonical_res_path(path);
+    std::string root{};
+    IDataProvider *provider = nullptr;
+    for (auto &[r, p] : _data_providers) {
+        if (!starts_with(canonical_path, r)) {
+            continue;
+        }
+        // Find the longest prefix
+        if (provider == nullptr || root.size() < r.size()) {
+            root = r;
+            provider = p.get();
+        }
+    }
+
+    // Does not touch relative path output if no match is found
+    if (provider == nullptr) {
+        return nullptr;
+    }
+
+    relative_path = canonical_path.substr(root.size());
+    return provider;
 }
 } // namespace ars

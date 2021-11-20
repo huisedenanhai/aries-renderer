@@ -6,6 +6,7 @@
 
 namespace ars {
 std::string canonical_res_path(const std::string &path);
+bool starts_with(const std::string &str, const std::string &prefix);
 
 // Resources path should all use '/' as separator
 class ResHandle {
@@ -79,16 +80,17 @@ class Resources {
     void register_res_loader(const rttr::type &ty,
                              const std::shared_ptr<IResLoader> &loader);
 
-    ResHandle load(const rttr::type &ty, const std::string &url);
+    ResHandle load(const rttr::type &ty, const std::string &path);
 
-    template <typename T> Res<T> load(const std::string &url) {
-        return Res<T>(load(rttr::type::get<T>(), url));
+    template <typename T> Res<T> load(const std::string &path) {
+        return Res<T>(load(rttr::type::get<T>(), path));
     }
 
   private:
     IDataProvider *resolve_path(const std::string &path,
                                 std::string &relative_path);
 
+    // Keys are canonical path of mount point
     std::unordered_map<std::string, std::shared_ptr<IDataProvider>>
         _data_providers;
     std::unordered_map<rttr::type, std::shared_ptr<IResLoader>> _res_loaders;

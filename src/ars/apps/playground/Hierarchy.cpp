@@ -76,6 +76,8 @@ class HierarchyInspectorApplication : public engine::IApplication {
         ARS_LOG_INFO("{}", canonical_res_path("////HE/sc"));
         ARS_LOG_INFO("{}", canonical_res_path("/Era///s//s////"));
         ARS_LOG_INFO("{}", canonical_res_path("/Era///s//s"));
+        auto s = split_by(":A:er::re:", ":");
+        ARS_LOG_INFO("{}", join(s.begin(), s.end(), ", "));
     }
 
     void update(double dt) override {

@@ -35,31 +35,51 @@ bool starts_with(const std::string &str, const std::string &prefix) {
     return true;
 }
 
-ResHandle Resources::load(const rttr::type &ty, const std::string &path) {
-    std::string relative_path{};
-    auto provider = resolve_path(path, relative_path);
-    if (provider == nullptr) {
-        ARS_LOG_ERROR("Failed to load resources {}: No data provider found.",
-                      path);
+std::vector<std::string> split_by(const std::string &str,
+                                  const std::string &sep) {
+    int offset = 0;
+    std::vector<std::string> res{};
+    auto len = str.size();
+    auto sep_len = sep.size();
+
+    while (offset < len) {
+        ARS_LOG_INFO("Sub {}", str.substr(offset));
+        auto p = str.find(sep, offset);
+        if (p != std::string::npos) {
+            res.push_back(str.substr(offset, p - offset));
+            offset = static_cast<int>(p + sep_len);
+            // The tail of str happens to be the separator
+            if (offset == len) {
+                res.emplace_back("");
+            }
+        } else {
+            res.push_back(str.substr(offset));
+            break;
+        }
+    }
+
+    return res;
+}
+
+ResHandle Resources::load_res(const std::string &path) {
+    auto names = split_by(path, ":");
+    names.erase(std::remove_if(names.begin(),
+                               names.end(),
+                               [&](std::string &s) { return s.empty(); }),
+                names.end());
+
+    if (names.empty()) {
+        ARS_LOG_ERROR("Failed to load resources {}: Empty path.", path);
         return {};
     }
 
-    auto loader_it = _res_loaders.find(ty);
-    if (loader_it == _res_loaders.end()) {
-        ARS_LOG_ERROR(
-            "Failed to load resources {}: No loader registered for type {}.",
-            path,
-            ty.get_name().to_string());
-        return {};
-    }
-    auto data = provider->load(relative_path);
-    if (data.has_value()) {
-        ARS_LOG_ERROR("Failed to load resources {}: Failed to load data.",
-                      path);
-        return {};
+    auto res = load_root_res(names[0]);
+
+    for (int i = 1; i < names.size(); i++) {
+        res = res.get_sub_res(names[i]);
     }
 
-    return loader_it->second->load(std::move(data));
+    return res;
 }
 
 void Resources::mount(const std::string &path,
@@ -95,5 +115,68 @@ IDataProvider *Resources::resolve_path(const std::string &path,
 
     relative_path = canonical_path.substr(root.size());
     return provider;
+}
+
+ResHandle Resources::load_root_res(const std::string &path) {
+    std::string relative_path{};
+    auto provider = resolve_path(path, relative_path);
+    if (provider == nullptr) {
+        ARS_LOG_ERROR("Failed to load resources {}: No data provider found.",
+                      path);
+        return {};
+    }
+
+    auto res_data = provider->load(relative_path);
+    if (res_data.data.has_value()) {
+        ARS_LOG_ERROR("Failed to load resources {}: Failed to load data.",
+                      path);
+        return {};
+    }
+
+    auto &ty = res_data.ty;
+    auto loader_it = _res_loaders.find(ty);
+    if (loader_it == _res_loaders.end()) {
+        ARS_LOG_ERROR(
+            "Failed to load resources {}: No loader registered for type {}.",
+            path,
+            ty.get_name().to_string());
+        return {};
+    }
+
+    return loader_it->second->load(std::move(res_data.data));
+}
+
+ResHandle ResHandle::get_sub_res(const std::string &name) const {
+    auto it = _handle->sub_res.find(name);
+    if (it == _handle->sub_res.end()) {
+        ARS_LOG_ERROR("Subresource {} not found in resource {}", name, path());
+        return {};
+    }
+    return it->second;
+}
+
+void ResHandle::set_sub_res(const std::string &name,
+                            const ResHandle &res) const {
+    _handle->sub_res[name] = res;
+}
+
+void ResHandle::set_variant(const rttr::variant &res) const {
+    _handle->res = res;
+}
+
+rttr::variant ResHandle::get_variant() const {
+    return _handle->res;
+}
+
+void ResHandle::set_path(const std::string &path) {
+    _handle->path = path;
+}
+
+std::string ResHandle::path() const {
+    return _handle->path;
+}
+
+ResHandle::ResHandle() {
+    _handle = std::make_shared<Handle>();
 }
 } // namespace ars

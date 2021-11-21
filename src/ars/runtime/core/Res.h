@@ -3,39 +3,66 @@
 #include <any>
 #include <memory>
 #include <rttr/variant.h>
+#include <sstream>
 
 namespace ars {
 std::string canonical_res_path(const std::string &path);
 bool starts_with(const std::string &str, const std::string &prefix);
+std::vector<std::string> split_by(const std::string &str,
+                                  const std::string &sep);
 
-// Resources path should all use '/' as separator
+template <typename It>
+std::string join(It &&beg, It &&end, const std::string &sep) {
+    std::ostringstream ss{};
+    bool first = true;
+    for (; beg != end; beg++) {
+        if (first) {
+            first = false;
+        } else {
+            ss << sep;
+        }
+        ss << *beg;
+    }
+    return ss.str();
+}
+
+template <typename T> class Res;
+
+// Resources path should all use '/' as separator.
+// For subresources, use ':' to separate names, names should not be empty
+// string. e.g. '/Model.gltf:mesh_0'
 class ResHandle {
   public:
-    ResHandle() {
-        _handle = std::make_shared<Handle>();
+    ResHandle();
+
+    std::string path() const;
+    void set_path(const std::string &path);
+
+    rttr::variant get_variant() const;
+    void set_variant(const rttr::variant &res) const;
+
+    // The concept of sub res should be useful for composite resources like
+    // models and sprite atlases.
+    // One should be careful to not introduce circular reference.
+    ResHandle get_sub_res(const std::string &name) const;
+    void set_sub_res(const std::string &name, const ResHandle &res) const;
+
+    template <typename T> Res<T> get_sub(const std::string &name) const {
+        return Res<T>(get_sub_res(name));
     }
 
-    std::string path() const {
-        return _handle->path;
-    }
-
-    void set_path(const std::string &path) {
-        _handle->path = path;
-    }
-
-    rttr::variant get_variant() const {
-        return _handle->res;
-    }
-
-    void set_variant(const rttr::variant &res) const {
-        _handle->res = res;
+    template <typename T>
+    void set_sub(const std::string &name, const Res<T> &res) const {
+        set_sub_res(name, res);
     }
 
   protected:
     struct Handle {
+        // The full path of the resources
         std::string path{};
         // Should be std::shared_ptr<T> for the underlying resource type T
         rttr::variant res{};
+        std::unordered_map<std::string, ResHandle> sub_res{};
     };
 
     std::shared_ptr<Handle> _handle{};
@@ -60,11 +87,16 @@ template <typename T> class Res : public ResHandle {
     }
 };
 
+struct ResData {
+    rttr::type ty;
+    std::any data;
+};
+
 class IDataProvider {
   public:
     virtual ~IDataProvider() = default;
 
-    virtual std::any load(const std::string &path) = 0;
+    virtual ResData load(const std::string &path) = 0;
 };
 
 class IResLoader {
@@ -85,13 +117,15 @@ class Resources {
         register_res_loader(rttr::type::get<T>(), loader);
     }
 
-    ResHandle load(const rttr::type &ty, const std::string &path);
+    ResHandle load_res(const std::string &path);
 
     template <typename T> Res<T> load(const std::string &path) {
-        return Res<T>(load(rttr::type::get<T>(), path));
+        return Res<T>(load_res(path));
     }
 
   private:
+    ResHandle load_root_res(const std::string &path);
+
     IDataProvider *resolve_path(const std::string &path,
                                 std::string &relative_path);
 

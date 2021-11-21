@@ -1,6 +1,7 @@
 #include "Res.h"
 #include "Log.h"
 #include "misc/Visitor.h"
+#include <fstream>
 
 namespace ars {
 std::string canonical_res_path(const std::string &path) {
@@ -127,7 +128,7 @@ ResHandle Resources::load_root_res(const std::string &path) {
     }
 
     auto res_data = provider->load(relative_path);
-    if (res_data.data.has_value()) {
+    if (!res_data.valid()) {
         ARS_LOG_ERROR("Failed to load resources {}: Failed to load data.",
                       path);
         return {};
@@ -143,7 +144,7 @@ ResHandle Resources::load_root_res(const std::string &path) {
         return {};
     }
 
-    return loader_it->second->load(std::move(res_data.data));
+    return loader_it->second->load(std::move(res_data));
 }
 
 ResHandle ResHandle::get_sub_res(const std::string &name) const {
@@ -178,5 +179,62 @@ std::string ResHandle::path() const {
 
 ResHandle::ResHandle() {
     _handle = std::make_shared<Handle>();
+}
+
+std::ostream &ResData::serialize(std::ostream &os) const {
+    os.write(reinterpret_cast<const char *>(MAGIC_NUMBER), 4);
+    nlohmann::json value = {
+        {"ty", ty.get_name()},
+        {"meta", meta},
+    };
+    auto bs = nlohmann::json::to_bson(value);
+    uint64_t meta_len = bs.size();
+    uint64_t data_len = data.size();
+    os.write(reinterpret_cast<const char *>(&meta_len), sizeof(meta_len));
+    os.write(reinterpret_cast<const char *>(&data_len), sizeof(data_len));
+    os.write(reinterpret_cast<const char *>(bs.data()),
+             static_cast<std::streamsize>(bs.size()));
+    os.write(reinterpret_cast<const char *>(data.data()),
+             static_cast<std::streamsize>(data.size()));
+    return os;
+}
+
+std::istream &ResData::deserialize(std::istream &is) {
+    uint8_t magic[4]{};
+    is.read(reinterpret_cast<char *>(magic), 4);
+    uint64_t meta_len{};
+    uint64_t data_len{};
+    is.read(reinterpret_cast<char *>(&meta_len), sizeof(meta_len));
+    is.read(reinterpret_cast<char *>(&data_len), sizeof(data_len));
+    std::vector<uint8_t> bs(meta_len);
+    std::vector<uint8_t> rdata(data_len);
+
+    is.read(reinterpret_cast<char *>(bs.data()),
+            static_cast<std::streamsize>(meta_len));
+    is.read(reinterpret_cast<char *>(rdata.data()),
+            static_cast<std::streamsize>(data_len));
+
+    auto value = nlohmann::json::from_bson(bs);
+    ty = rttr::type::get_by_name(value.at("ty").get<std::string>());
+    meta = value.at("meta");
+    data = std::move(rdata);
+
+    return is;
+}
+
+void ResData::save(const std::filesystem::path &path) const {
+    std::ofstream os(path, std::ios::binary);
+    serialize(os);
+    os.close();
+}
+
+void ResData::load(const std::filesystem::path &path) {
+    std::ifstream is(path, std::ios::binary);
+    deserialize(is);
+    is.close();
+}
+
+bool ResData::valid() const {
+    return ty != rttr::type::get<ResData>();
 }
 } // namespace ars

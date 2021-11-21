@@ -1,6 +1,7 @@
 #include "Engine.h"
 #include "components/Components.h"
 #include <ars/runtime/core/Log.h>
+#include <ars/runtime/core/Res.h>
 #include <ars/runtime/render/IContext.h>
 #include <ars/runtime/render/IScene.h>
 #include <ars/runtime/render/ITexture.h>
@@ -80,6 +81,7 @@ class Engine {
 
     void run() {
         init_render();
+        init_resources();
         register_components();
 
         _application->init(_main_window.get());
@@ -124,6 +126,10 @@ class Engine {
         return _render_context.get();
     }
 
+    [[nodiscard]] Resources *resources() const {
+        return _resources.get();
+    }
+
   private:
     void check_secondary_windows_should_close() {
         for (auto it = _secondary_windows.begin();
@@ -158,6 +164,10 @@ class Engine {
         _main_window = std::move(window);
     }
 
+    void init_resources() {
+        _resources = std::make_unique<Resources>();
+    }
+
     void destroy_render() {
         _main_window.reset();
         _render_context.reset();
@@ -166,6 +176,7 @@ class Engine {
     }
 
     std::unique_ptr<IApplication> _application{};
+    std::unique_ptr<Resources> _resources{};
     std::unique_ptr<render::IContext> _render_context{};
     std::unique_ptr<render::IWindow> _main_window{};
     std::set<std::unique_ptr<SecondaryWindow>> _secondary_windows{};
@@ -200,4 +211,8 @@ render::IContext *render_context() {
     return s_engine->render_context();
 }
 
+Resources *resources() {
+    assert(s_engine != nullptr);
+    return s_engine->resources();
+}
 } // namespace ars::engine

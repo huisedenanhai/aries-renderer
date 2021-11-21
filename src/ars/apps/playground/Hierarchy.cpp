@@ -78,6 +78,27 @@ class HierarchyInspectorApplication : public engine::IApplication {
         ARS_LOG_INFO("{}", canonical_res_path("/Era///s//s"));
         auto s = split_by(":A:er::re:", ":");
         ARS_LOG_INFO("{}", join(s.begin(), s.end(), ", "));
+
+        ResData res{};
+        res.ty = rttr::type::get<Hello>();
+        res.meta = {
+            {"a", "Hello"},
+            {"b", "World"},
+        };
+        res.data = {0, 1, 2, 3, 4, 5, 6};
+
+        res.save("test.ares");
+
+        ResData res2{};
+        res2.load("test.ares");
+        std::stringstream ss;
+        for (auto &d : res2.data) {
+            ss << static_cast<int>(d) << ", ";
+        }
+        ARS_LOG_INFO("res2 ty = {}, meta = {}, data = [{}]",
+                     res2.ty.get_name().to_string(),
+                     res2.meta.dump(),
+                     ss.str());
     }
 
     void update(double dt) override {

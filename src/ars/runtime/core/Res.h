@@ -1,7 +1,8 @@
 #pragma once
 
-#include <any>
+#include <ios>
 #include <memory>
+#include <nlohmann/json.hpp>
 #include <rttr/variant.h>
 #include <sstream>
 
@@ -88,8 +89,20 @@ template <typename T> class Res : public ResHandle {
 };
 
 struct ResData {
-    rttr::type ty;
-    std::any data;
+    rttr::type ty = rttr::type::get<ResData>();
+    nlohmann::json meta{};
+    std::vector<uint8_t> data{};
+
+    bool valid() const;
+
+    // 4 byte magic
+    static constexpr uint8_t MAGIC_NUMBER[4] = {0xAD, 0x92, 0x77, 0xBA};
+
+    std::ostream &serialize(std::ostream &os) const;
+    std::istream &deserialize(std::istream &is);
+
+    void save(const std::filesystem::path &path) const;
+    void load(const std::filesystem::path &path);
 };
 
 class IDataProvider {
@@ -101,7 +114,7 @@ class IDataProvider {
 
 class IResLoader {
   public:
-    virtual ResHandle load(std::any data) = 0;
+    virtual ResHandle load(ResData data) = 0;
 };
 
 class Resources {

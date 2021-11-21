@@ -5,6 +5,8 @@
 #include <string>
 
 namespace ars {
+class Resources;
+
 namespace render {
 class IWindow;
 class IContext;
@@ -58,5 +60,6 @@ void create_window(const char *title,
                    WindowRenderCallback render);
 
 render::IContext *render_context();
+Resources *resources();
 } // namespace engine
 } // namespace ars

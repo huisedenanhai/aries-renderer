@@ -80,6 +80,11 @@ class Resources {
     void register_res_loader(const rttr::type &ty,
                              const std::shared_ptr<IResLoader> &loader);
 
+    template <typename T>
+    void register_res_loader(const std::shared_ptr<IResLoader> &loader) {
+        register_res_loader(rttr::type::get<T>(), loader);
+    }
+
     ResHandle load(const rttr::type &ty, const std::string &path);
 
     template <typename T> Res<T> load(const std::string &path) {

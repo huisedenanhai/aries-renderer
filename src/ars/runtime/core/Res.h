@@ -3,7 +3,6 @@
 #include <ios>
 #include <memory>
 #include <nlohmann/json.hpp>
-#include <rttr/variant.h>
 #include <sstream>
 
 namespace ars {

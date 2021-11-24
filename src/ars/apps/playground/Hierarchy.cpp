@@ -80,7 +80,7 @@ class HierarchyInspectorApplication : public engine::IApplication {
         ARS_LOG_INFO("{}", join(s.begin(), s.end(), ", "));
 
         ResData res{};
-        res.ty = rttr::type::get<Hello>();
+        res.ty = "Hello";
         res.meta = {
             {"a", "Hello"},
             {"b", "World"},
@@ -96,7 +96,7 @@ class HierarchyInspectorApplication : public engine::IApplication {
             ss << static_cast<int>(d) << ", ";
         }
         ARS_LOG_INFO("res2 ty = {}, meta = {}, data = [{}]",
-                     res2.ty.get_name().to_string(),
+                     res2.ty,
                      res2.meta.dump(),
                      ss.str());
     }

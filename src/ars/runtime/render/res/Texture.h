@@ -2,7 +2,7 @@
 
 #include "../Common.h"
 #include "../ITexture.h"
-#include <ars/runtime/core/Res.h>
+#include <ars/runtime/core/ResData.h>
 #include <filesystem>
 #include <memory>
 
@@ -13,6 +13,21 @@ Format get_8_bit_texture_format(uint32_t channels, bool need_srgb);
 
 std::shared_ptr<ITexture> load_texture(IContext *context,
                                        const std::filesystem::path &path);
+
+// DO NOT push this in ITexture.h, it slows down compilation significantly
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(TextureInfo,
+                                   format,
+                                   width,
+                                   height,
+                                   depth,
+                                   mip_levels,
+                                   array_layers,
+                                   min_filter,
+                                   mag_filter,
+                                   mipmap_mode,
+                                   wrap_u,
+                                   wrap_v,
+                                   wrap_w)
 
 struct TextureResMeta {
     TextureInfo info{};

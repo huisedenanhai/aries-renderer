@@ -30,20 +30,6 @@ struct TextureInfo {
     WrapMode wrap_u = WrapMode::Repeat;
     WrapMode wrap_v = WrapMode::Repeat;
     WrapMode wrap_w = WrapMode::Repeat;
-
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(TextureInfo,
-                                   format,
-                                   width,
-                                   height,
-                                   depth,
-                                   mip_levels,
-                                   array_layers,
-                                   min_filter,
-                                   mag_filter,
-                                   mipmap_mode,
-                                   wrap_u,
-                                   wrap_v,
-                                   wrap_w)
 };
 
 uint32_t calculate_mip_levels(uint32_t width, uint32_t height, uint32_t depth);

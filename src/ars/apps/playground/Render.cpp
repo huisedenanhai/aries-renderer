@@ -90,6 +90,17 @@ class Application : public ars::engine::IApplication {
         auto ctx = ars::engine::render_context();
         auto tex = load_texture(ctx, "test.jpg");
 
+        {
+            using namespace std::chrono;
+            auto start = high_resolution_clock::now();
+            ars::ResData res{};
+            res.load(ars::preferred_res_path("test.jpg"));
+            tex = load_texture(ctx, res);
+            auto stop = high_resolution_clock::now();
+            ARS_LOG_INFO("Load texture test.jpg.ares takes {}ms",
+                         duration_cast<milliseconds>(stop - start).count());
+        }
+
         int window_num = 3;
         for (int i = 0; i < window_num; i++) {
             auto title = "Playground Render " + std::to_string(i);

@@ -88,7 +88,7 @@ void Resources::mount(const std::string &path,
     _data_providers[canonical_res_path(path)] = provider;
 }
 
-void Resources::register_res_loader(const rttr::type &ty,
+void Resources::register_res_loader(const std::string &ty,
                                     const std::shared_ptr<IResLoader> &loader) {
     _res_loaders[ty] = loader;
 }
@@ -119,6 +119,8 @@ IDataProvider *Resources::resolve_path(const std::string &path,
 }
 
 ResHandle Resources::load_root_res(const std::string &path) {
+    using namespace std::chrono;
+
     std::string relative_path{};
     auto provider = resolve_path(path, relative_path);
     if (provider == nullptr) {
@@ -127,6 +129,8 @@ ResHandle Resources::load_root_res(const std::string &path) {
         return {};
     }
 
+    auto start = high_resolution_clock::now();
+
     auto res_data = provider->load(relative_path);
     if (!res_data.valid()) {
         ARS_LOG_ERROR("Failed to load resources {}: Failed to load data.",
@@ -134,17 +138,34 @@ ResHandle Resources::load_root_res(const std::string &path) {
         return {};
     }
 
+    auto mid = high_resolution_clock::now();
+
     auto &ty = res_data.ty;
     auto loader_it = _res_loaders.find(ty);
     if (loader_it == _res_loaders.end()) {
         ARS_LOG_ERROR(
             "Failed to load resources {}: No loader registered for type {}.",
             path,
-            ty.get_name().to_string());
+            ty);
         return {};
     }
 
-    return loader_it->second->load(std::move(res_data));
+    auto res = loader_it->second->load(std::move(res_data));
+
+    auto stop = high_resolution_clock::now();
+
+    auto total_duration = duration_cast<milliseconds>(stop - start);
+    auto decode_duration = duration_cast<milliseconds>(mid - start);
+    auto upload_duration = duration_cast<milliseconds>(stop - mid);
+
+    ARS_LOG_INFO(
+        "Load resource {} takes {}ms, fetch data takes {}ms, upload takes {}ms",
+        path,
+        total_duration.count(),
+        decode_duration.count(),
+        upload_duration.count());
+
+    return res;
 }
 
 ResHandle ResHandle::get_sub_res(const std::string &name) const {
@@ -184,7 +205,7 @@ ResHandle::ResHandle() {
 std::ostream &ResData::serialize(std::ostream &os) const {
     os.write(reinterpret_cast<const char *>(MAGIC_NUMBER), 4);
     nlohmann::json value = {
-        {"ty", ty.get_name()},
+        {"ty", ty},
         {"meta", meta},
     };
     auto bs = nlohmann::json::to_bson(value);
@@ -202,6 +223,12 @@ std::ostream &ResData::serialize(std::ostream &os) const {
 std::istream &ResData::deserialize(std::istream &is) {
     uint8_t magic[4]{};
     is.read(reinterpret_cast<char *>(magic), 4);
+    if (std::memcmp(magic, MAGIC_NUMBER, 4) != 0) {
+        ARS_LOG_ERROR("Invalid magic number for res data");
+        reset();
+        is.seekg(-4, std::ios::seekdir::cur);
+        return is;
+    }
     uint64_t meta_len{};
     uint64_t data_len{};
     is.read(reinterpret_cast<char *>(&meta_len), sizeof(meta_len));
@@ -215,11 +242,19 @@ std::istream &ResData::deserialize(std::istream &is) {
             static_cast<std::streamsize>(data_len));
 
     auto value = nlohmann::json::from_bson(bs);
-    ty = rttr::type::get_by_name(value.at("ty").get<std::string>());
+    ty = value.at("ty").get<std::string>();
     meta = value.at("meta");
     data = std::move(rdata);
 
     return is;
+}
+
+std::filesystem::path preferred_res_path(const std::filesystem::path &path) {
+    auto preferred_ext = ".ares";
+    if (path.extension() == preferred_ext) {
+        return path;
+    }
+    return path.string() + preferred_ext;
 }
 
 void ResData::save(const std::filesystem::path &path) const {
@@ -235,6 +270,10 @@ void ResData::load(const std::filesystem::path &path) {
 }
 
 bool ResData::valid() const {
-    return ty != rttr::type::get<ResData>();
+    return !ty.empty();
+}
+
+void ResData::reset() {
+    *this = ResData();
 }
 } // namespace ars

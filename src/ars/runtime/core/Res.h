@@ -89,9 +89,15 @@ template <typename T> class Res : public ResHandle {
 };
 
 struct ResData {
-    rttr::type ty = rttr::type::get<ResData>();
+    // Use std::string rather than rttr::type or other similar stuff because:
+    // 1. All we want here is an id.
+    // 2. rttr::type::get_by_name() access global registry, looks unnecessary
+    // for here and seems not thread safe.
+    std::string ty{};
     nlohmann::json meta{};
     std::vector<uint8_t> data{};
+
+    void reset();
 
     bool valid() const;
 
@@ -103,6 +109,16 @@ struct ResData {
 
     void save(const std::filesystem::path &path) const;
     void load(const std::filesystem::path &path);
+};
+
+// Add preferred extension '.ares' to the path
+std::filesystem::path preferred_res_path(const std::filesystem::path &path);
+
+struct DataSlice {
+    uint64_t offset = 0;
+    uint64_t size = 0;
+
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(DataSlice, offset, size)
 };
 
 class IDataProvider {
@@ -122,7 +138,7 @@ class Resources {
     void mount(const std::string &path,
                const std::shared_ptr<IDataProvider> &provider);
 
-    void register_res_loader(const rttr::type &ty,
+    void register_res_loader(const std::string &ty,
                              const std::shared_ptr<IResLoader> &loader);
 
     template <typename T>
@@ -145,6 +161,6 @@ class Resources {
     // Keys are canonical path of mount point
     std::unordered_map<std::string, std::shared_ptr<IDataProvider>>
         _data_providers;
-    std::unordered_map<rttr::type, std::shared_ptr<IResLoader>> _res_loaders;
+    std::unordered_map<std::string, std::shared_ptr<IResLoader>> _res_loaders;
 };
 } // namespace ars

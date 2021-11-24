@@ -1,10 +1,8 @@
 #include "Texture.h"
 
 #include "../IContext.h"
-#include "../ITexture.h"
 #include <ars/runtime/core/Log.h>
 #include <chrono>
-#include <sstream>
 #include <stb_image.h>
 
 namespace ars::render {
@@ -68,5 +66,48 @@ std::shared_ptr<ITexture> load_texture(IContext *context,
                  upload_duration.count());
 
     return texture;
+}
+
+std::shared_ptr<ITexture> load_texture(IContext *context, const ResData &data) {
+    if (data.ty != TEXTURE_RES_TYPE_NAME) {
+        ARS_LOG_ERROR("Failed to load texture: invalid data type");
+        return nullptr;
+    }
+    TextureResMeta meta{};
+    data.meta.get_to(meta);
+    auto tex = context->create_texture(meta.info);
+    for (int l = 0; l < meta.layers.size(); l++) {
+        auto &layer = meta.layers[l];
+
+        auto mip_width = static_cast<int32_t>(meta.info.width);
+        auto mip_height = static_cast<int32_t>(meta.info.height);
+        auto mip_depth = static_cast<int32_t>(meta.info.depth);
+
+        for (int m = 0; m < layer.mipmaps.size(); m++) {
+            auto calc_next_mip_size = [](int32_t size) {
+                return size > 1 ? size / 2 : 1;
+            };
+            auto &mip = layer.mipmaps[m];
+            tex->set_data((void *)(&data.data[mip.offset]),
+                          mip.size,
+                          m,
+                          l,
+                          0,
+                          0,
+                          0,
+                          mip_width,
+                          mip_height,
+                          mip_depth);
+            mip_width = calc_next_mip_size(mip_width);
+            mip_height = calc_next_mip_size(mip_height);
+            mip_depth = calc_next_mip_size(mip_depth);
+        }
+    }
+
+    if (meta.regenerate_mipmap) {
+        tex->generate_mipmap();
+    }
+
+    return tex;
 }
 } // namespace ars::render

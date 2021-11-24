@@ -62,7 +62,7 @@ std::vector<std::string> split_by(const std::string &str,
     return res;
 }
 
-ResHandle Resources::load_res(const std::string &path) {
+std::shared_ptr<IRes> Resources::load_res(const std::string &path) {
     auto names = split_by(path, ":");
     names.erase(std::remove_if(names.begin(),
                                names.end(),
@@ -77,7 +77,7 @@ ResHandle Resources::load_res(const std::string &path) {
     auto res = load_root_res(names[0]);
 
     for (int i = 1; i < names.size(); i++) {
-        res = res.get_sub_res(names[i]);
+        res = res->get_sub_res(names[i]);
     }
 
     return res;
@@ -118,7 +118,7 @@ IDataProvider *Resources::resolve_path(const std::string &path,
     return provider;
 }
 
-ResHandle Resources::load_root_res(const std::string &path) {
+std::shared_ptr<IRes> Resources::load_root_res(const std::string &path) {
     using namespace std::chrono;
 
     std::string relative_path{};
@@ -168,38 +168,18 @@ ResHandle Resources::load_root_res(const std::string &path) {
     return res;
 }
 
-ResHandle ResHandle::get_sub_res(const std::string &name) const {
-    auto it = _handle->sub_res.find(name);
-    if (it == _handle->sub_res.end()) {
+std::shared_ptr<IRes> IRes::get_sub_res(const std::string &name) const {
+    auto it = _sub_res.find(name);
+    if (it == _sub_res.end()) {
         ARS_LOG_ERROR("Subresource {} not found in resource {}", name, path());
         return {};
     }
     return it->second;
 }
 
-void ResHandle::set_sub_res(const std::string &name,
-                            const ResHandle &res) const {
-    _handle->sub_res[name] = res;
-}
-
-void ResHandle::set_variant(const rttr::variant &res) const {
-    _handle->res = res;
-}
-
-rttr::variant ResHandle::get_variant() const {
-    return _handle->res;
-}
-
-void ResHandle::set_path(const std::string &path) {
-    _handle->path = path;
-}
-
-std::string ResHandle::path() const {
-    return _handle->path;
-}
-
-ResHandle::ResHandle() {
-    _handle = std::make_shared<Handle>();
+void IRes::set_sub_res(const std::string &name,
+                       const std::shared_ptr<IRes> &res) {
+    _sub_res[name] = res;
 }
 
 std::ostream &ResData::serialize(std::ostream &os) const {
@@ -275,5 +255,13 @@ bool ResData::valid() const {
 
 void ResData::reset() {
     *this = ResData();
+}
+
+std::string IRes::path() const {
+    return _path;
+}
+
+void IRes::set_path(const std::string &path) {
+    _path = path;
 }
 } // namespace ars

@@ -27,65 +27,24 @@ std::string join(It &&beg, It &&end, const std::string &sep) {
     return ss.str();
 }
 
-template <typename T> class Res;
-
 // Resources path should all use '/' as separator.
 // For subresources, use ':' to separate names, names should not be empty
 // string. e.g. '/Model.gltf:mesh_0'
-class ResHandle {
+class IRes {
   public:
-    ResHandle();
+    virtual ~IRes() = default;
 
-    std::string path() const;
+    [[nodiscard]] std::string path() const;
     void set_path(const std::string &path);
 
-    rttr::variant get_variant() const;
-    void set_variant(const rttr::variant &res) const;
+    [[nodiscard]] std::shared_ptr<IRes>
+    get_sub_res(const std::string &name) const;
+    void set_sub_res(const std::string &name, const std::shared_ptr<IRes> &res);
 
-    // The concept of sub res should be useful for composite resources like
-    // models and sprite atlases.
-    // One should be careful to not introduce circular reference.
-    ResHandle get_sub_res(const std::string &name) const;
-    void set_sub_res(const std::string &name, const ResHandle &res) const;
-
-    template <typename T> Res<T> get_sub(const std::string &name) const {
-        return Res<T>(get_sub_res(name));
-    }
-
-    template <typename T>
-    void set_sub(const std::string &name, const Res<T> &res) const {
-        set_sub_res(name, res);
-    }
-
-  protected:
-    struct Handle {
-        // The full path of the resources
-        std::string path{};
-        // Should be std::shared_ptr<T> for the underlying resource type T
-        rttr::variant res{};
-        std::unordered_map<std::string, ResHandle> sub_res{};
-    };
-
-    std::shared_ptr<Handle> _handle{};
-};
-
-template <typename T> class Res : public ResHandle {
-  public:
-    using ResHandle::ResHandle;
-
-    explicit Res(const ResHandle &res) : ResHandle(res) {}
-
-    std::shared_ptr<T> get() const {
-        return _handle->res.template get_value<std::shared_ptr<T>>();
-    }
-
-    void set(const std::shared_ptr<T> &res) const {
-        _handle->res = res;
-    }
-
-    T *operator->() const {
-        return get().get();
-    }
+  private:
+    // The full path of the resources
+    std::string _path{};
+    std::unordered_map<std::string, std::shared_ptr<IRes>> _sub_res{};
 };
 
 struct ResData {
@@ -130,7 +89,7 @@ class IDataProvider {
 
 class IResLoader {
   public:
-    virtual ResHandle load(ResData data) = 0;
+    virtual std::shared_ptr<IRes> load(ResData data) = 0;
 };
 
 class Resources {
@@ -141,19 +100,14 @@ class Resources {
     void register_res_loader(const std::string &ty,
                              const std::shared_ptr<IResLoader> &loader);
 
-    template <typename T>
-    void register_res_loader(const std::shared_ptr<IResLoader> &loader) {
-        register_res_loader(rttr::type::get<T>(), loader);
-    }
+    std::shared_ptr<IRes> load_res(const std::string &path);
 
-    ResHandle load_res(const std::string &path);
-
-    template <typename T> Res<T> load(const std::string &path) {
-        return Res<T>(load_res(path));
+    template <typename T> std::shared_ptr<T> load(const std::string &path) {
+        return std::dynamic_pointer_cast<T>(load_res(path));
     }
 
   private:
-    ResHandle load_root_res(const std::string &path);
+    std::shared_ptr<IRes> load_root_res(const std::string &path);
 
     IDataProvider *resolve_path(const std::string &path,
                                 std::string &relative_path);

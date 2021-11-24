@@ -3,8 +3,8 @@
 #include "Common.h"
 #include "IWindow.h"
 
+#include <ars/runtime/core/Res.h>
 #include <memory>
-#include <nlohmann/json.hpp>
 
 namespace ars::render {
 enum class TextureType { Texture2D };
@@ -48,11 +48,9 @@ struct TextureInfo {
 
 uint32_t calculate_mip_levels(uint32_t width, uint32_t height, uint32_t depth);
 
-class ITexture {
+class ITexture : public IRes {
   public:
     explicit ITexture(const TextureInfo &info);
-
-    virtual ~ITexture() = default;
 
     [[nodiscard]] TextureType type() const;
     [[nodiscard]] Format format() const;

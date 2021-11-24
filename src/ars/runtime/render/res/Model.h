@@ -1,6 +1,9 @@
 #pragma once
 
+#include "../IMesh.h"
 #include "../IScene.h"
+#include <ars/runtime/core/Res.h>
+#include <ars/runtime/core/Serde.h>
 #include <ars/runtime/core/math/Transform.h>
 #include <filesystem>
 #include <memory>
@@ -10,8 +13,6 @@
 #include <vector>
 
 namespace ars::render {
-class IMesh;
-class IMaterial;
 class IContext;
 class ITexture;
 
@@ -77,5 +78,27 @@ struct Model {
 };
 
 Model load_gltf(IContext *context, const std::filesystem::path &path);
+
+constexpr const char *MESH_RES_TYPE_NAME = "ars::render::IMesh";
+constexpr const char *MATERIAL_RES_TYPE_NAME = "ars::render::IMaterial";
+
+struct MeshResMeta {
+    math::AABB<float> aabb;
+    DataSlice position;
+    DataSlice normal;
+    DataSlice tangent;
+    DataSlice tex_coord;
+    DataSlice indices;
+
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(
+        MeshResMeta, aabb, position, normal, tangent, tex_coord, indices)
+};
+
+struct MaterialResMeta {
+    MaterialType type = MaterialType::Error;
+    DataSlice properties;
+
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(MaterialResMeta, type, properties)
+};
 
 } // namespace ars::render

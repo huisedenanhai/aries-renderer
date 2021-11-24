@@ -1,6 +1,4 @@
 #include "Model.h"
-#include "../IContext.h"
-#include "../IMesh.h"
 #include "../ITexture.h"
 #include "Texture.h"
 #include <ars/runtime/core/Log.h>
@@ -626,5 +624,14 @@ Model load_gltf(IContext *context, const std::filesystem::path &path) {
     }
 
     return model;
+}
+
+std::shared_ptr<IMesh> load_mesh(IContext *context, const ResData &data) {
+    return nullptr;
+}
+
+std::shared_ptr<IMaterial> load_material(IContext *context,
+                                         const ResData &data) {
+    return nullptr;
 }
 } // namespace ars::render

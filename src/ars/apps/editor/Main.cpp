@@ -34,6 +34,9 @@ class Editor : public engine::IApplication {
         auto &io = ImGui::GetIO();
         io.ConfigWindowsMoveFromTitleBarOnly = true;
 
+        _light_bulb_icon =
+            render::load_texture(engine::render_context(), "light-bulb.png");
+
         edit_scene(std::nullopt);
 
         _file_browser_state.on_file_open =
@@ -66,8 +69,7 @@ class Editor : public engine::IApplication {
                 math::XformTRS<float>::from_translation({0, 0.3f, 2.0f}));
             _3d_view_state.focus_distance = 2.0f;
 
-            auto light_bulb_icon = render::load_texture(ctx, "light-bulb.png");
-            _view->overlay()->set_light_gizmo(light_bulb_icon, 0.1f);
+            _view->overlay()->set_light_gizmo(_light_bulb_icon, 0.1f);
 
             if (path.has_value()) {
                 auto ext = path->extension();
@@ -214,6 +216,7 @@ class Editor : public engine::IApplication {
 
     std::vector<std::function<void()>> _update_tasks{};
 
+    std::shared_ptr<render::ITexture> _light_bulb_icon{};
     std::unique_ptr<render::IView> _view{};
     std::unique_ptr<engine::Scene> _scene{};
     std::optional<std::filesystem::path> _scene_save_dir{};

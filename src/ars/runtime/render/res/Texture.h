@@ -14,7 +14,7 @@ Format get_8_bit_texture_format(uint32_t channels, bool need_srgb);
 std::shared_ptr<ITexture> load_texture(IContext *context,
                                        const std::filesystem::path &path);
 
-// DO NOT push this in ITexture.h, it slows down compilation significantly
+// DO NOT put this in ITexture.h, it slows down compilation significantly
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(TextureInfo,
                                    format,
                                    width,

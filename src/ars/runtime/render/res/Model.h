@@ -94,6 +94,8 @@ struct MeshResMeta {
         MeshResMeta, aabb, position, normal, tangent, tex_coord, indices)
 };
 
+std::shared_ptr<IMesh> load_mesh(IContext *context, const ResData &data);
+
 struct MaterialResMeta {
     MaterialType type = MaterialType::Error;
     DataSlice properties;
@@ -101,4 +103,6 @@ struct MaterialResMeta {
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(MaterialResMeta, type, properties)
 };
 
+std::shared_ptr<IMaterial> load_material(IContext *context,
+                                         const ResData &data);
 } // namespace ars::render

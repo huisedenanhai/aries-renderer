@@ -1,5 +1,6 @@
 #include <ars/runtime/core/Log.h>
 #include <ars/runtime/core/Res.h>
+#include <ars/runtime/render/res/Model.h>
 #include <ars/runtime/render/res/Texture.h>
 #include <iostream>
 #include <stb_image.h>
@@ -47,10 +48,190 @@ void gltf_warn(const std::filesystem::path &path, const std::string &info) {
     ARS_LOG_WARN("Loading {}: {}", path.string(), info);
 }
 
+void gltf_decode_accessor(const tinygltf::Model &gltf,
+                          int accessor_index,
+                          const unsigned char *&data,
+                          size_t &offset,
+                          size_t &stride,
+                          size_t &count) {
+    auto &accessor = gltf.accessors[accessor_index];
+    auto &buffer_view = gltf.bufferViews[accessor.bufferView];
+    auto &buffer = gltf.buffers[buffer_view.buffer];
+    stride = accessor.ByteStride(buffer_view);
+    offset = accessor.byteOffset + buffer_view.byteOffset;
+    count = accessor.count;
+    data = buffer.data.data();
+}
+
+template <typename T, typename R> R cast_value(const unsigned char *ptr) {
+    return static_cast<R>(*reinterpret_cast<const T *>(ptr));
+}
+
 void import_gltf_mesh(const std::filesystem::path &path,
                       const tinygltf::Model &gltf) {
-    auto target_dir = ".ars" / path.parent_path();
+    auto target_dir = ".ars" / path.parent_path() / "meshes";
     std::filesystem::create_directories(target_dir);
+    for (auto &m : gltf.meshes) {
+        for (int prim_index = 0; prim_index < m.primitives.size();
+             prim_index++) {
+            auto &p = m.primitives[prim_index];
+            auto save_path =
+                target_dir / fmt::format("{}.{}", m.name, prim_index);
+
+            render::MeshResMeta meta{};
+            ResData data{};
+            auto &buf = data.data;
+
+            auto add_data = [&](int accessor_index, int elem_size) {
+                const unsigned char *ptr = nullptr;
+                size_t offset = 0, stride = 0, count = 0;
+                gltf_decode_accessor(
+                    gltf, accessor_index, ptr, offset, stride, count);
+                DataSlice slice{};
+                slice.offset = buf.size();
+                slice.size = elem_size * count;
+                buf.resize(slice.offset + slice.size);
+
+                if (stride == elem_size) {
+                    std::memcpy(&buf[slice.offset], ptr, slice.size);
+                } else {
+                    for (int i = 0; i < count; i++) {
+                        std::memcpy(&buf[slice.offset + i * elem_size],
+                                    ptr + i * elem_size,
+                                    elem_size);
+                    }
+                }
+
+                return slice;
+            };
+
+            // Import attributes
+            constexpr int ATTR_COUNT = 4;
+            const char *attr_names[ATTR_COUNT] = {
+                "POSITION",
+                "NORMAL",
+                "TANGENT",
+                "TEXCOORD_0",
+            };
+
+            int attr_types[ATTR_COUNT] = {
+                TINYGLTF_TYPE_VEC3,
+                TINYGLTF_TYPE_VEC3,
+                TINYGLTF_TYPE_VEC4,
+                TINYGLTF_TYPE_VEC2,
+            };
+
+            int attr_elem_size[ATTR_COUNT] = {
+                3 * sizeof(float),
+                3 * sizeof(float),
+                4 * sizeof(float),
+                2 * sizeof(float),
+            };
+
+            DataSlice *slices[ATTR_COUNT] = {
+                &meta.position,
+                &meta.normal,
+                &meta.tangent,
+                &meta.tex_coord,
+            };
+
+            for (int a = 0; a < ATTR_COUNT; a++) {
+                auto &attrs = p.attributes;
+                auto it = p.attributes.find(attr_names[a]);
+                if (it == attrs.end()) {
+                    ARS_LOG_WARN("Attribute {} for mesh {}: Not found",
+                                 attr_names[a],
+                                 save_path.string());
+                    continue;
+                }
+
+                auto &accessor = gltf.accessors[it->second];
+                if (accessor.type != attr_types[a]) {
+                    ARS_LOG_WARN("Attribute {} for mesh {}: Type mismatch",
+                                 attr_names[a],
+                                 save_path.string());
+                    continue;
+                }
+
+                if (accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT) {
+                    ARS_LOG_WARN("Attribute {} for mesh {}: Only support float "
+                                 "vertex attribute",
+                                 attr_names[a],
+                                 save_path.string());
+                    continue;
+                }
+
+                *slices[a] = add_data(it->second, attr_elem_size[a]);
+            }
+
+            // Import indices
+            std::vector<uint32_t> indices;
+            {
+                auto accessor_index = p.indices;
+                if (accessor_index >= 0) {
+                    auto &accessor = gltf.accessors[accessor_index];
+                    indices.resize(accessor.count);
+                    const unsigned char *ptr = nullptr;
+                    size_t offset = 0, stride = 0, count = 0;
+                    gltf_decode_accessor(
+                        gltf, accessor_index, ptr, offset, stride, count);
+
+                    auto reader = [&](int i) {
+                        return ptr + offset + i * stride;
+                    };
+
+                    for (int i = 0; i < accessor.count; i++) {
+                        switch (accessor.componentType) {
+                        case TINYGLTF_COMPONENT_TYPE_BYTE:
+                            indices[i] =
+                                cast_value<int8_t, uint32_t>(reader(i));
+                            break;
+                        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+                            indices[i] =
+                                cast_value<uint8_t, uint32_t>(reader(i));
+                            break;
+                        case TINYGLTF_COMPONENT_TYPE_SHORT:
+                            indices[i] =
+                                cast_value<int16_t, uint32_t>(reader(i));
+                            break;
+                        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+                            indices[i] =
+                                cast_value<uint16_t, uint32_t>(reader(i));
+                            break;
+                        case TINYGLTF_COMPONENT_TYPE_INT:
+                            indices[i] =
+                                cast_value<int32_t, uint32_t>(reader(i));
+                            break;
+                        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+                            indices[i] =
+                                cast_value<uint32_t, uint32_t>(reader(i));
+                            break;
+                        default:
+                            ARS_LOG_ERROR("Indices of mesh {}: Invalid type.",
+                                          save_path.string());
+                        }
+                    }
+                }
+            }
+            meta.indices.offset = buf.size();
+            meta.indices.size = indices.size() * sizeof(uint32_t);
+            buf.resize(meta.indices.offset + meta.indices.size);
+            std::memcpy(
+                &buf[meta.indices.offset], indices.data(), meta.indices.size);
+
+            // Calculate AABB
+            auto vert_count = meta.position.size / (3 * sizeof(float));
+            auto vertices =
+                reinterpret_cast<glm::vec3 *>(&buf[meta.position.offset]);
+            meta.aabb =
+                math::AABB<float>::from_points(vertices, vertices + vert_count);
+
+            data.ty = render::RES_TYPE_NAME_MESH;
+            data.meta = meta;
+
+            data.save(preferred_res_path(save_path.string()));
+        }
+    }
 }
 
 void import_gltf(const std::filesystem::path &path) {

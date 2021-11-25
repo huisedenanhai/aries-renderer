@@ -56,7 +56,7 @@ template <typename T> struct AABB {
         extend_point(rhs.max);
     }
 
-    template <typename Iter> static AABB from_points(Iter &&beg, Iter &&end) {
+    template <typename Iter> static AABB from_points(Iter beg, Iter end) {
         if (beg == end) {
             return {};
         }

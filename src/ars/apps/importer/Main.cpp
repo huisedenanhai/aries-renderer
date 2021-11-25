@@ -51,16 +51,15 @@ void gltf_warn(const std::filesystem::path &path, const std::string &info) {
 void gltf_decode_accessor(const tinygltf::Model &gltf,
                           int accessor_index,
                           const unsigned char *&data,
-                          size_t &offset,
                           size_t &stride,
                           size_t &count) {
     auto &accessor = gltf.accessors[accessor_index];
     auto &buffer_view = gltf.bufferViews[accessor.bufferView];
     auto &buffer = gltf.buffers[buffer_view.buffer];
     stride = accessor.ByteStride(buffer_view);
-    offset = accessor.byteOffset + buffer_view.byteOffset;
+    auto offset = accessor.byteOffset + buffer_view.byteOffset;
     count = accessor.count;
-    data = buffer.data.data();
+    data = buffer.data.data() + offset;
 }
 
 template <typename T, typename R> R cast_value(const unsigned char *ptr) {
@@ -84,9 +83,8 @@ void import_gltf_mesh(const std::filesystem::path &path,
 
             auto add_data = [&](int accessor_index, int elem_size) {
                 const unsigned char *ptr = nullptr;
-                size_t offset = 0, stride = 0, count = 0;
-                gltf_decode_accessor(
-                    gltf, accessor_index, ptr, offset, stride, count);
+                size_t stride = 0, count = 0;
+                gltf_decode_accessor(gltf, accessor_index, ptr, stride, count);
                 DataSlice slice{};
                 slice.offset = buf.size();
                 slice.size = elem_size * count;
@@ -172,13 +170,11 @@ void import_gltf_mesh(const std::filesystem::path &path,
                     auto &accessor = gltf.accessors[accessor_index];
                     indices.resize(accessor.count);
                     const unsigned char *ptr = nullptr;
-                    size_t offset = 0, stride = 0, count = 0;
+                    size_t stride = 0, count = 0;
                     gltf_decode_accessor(
-                        gltf, accessor_index, ptr, offset, stride, count);
+                        gltf, accessor_index, ptr, stride, count);
 
-                    auto reader = [&](int i) {
-                        return ptr + offset + i * stride;
-                    };
+                    auto reader = [&](int i) { return ptr + i * stride; };
 
                     for (int i = 0; i < accessor.count; i++) {
                         switch (accessor.componentType) {

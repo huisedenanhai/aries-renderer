@@ -124,6 +124,23 @@ class Application : public ars::engine::IApplication {
         _view->overlay()->set_light_gizmo(light_bulb_icon, 0.1f);
         _fly_camera.xform.set_translation({0, 0.3f, 2.0f});
         ars::engine::load_model(_scene->root(), model);
+        load_test_mesh();
+    }
+
+    void load_test_mesh() {
+        auto ctx = ars::engine::render_context();
+        auto e = _scene->create_entity();
+        auto mesh_rd = e->add_component<ars::engine::MeshRenderer>();
+        auto prim = mesh_rd->add_primitive();
+        ars::ResData mesh_data{};
+        mesh_data.load(
+            ".ars/FlightHelmetWithLight/meshes/RubberWood_low.001.0.ares");
+        prim->set_mesh(load_mesh(ctx, mesh_data));
+
+        auto mat = ctx->material_prototype(MaterialType::MetallicRoughnessPBR)
+                       ->create_material();
+        mat->set("base_color_factor", glm::vec4(0.6f, 0.0f, 0.0f, 1.0f));
+        prim->set_material(mat);
     }
 
     void update(double dt) override {

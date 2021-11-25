@@ -55,7 +55,7 @@ template <typename T> struct adl_serializer<ars::math::AABB<T>> {
     static void to_json(json &js, const AABB &v) {
         js = json{
             {"min", v.min},
-            {"min", v.max},
+            {"max", v.max},
         };
     }
 

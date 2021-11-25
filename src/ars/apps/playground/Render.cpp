@@ -1,4 +1,3 @@
-#include <ars/runtime/core/Log.h>
 #include <ars/runtime/core/input/Keyboard.h>
 #include <ars/runtime/core/input/Mouse.h>
 #include <ars/runtime/engine/Engine.h>
@@ -117,8 +116,6 @@ class Application : public ars::engine::IApplication {
                 });
         }
 
-        // auto model = load_gltf(ctx, "FlightHelmet/FlightHelmet.gltf");
-        // auto model = load_gltf(ctx, "Test/Test.gltf");
         auto model =
             load_gltf(ctx, "FlightHelmetWithLight/FlightHelmetWithLight.gltf");
         _scene = std::make_unique<ars::engine::Scene>();

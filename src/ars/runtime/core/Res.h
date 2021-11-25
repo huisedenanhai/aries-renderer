@@ -105,7 +105,7 @@ class FolderDataProvider : public IDataProvider {
 
 class IResLoader {
   public:
-    virtual std::any load(ResData data) = 0;
+    virtual std::any load(const ResData &data) = 0;
 };
 
 template <typename Func> auto make_loader(Func &&func) {
@@ -113,8 +113,8 @@ template <typename Func> auto make_loader(Func &&func) {
       public:
         explicit Loader(Func &&f) : f(f) {}
 
-        std::any load(ResData data) override {
-            return f(std::move(data));
+        std::any load(const ResData &data) override {
+            return f(data);
         }
 
         Func f;

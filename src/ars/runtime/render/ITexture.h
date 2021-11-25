@@ -3,7 +3,6 @@
 #include "Common.h"
 #include "IWindow.h"
 
-#include <ars/runtime/core/Res.h>
 #include <memory>
 
 namespace ars::render {
@@ -34,9 +33,11 @@ struct TextureInfo {
 
 uint32_t calculate_mip_levels(uint32_t width, uint32_t height, uint32_t depth);
 
-class ITexture : public IRes {
+class ITexture {
   public:
     explicit ITexture(const TextureInfo &info);
+
+    virtual ~ITexture() = default;
 
     [[nodiscard]] TextureType type() const;
     [[nodiscard]] Format format() const;

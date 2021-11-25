@@ -90,16 +90,20 @@ class Application : public ars::engine::IApplication {
         auto ctx = ars::engine::render_context();
         auto tex = load_texture(ctx, "test.jpg");
 
-        {
-            using namespace std::chrono;
-            auto start = high_resolution_clock::now();
-            ars::ResData res{};
-            res.load(ars::preferred_res_path("test.jpg"));
-            tex = load_texture(ctx, res);
-            auto stop = high_resolution_clock::now();
-            ARS_LOG_INFO("Load texture test.jpg.ares takes {}ms",
-                         duration_cast<milliseconds>(stop - start).count());
-        }
+        auto res = ars::engine::resources();
+        res->register_res_loader(
+            ars::render::RES_TYPE_NAME_TEXTURE,
+            ars::make_loader([ctx](const ars::ResData &data) {
+                return load_texture(ctx, data);
+            }));
+        res->register_res_loader(
+            ars::render::RES_TYPE_NAME_MESH,
+            ars::make_loader([ctx](const ars::ResData &data) {
+                return load_mesh(ctx, data);
+            }));
+        res->mount("/", std::make_shared<ars::FolderDataProvider>("."));
+
+        tex = res->load<ITexture>("test.jpg").get();
 
         int window_num = 3;
         for (int i = 0; i < window_num; i++) {
@@ -129,13 +133,14 @@ class Application : public ars::engine::IApplication {
 
     void load_test_mesh() {
         auto ctx = ars::engine::render_context();
+        auto res = ars::engine::resources();
         auto e = _scene->create_entity();
         auto mesh_rd = e->add_component<ars::engine::MeshRenderer>();
         auto prim = mesh_rd->add_primitive();
-        ars::ResData mesh_data{};
-        mesh_data.load(
-            ".ars/FlightHelmetWithLight/meshes/RubberWood_low.001.0.ares");
-        prim->set_mesh(load_mesh(ctx, mesh_data));
+        auto mesh = res->load<IMesh>(".ars/FlightHelmetWithLight/meshes/"
+                                     "RubberWood_low.001.0.ares")
+                        .get();
+        prim->set_mesh(mesh);
 
         auto mat = ctx->material_prototype(MaterialType::MetallicRoughnessPBR)
                        ->create_material();

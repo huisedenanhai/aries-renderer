@@ -79,8 +79,8 @@ struct Model {
 
 Model load_gltf(IContext *context, const std::filesystem::path &path);
 
-constexpr const char *MESH_RES_TYPE_NAME = "ars::render::IMesh";
-constexpr const char *MATERIAL_RES_TYPE_NAME = "ars::render::IMaterial";
+constexpr const char *RES_TYPE_NAME_MESH = "ars::render::IMesh";
+constexpr const char *RES_TYPE_NAME_MATERIAL = "ars::render::IMaterial";
 
 struct MeshResMeta {
     math::AABB<float> aabb;

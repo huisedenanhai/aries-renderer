@@ -1,8 +1,8 @@
 #pragma once
 
-#include <ars/runtime/core/misc/Macro.h>
 #include "Vulkan.h"
 #include <algorithm>
+#include <ars/runtime/core/misc/Macro.h>
 
 namespace ars::render::vk {
 class Context;
@@ -34,9 +34,8 @@ class Buffer {
     template <typename T>
     void set_data(T *value, size_t elem_offset, size_t elem_count) {
         static_assert(std::is_pod_v<T>);
-        set_data_raw(reinterpret_cast<void *>(value),
-                     elem_offset * sizeof(T),
-                     elem_count * sizeof(T));
+        set_data_raw(
+            (void *)(value), elem_offset * sizeof(T), elem_count * sizeof(T));
     }
 
   private:

@@ -21,28 +21,28 @@ class IMesh : public IRes {
     [[nodiscard]] size_t triangle_capacity() const;
 
     // Values exceed capacity will be ignored.
-    virtual void set_position(glm::vec3 *positions,
+    virtual void set_position(const glm::vec3 *positions,
                               size_t elem_offset,
                               size_t elem_count) = 0;
-    virtual void
-    set_normal(glm::vec3 *normals, size_t elem_offset, size_t elem_count) = 0;
-    virtual void
-    set_tangent(glm::vec4 *tangents, size_t elem_offset, size_t elem_count) = 0;
-    virtual void set_tex_coord(glm::vec2 *tex_coord,
+    virtual void set_normal(const glm::vec3 *normals,
+                            size_t elem_offset,
+                            size_t elem_count) = 0;
+    virtual void set_tangent(const glm::vec4 *tangents,
+                             size_t elem_offset,
+                             size_t elem_count) = 0;
+    virtual void set_tex_coord(const glm::vec2 *tex_coord,
                                size_t elem_offset,
                                size_t elem_count) = 0;
 
     [[nodiscard]] virtual size_t triangle_count() const = 0;
     virtual void set_triangle_count(size_t count) = 0;
 
-    virtual void set_indices(glm::u32vec3 *indices,
+    virtual void set_indices(const glm::u32vec3 *indices,
                              size_t elem_offset,
                              size_t elem_count) = 0;
 
     virtual math::AABB<float> aabb() = 0;
     virtual void set_aabb(const math::AABB<float> &aabb) = 0;
-
-    virtual ~IMesh() = default;
 
   protected:
     MeshInfo _info{};

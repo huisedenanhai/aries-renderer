@@ -417,7 +417,8 @@ std::shared_ptr<ITexture> load_texture(IContext *context,
         info.mipmap_mode = translate_mipmap_mode(sampler.minFilter);
         info.wrap_u = translate_wrap_mode(sampler.wrapS);
         info.wrap_v = translate_wrap_mode(sampler.wrapT);
-        info.wrap_w = translate_wrap_mode(sampler.wrapR);
+        // tinygltf mark wrapR as unused, assign a default value here.
+        info.wrap_w = WrapMode::Repeat;
     }
 
     auto texture = context->create_texture(info);
@@ -627,11 +628,44 @@ Model load_gltf(IContext *context, const std::filesystem::path &path) {
 }
 
 std::shared_ptr<IMesh> load_mesh(IContext *context, const ResData &data) {
-    return nullptr;
+    if (data.ty != RES_TYPE_NAME_MESH) {
+        ARS_LOG_ERROR("Failed to load mesh: invalid data type");
+        return nullptr;
+    }
+
+    MeshResMeta meta{};
+    data.meta.get_to(meta);
+    MeshInfo info{};
+    auto round_up = [&](uint64_t a, uint64_t b) { return (a + b - 1) / b; };
+    info.vertex_capacity = round_up(meta.position.size, sizeof(glm::vec3));
+    info.triangle_capacity = round_up(meta.indices.size, sizeof(glm::u32vec3));
+    auto mesh = context->create_mesh(info);
+    mesh->set_aabb(meta.aabb);
+
+#define ARS_MESH_SET_ATTR(m, ty, attr)                                         \
+    mesh->m(reinterpret_cast<const ty *>(&data.data[meta.attr.offset]),        \
+            0,                                                                 \
+            meta.attr.size / sizeof(ty))
+
+    ARS_MESH_SET_ATTR(set_position, glm::vec3, position);
+    ARS_MESH_SET_ATTR(set_normal, glm::vec3, normal);
+    ARS_MESH_SET_ATTR(set_tangent, glm::vec4, tangent);
+    ARS_MESH_SET_ATTR(set_tex_coord, glm::vec2, tex_coord);
+    ARS_MESH_SET_ATTR(set_indices, glm::u32vec3, indices);
+
+#undef ARS_MESH_SET_ATTR
+
+    mesh->set_triangle_count(meta.indices.size / sizeof(glm::u32vec3));
+    return mesh;
 }
 
 std::shared_ptr<IMaterial> load_material(IContext *context,
                                          const ResData &data) {
+    if (data.ty != RES_TYPE_NAME_MATERIAL) {
+        ARS_LOG_ERROR("Failed to load material: invalid data type");
+        return nullptr;
+    }
+
     return nullptr;
 }
 } // namespace ars::render

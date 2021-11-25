@@ -43,7 +43,7 @@ struct TextureResMeta {
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(TextureResMeta, info, layers)
 };
 
-constexpr const char *TEXTURE_RES_TYPE_NAME = "ars::render::ITexture";
+constexpr const char *RES_TYPE_NAME_TEXTURE = "ars::render::ITexture";
 
 std::shared_ptr<ITexture> load_texture(IContext *context, const ResData &data);
 

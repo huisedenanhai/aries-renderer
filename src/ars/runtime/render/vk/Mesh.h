@@ -11,19 +11,19 @@ class Mesh : public IMesh {
   public:
     Mesh(Context *context, const MeshInfo &info);
 
-    void set_position(glm::vec3 *positions,
+    void set_position(const glm::vec3 *positions,
                       size_t elem_offset,
                       size_t elem_count) override;
 
-    void set_normal(glm::vec3 *normals,
+    void set_normal(const glm::vec3 *normals,
                     size_t elem_offset,
                     size_t elem_count) override;
 
-    void set_tangent(glm::vec4 *tangents,
+    void set_tangent(const glm::vec4 *tangents,
                      size_t elem_offset,
                      size_t elem_count) override;
 
-    void set_tex_coord(glm::vec2 *tex_coord,
+    void set_tex_coord(const glm::vec2 *tex_coord,
                        size_t elem_offset,
                        size_t elem_count) override;
 
@@ -31,7 +31,7 @@ class Mesh : public IMesh {
 
     void set_triangle_count(size_t count) override;
 
-    void set_indices(glm::u32vec3 *indices,
+    void set_indices(const glm::u32vec3 *indices,
                      size_t elem_offset,
                      size_t elem_count) override;
     math::AABB<float> aabb() override;

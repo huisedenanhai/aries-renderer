@@ -259,8 +259,10 @@ void control_view_camera(Scene3DViewState &state,
             orbit_camera(state, view);
         }
     } else {
-        if (ImGui::IsWindowFocused()) {
+        if (ImGui::IsWindowHovered()) {
             zoom_camera(state, view);
+        }
+        if (ImGui::IsWindowFocused()) {
             if (window->keyboard()->is_pressed(input::Key::F)) {
                 focus_camera(state, view, current_selected);
             }

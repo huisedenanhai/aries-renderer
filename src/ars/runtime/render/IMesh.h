@@ -1,6 +1,7 @@
 #pragma once
 
 #include "IContext.h"
+#include <ars/runtime/core/Res.h>
 #include <ars/runtime/core/math/AABB.h>
 #include <glm/glm.hpp>
 #include <memory>
@@ -11,11 +12,9 @@ struct MeshInfo {
     size_t triangle_capacity = 0;
 };
 
-class IMesh {
+class IMesh : public IRes {
   public:
     explicit IMesh(const MeshInfo &info);
-
-    virtual ~IMesh() = default;
 
     // Capacity can not be changed after initialization.
     [[nodiscard]] size_t vertex_capacity() const;

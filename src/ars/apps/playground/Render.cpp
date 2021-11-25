@@ -102,7 +102,7 @@ class Application : public ars::engine::IApplication {
             }));
         res->mount("/", std::make_shared<ars::FolderDataProvider>("."));
 
-        tex = res->load<ITexture>("test.jpg").get();
+        tex = res->load<ITexture>("test.jpg");
 
         int window_num = 3;
         for (int i = 0; i < window_num; i++) {
@@ -135,8 +135,7 @@ class Application : public ars::engine::IApplication {
         auto mesh_rd = e->add_component<ars::engine::MeshRenderer>();
         auto prim = mesh_rd->add_primitive();
         auto mesh = res->load<IMesh>(".ars/FlightHelmetWithLight/meshes/"
-                                     "RubberWood_low.001.0.ares")
-                        .get();
+                                     "RubberWood_low.001.0.ares");
         prim->set_mesh(mesh);
 
         auto mat = ctx->material_prototype(MaterialType::MetallicRoughnessPBR)

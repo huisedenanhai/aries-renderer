@@ -2,7 +2,7 @@
 
 #include "../Common.h"
 #include "../ITexture.h"
-#include <ars/runtime/core/Res.h>
+#include <ars/runtime/core/ResData.h>
 #include <filesystem>
 #include <memory>
 

@@ -2,7 +2,7 @@
 
 #include "../IMesh.h"
 #include "../IScene.h"
-#include <ars/runtime/core/Res.h>
+#include <ars/runtime/core/ResData.h>
 #include <ars/runtime/core/Serde.h>
 #include <ars/runtime/core/math/Transform.h>
 #include <filesystem>

@@ -342,50 +342,6 @@ void load_cameras(const std::filesystem::path &path,
     }
 }
 
-WrapMode translate_wrap_mode(int value) {
-    switch (value) {
-    case TINYGLTF_TEXTURE_WRAP_REPEAT:
-        return WrapMode::Repeat;
-    case TINYGLTF_TEXTURE_WRAP_CLAMP_TO_EDGE:
-        return WrapMode::ClampToEdge;
-    case TINYGLTF_TEXTURE_WRAP_MIRRORED_REPEAT:
-        return WrapMode::MirroredRepeat;
-    default:
-        break;
-    }
-    return WrapMode::Repeat;
-}
-
-FilterMode translate_filter_mode(int filter) {
-    switch (filter) {
-    case TINYGLTF_TEXTURE_FILTER_NEAREST:
-    case TINYGLTF_TEXTURE_FILTER_NEAREST_MIPMAP_NEAREST:
-    case TINYGLTF_TEXTURE_FILTER_NEAREST_MIPMAP_LINEAR:
-        return FilterMode::Nearest;
-    case TINYGLTF_TEXTURE_FILTER_LINEAR:
-    case TINYGLTF_TEXTURE_FILTER_LINEAR_MIPMAP_NEAREST:
-    case TINYGLTF_TEXTURE_FILTER_LINEAR_MIPMAP_LINEAR:
-        return FilterMode::Linear;
-    default:
-        break;
-    }
-    return FilterMode::Linear;
-}
-
-MipmapMode translate_mipmap_mode(int filter) {
-    switch (filter) {
-    case TINYGLTF_TEXTURE_FILTER_NEAREST_MIPMAP_NEAREST:
-    case TINYGLTF_TEXTURE_FILTER_LINEAR_MIPMAP_NEAREST:
-        return MipmapMode::Nearest;
-    case TINYGLTF_TEXTURE_FILTER_NEAREST_MIPMAP_LINEAR:
-    case TINYGLTF_TEXTURE_FILTER_LINEAR_MIPMAP_LINEAR:
-        return MipmapMode::Linear;
-    default:
-        break;
-    }
-    return MipmapMode::Linear;
-}
-
 std::shared_ptr<ITexture> load_texture(IContext *context,
                                        const std::filesystem::path &path,
                                        const tinygltf::Model &gltf,
@@ -413,11 +369,11 @@ std::shared_ptr<ITexture> load_texture(IContext *context,
     if (gltf_tex.sampler >= 0) {
         auto &sampler = gltf.samplers[gltf_tex.sampler];
 
-        info.min_filter = translate_filter_mode(sampler.minFilter);
-        info.mag_filter = translate_filter_mode(sampler.magFilter);
-        info.mipmap_mode = translate_mipmap_mode(sampler.minFilter);
-        info.wrap_u = translate_wrap_mode(sampler.wrapS);
-        info.wrap_v = translate_wrap_mode(sampler.wrapT);
+        info.min_filter = gltf_translate_filter_mode(sampler.minFilter);
+        info.mag_filter = gltf_translate_filter_mode(sampler.magFilter);
+        info.mipmap_mode = gltf_translate_mipmap_mode(sampler.minFilter);
+        info.wrap_u = gltf_translate_wrap_mode(sampler.wrapS);
+        info.wrap_v = gltf_translate_wrap_mode(sampler.wrapT);
         // tinygltf mark wrapR as unused, assign a default value here.
         info.wrap_w = WrapMode::Repeat;
     }
@@ -562,6 +518,50 @@ Model load_gltf(IContext *context,
     return model;
 }
 } // namespace
+
+WrapMode gltf_translate_wrap_mode(int value) {
+    switch (value) {
+    case TINYGLTF_TEXTURE_WRAP_REPEAT:
+        return WrapMode::Repeat;
+    case TINYGLTF_TEXTURE_WRAP_CLAMP_TO_EDGE:
+        return WrapMode::ClampToEdge;
+    case TINYGLTF_TEXTURE_WRAP_MIRRORED_REPEAT:
+        return WrapMode::MirroredRepeat;
+    default:
+        break;
+    }
+    return WrapMode::Repeat;
+}
+
+FilterMode gltf_translate_filter_mode(int filter) {
+    switch (filter) {
+    case TINYGLTF_TEXTURE_FILTER_NEAREST:
+    case TINYGLTF_TEXTURE_FILTER_NEAREST_MIPMAP_NEAREST:
+    case TINYGLTF_TEXTURE_FILTER_NEAREST_MIPMAP_LINEAR:
+        return FilterMode::Nearest;
+    case TINYGLTF_TEXTURE_FILTER_LINEAR:
+    case TINYGLTF_TEXTURE_FILTER_LINEAR_MIPMAP_NEAREST:
+    case TINYGLTF_TEXTURE_FILTER_LINEAR_MIPMAP_LINEAR:
+        return FilterMode::Linear;
+    default:
+        break;
+    }
+    return FilterMode::Linear;
+}
+
+MipmapMode gltf_translate_mipmap_mode(int filter) {
+    switch (filter) {
+    case TINYGLTF_TEXTURE_FILTER_NEAREST_MIPMAP_NEAREST:
+    case TINYGLTF_TEXTURE_FILTER_LINEAR_MIPMAP_NEAREST:
+        return MipmapMode::Nearest;
+    case TINYGLTF_TEXTURE_FILTER_NEAREST_MIPMAP_LINEAR:
+    case TINYGLTF_TEXTURE_FILTER_LINEAR_MIPMAP_LINEAR:
+        return MipmapMode::Linear;
+    default:
+        break;
+    }
+    return MipmapMode::Linear;
+}
 
 Model load_gltf(IContext *context, const std::filesystem::path &path) {
     tinygltf::TinyGLTF loader;

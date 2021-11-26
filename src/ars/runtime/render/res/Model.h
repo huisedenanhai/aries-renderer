@@ -2,6 +2,7 @@
 
 #include "../IScene.h"
 #include <ars/runtime/core/math/Transform.h>
+#include <ars/runtime/render/ITexture.h>
 #include <filesystem>
 #include <memory>
 #include <optional>
@@ -76,4 +77,7 @@ struct Model {
 };
 
 Model load_gltf(IContext *context, const std::filesystem::path &path);
+FilterMode gltf_translate_filter_mode(int filter);
+MipmapMode gltf_translate_mipmap_mode(int filter);
+WrapMode gltf_translate_wrap_mode(int value);
 } // namespace ars::render

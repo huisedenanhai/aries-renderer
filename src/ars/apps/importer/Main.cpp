@@ -3,7 +3,9 @@
 #include <ars/runtime/engine/Engine.h>
 #include <ars/runtime/render/res/Material.h>
 #include <ars/runtime/render/res/Mesh.h>
+#include <ars/runtime/render/res/Model.h>
 #include <ars/runtime/render/res/Texture.h>
+#include <fstream>
 #include <iostream>
 #include <stb_image.h>
 #include <tiny_gltf.h>
@@ -13,6 +15,43 @@ using namespace ars;
 void save(const ResData &data, const std::filesystem::path &path) {
     std::filesystem::create_directories(path.parent_path());
     data.save(preferred_res_path(path));
+}
+
+struct TextureImportSettings {
+    bool srgb = true;
+    render::FilterMode min_filter = render::FilterMode::Linear;
+    render::FilterMode mag_filter = render::FilterMode::Linear;
+    render::MipmapMode mipmap_mode = render::MipmapMode::Linear;
+    render::WrapMode wrap_u = render::WrapMode::Repeat;
+    render::WrapMode wrap_v = render::WrapMode::Repeat;
+    render::WrapMode wrap_w = render::WrapMode::Repeat;
+
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(TextureImportSettings,
+                                   srgb,
+                                   min_filter,
+                                   mag_filter,
+                                   mipmap_mode,
+                                   wrap_u,
+                                   wrap_v,
+                                   wrap_w)
+};
+
+template <typename T>
+T get_import_setting(const std::filesystem::path &path,
+                     const T &default_value) {
+    std::filesystem::path setting_path = path.string() + ".import";
+    if (!std::filesystem::exists(setting_path)) {
+        std::ofstream os(setting_path);
+        nlohmann::json js = default_value;
+        os << std::setw(2) << js;
+        os.close();
+        return default_value;
+    }
+    std::ifstream is(setting_path);
+    nlohmann::json js{};
+    is >> js;
+    is.close();
+    return js.get<T>();
 }
 
 void import_texture(const std::filesystem::path &path) {
@@ -29,11 +68,19 @@ void import_texture(const std::filesystem::path &path) {
         return;
     }
 
+    auto setting = get_import_setting<TextureImportSettings>(path, {});
+
     render::TextureResMeta meta{};
     auto &info = meta.info;
-    info.format = render::get_8_bit_texture_format(channels, true);
+    info.format = render::get_8_bit_texture_format(channels, setting.srgb);
     info.width = width;
     info.height = height;
+    info.min_filter = setting.min_filter;
+    info.mag_filter = setting.mag_filter;
+    info.mipmap_mode = setting.mipmap_mode;
+    info.wrap_u = setting.wrap_u;
+    info.wrap_v = setting.wrap_v;
+    info.wrap_w = setting.wrap_w;
 
     DataSlice pixels{};
     pixels.offset = 0;
@@ -237,17 +284,23 @@ void import_gltf_meshes(const std::filesystem::path &path,
     }
 }
 
+std::filesystem::path gltf_texture_path(const std::filesystem::path &path,
+                                        const tinygltf::Model &gltf,
+                                        int index) {
+    if (index < 0) {
+        return "";
+    }
+    auto image = gltf.textures[index].source;
+    return path.parent_path() / gltf.images[image].uri;
+}
+
 void import_gltf_materials(const std::filesystem::path &path,
                            const tinygltf::Model &gltf) {
     auto target_dir = ".ars" / path.parent_path() / "materials";
     std::filesystem::create_directories(target_dir);
 
     auto tex = [&](int index) -> std::string {
-        if (index < 0) {
-            return "";
-        }
-        auto image = gltf.textures[index].source;
-        return path.parent_path() / gltf.images[image].uri;
+        return gltf_texture_path(path, gltf, index).string();
     };
 
     for (auto &gltf_mat : gltf.materials) {
@@ -290,6 +343,46 @@ void import_gltf_materials(const std::filesystem::path &path,
 
         auto save_path = target_dir / gltf_mat.name;
         data.save(preferred_res_path(save_path));
+    }
+}
+
+void guess_gltf_texture_settings(const std::filesystem::path &path,
+                                 const tinygltf::Model &gltf) {
+    std::vector<bool> need_srgb{};
+    need_srgb.resize(gltf.textures.size());
+
+    for (auto &gltf_mat : gltf.materials) {
+        auto base_color = gltf_mat.pbrMetallicRoughness.baseColorTexture.index;
+        if (base_color >= 0) {
+            need_srgb[base_color] = true;
+        }
+
+        auto emission = gltf_mat.emissiveTexture.index;
+        if (emission >= 0) {
+            need_srgb[emission] = true;
+        }
+    }
+
+    for (int index = 0; index < gltf.textures.size(); index++) {
+        const auto &gltf_tex = gltf.textures[index];
+        TextureImportSettings settings{};
+        settings.srgb = need_srgb[index];
+        if (gltf_tex.sampler >= 0) {
+            auto &sampler = gltf.samplers[gltf_tex.sampler];
+
+            settings.min_filter =
+                render::gltf_translate_filter_mode(sampler.minFilter);
+            settings.mag_filter =
+                render::gltf_translate_filter_mode(sampler.magFilter);
+            settings.mipmap_mode =
+                render::gltf_translate_mipmap_mode(sampler.minFilter);
+            settings.wrap_u = render::gltf_translate_wrap_mode(sampler.wrapS);
+            settings.wrap_v = render::gltf_translate_wrap_mode(sampler.wrapT);
+            // tinygltf mark wrapR as unused, assign a default value here.
+            settings.wrap_w = render::WrapMode::Repeat;
+        }
+
+        get_import_setting(gltf_texture_path(path, gltf, index), settings);
     }
 }
 
@@ -345,6 +438,7 @@ void import_gltf(const std::filesystem::path &path) {
                  duration_cast<milliseconds>(end - start).count());
     import_gltf_meshes(path, gltf);
     import_gltf_materials(path, gltf);
+    guess_gltf_texture_settings(path, gltf);
 }
 
 class Importer : public engine::IApplication {
@@ -357,7 +451,9 @@ class Importer : public engine::IApplication {
         return info;
     }
 
-    void start() override {
+    void run() {
+        std::vector<std::filesystem::path> gltf_import_tasks{};
+        std::vector<std::filesystem::path> tex_import_tasks{};
         using recursive_directory_iterator =
             std::filesystem::recursive_directory_iterator;
         for (const auto &entry :
@@ -369,16 +465,28 @@ class Importer : public engine::IApplication {
             if (entry.is_regular_file()) {
                 auto ext = path.extension();
                 if (ext == ".jpg" || ext == ".png") {
-                    ARS_LOG_INFO("Import {}", path.string());
-                    import_texture(path);
+                    tex_import_tasks.push_back(path);
                 }
                 if (ext == ".gltf") {
-                    ARS_LOG_INFO("Import {}", path.string());
-                    import_gltf(path);
+                    gltf_import_tasks.push_back(path);
                 }
             }
         }
 
+        // Import gltf first so we can guess texture import settings
+        for (auto &task : gltf_import_tasks) {
+            ARS_LOG_INFO("Import {}", task.string());
+            import_gltf(task);
+        }
+
+        for (auto &task : tex_import_tasks) {
+            ARS_LOG_INFO("Import {}", task.string());
+            import_texture(task);
+        }
+    }
+
+    void start() override {
+        run();
         quit();
     }
 };

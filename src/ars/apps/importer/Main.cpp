@@ -1,6 +1,6 @@
 #include <ars/runtime/core/Log.h>
 #include <ars/runtime/core/ResData.h>
-#include <ars/runtime/render/res/Model.h>
+#include <ars/runtime/render/res/Mesh.h>
 #include <ars/runtime/render/res/Texture.h>
 #include <iostream>
 #include <stb_image.h>

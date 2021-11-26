@@ -7,6 +7,7 @@
 #include <ars/runtime/render/IScene.h>
 #include <ars/runtime/render/ITexture.h>
 #include <ars/runtime/render/IWindow.h>
+#include <ars/runtime/render/res/Mesh.h>
 #include <ars/runtime/render/res/Model.h>
 #include <ars/runtime/render/res/Texture.h>
 #include <imgui/imgui.h>

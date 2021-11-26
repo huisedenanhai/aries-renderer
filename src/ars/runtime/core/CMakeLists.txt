@@ -1,4 +1,5 @@
 add_library(core
+        Serde.cpp
         Serde.h
         ResData.cpp
         ResData.h

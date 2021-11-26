@@ -15,8 +15,8 @@ struct MaterialResMeta {
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(MaterialResMeta, type, properties)
 };
 
-std::shared_ptr<IMaterial> load_material(IContext *context,
-                                         const ResData &data);
+std::shared_ptr<IMaterial>
+load_material(IContext *context, Resources *res, const ResData &data);
 
 nlohmann::json serialize_material(IMaterial *material);
 } // namespace ars::render

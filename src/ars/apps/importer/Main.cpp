@@ -1,5 +1,7 @@
 #include <ars/runtime/core/Log.h>
 #include <ars/runtime/core/ResData.h>
+#include <ars/runtime/engine/Engine.h>
+#include <ars/runtime/render/res/Material.h>
 #include <ars/runtime/render/res/Mesh.h>
 #include <ars/runtime/render/res/Texture.h>
 #include <iostream>
@@ -8,7 +10,12 @@
 
 using namespace ars;
 
-std::optional<ResData> import_texture(const std::filesystem::path &path) {
+void save(const ResData &data, const std::filesystem::path &path) {
+    std::filesystem::create_directories(path.parent_path());
+    data.save(preferred_res_path(path));
+}
+
+void import_texture(const std::filesystem::path &path) {
     int width, height, channels;
     auto path_str = path.string();
     // Only loads image as R8G8B8A8_SRGB for simplicity. Other formats may not
@@ -18,8 +25,8 @@ std::optional<ResData> import_texture(const std::filesystem::path &path) {
     channels = 4;
 
     if (!pixel_data) {
-        ARS_LOG_CRITICAL("Failed to load image {}", path.string());
-        return std::nullopt;
+        ARS_LOG_ERROR("Failed to load image {}", path.string());
+        return;
     }
 
     render::TextureResMeta meta{};
@@ -41,7 +48,7 @@ std::optional<ResData> import_texture(const std::filesystem::path &path) {
     res.data.resize(pixels.size);
     std::memcpy(res.data.data(), pixel_data, pixels.size);
 
-    return res;
+    save(res, ".ars" / path);
 }
 
 void gltf_warn(const std::filesystem::path &path, const std::string &info) {
@@ -66,8 +73,8 @@ template <typename T, typename R> R cast_value(const unsigned char *ptr) {
     return static_cast<R>(*reinterpret_cast<const T *>(ptr));
 }
 
-void import_gltf_mesh(const std::filesystem::path &path,
-                      const tinygltf::Model &gltf) {
+void import_gltf_meshes(const std::filesystem::path &path,
+                        const tinygltf::Model &gltf) {
     auto target_dir = ".ars" / path.parent_path() / "meshes";
     std::filesystem::create_directories(target_dir);
     for (auto &m : gltf.meshes) {
@@ -230,6 +237,62 @@ void import_gltf_mesh(const std::filesystem::path &path,
     }
 }
 
+void import_gltf_materials(const std::filesystem::path &path,
+                           const tinygltf::Model &gltf) {
+    auto target_dir = ".ars" / path.parent_path() / "materials";
+    std::filesystem::create_directories(target_dir);
+
+    auto tex = [&](int index) -> std::string {
+        if (index < 0) {
+            return "";
+        }
+        auto image = gltf.textures[index].source;
+        return path.parent_path() / gltf.images[image].uri;
+    };
+
+    for (auto &gltf_mat : gltf.materials) {
+        render::MaterialResMeta meta{};
+        meta.type = render::MaterialType::MetallicRoughnessPBR;
+
+        auto js = nlohmann::json::object();
+
+        auto &pbr = gltf_mat.pbrMetallicRoughness;
+        js["base_color_tex"] = tex(pbr.baseColorTexture.index);
+        js["base_color_factor"] = glm::vec4(pbr.baseColorFactor[0],
+                                            pbr.baseColorFactor[1],
+                                            pbr.baseColorFactor[2],
+                                            pbr.baseColorFactor[3]);
+        js["metallic_factor"] = (float)pbr.metallicFactor;
+        js["roughness_factor"] = (float)pbr.roughnessFactor;
+        js["metallic_roughness_tex"] = tex(pbr.metallicRoughnessTexture.index);
+        js["normal_tex"] = tex(gltf_mat.normalTexture.index);
+        js["normal_scale"] = (float)gltf_mat.normalTexture.scale;
+        js["occlusion_tex"] = tex(gltf_mat.occlusionTexture.index);
+        js["occlusion_strength"] = (float)gltf_mat.occlusionTexture.strength;
+        js["emission_tex"] = tex(gltf_mat.emissiveTexture.index);
+        js["emission_factor"] = glm::vec3(gltf_mat.emissiveFactor[0],
+                                          gltf_mat.emissiveFactor[1],
+                                          gltf_mat.emissiveFactor[2]);
+
+        js["double_sided"] = gltf_mat.doubleSided;
+
+        js["alpha_mode"] = render::MaterialAlphaMode::Opaque;
+        if (gltf_mat.alphaMode == "BLEND") {
+            js["alpha_mode"] = render::MaterialAlphaMode::Blend;
+        }
+
+        ResData data{};
+        data.ty = render::RES_TYPE_NAME_MATERIAL;
+        nlohmann::json::to_bson(js, data.data);
+        meta.properties.offset = 0;
+        meta.properties.size = data.data.size();
+        data.meta = meta;
+
+        auto save_path = target_dir / gltf_mat.name;
+        data.save(preferred_res_path(save_path));
+    }
+}
+
 void import_gltf(const std::filesystem::path &path) {
     tinygltf::TinyGLTF loader;
     tinygltf::Model gltf;
@@ -280,16 +343,46 @@ void import_gltf(const std::filesystem::path &path) {
     ARS_LOG_INFO("Open gltf file {} takes {}ms",
                  path.string(),
                  duration_cast<milliseconds>(end - start).count());
-    import_gltf_mesh(path, gltf);
+    import_gltf_meshes(path, gltf);
+    import_gltf_materials(path, gltf);
 }
 
-int main() {
-    ARS_LOG_INFO("Importing {}", "test.jpg");
-    auto res = import_texture("test.jpg");
-    if (res.has_value()) {
-        res->save(preferred_res_path("test.jpg"));
+class Importer : public engine::IApplication {
+  public:
+    Info get_info() const override {
+        Info info{};
+        info.name = "Aries Importer";
+        info.default_window_logical_width = 128;
+        info.default_window_logical_height = 128;
+        return info;
     }
-    auto gltf_path = "FlightHelmetWithLight/FlightHelmetWithLight.gltf";
-    ARS_LOG_INFO("Importing {}", gltf_path);
-    import_gltf(gltf_path);
+
+    void start() override {
+        using recursive_directory_iterator =
+            std::filesystem::recursive_directory_iterator;
+        for (const auto &entry :
+             recursive_directory_iterator(std::filesystem::current_path())) {
+            auto path = std::filesystem::relative(entry.path());
+            if (path.root_directory() == ".ars") {
+                continue;
+            }
+            if (entry.is_regular_file()) {
+                auto ext = path.extension();
+                if (ext == ".jpg" || ext == ".png") {
+                    ARS_LOG_INFO("Import {}", path.string());
+                    import_texture(path);
+                }
+                if (ext == ".gltf") {
+                    ARS_LOG_INFO("Import {}", path.string());
+                    import_gltf(path);
+                }
+            }
+        }
+
+        quit();
+    }
+};
+
+int main() {
+    engine::start_engine(std::make_unique<Importer>());
 }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ars/runtime/core/Res.h>
 #include <functional>
 #include <glm/glm.hpp>
 #include <memory>
@@ -133,10 +134,9 @@ class IMaterialPrototype {
 // If the material does not have corresponding property, or the property
 // type mismatches, setter will do nothing and getter will return default
 // value.
-class IMaterial {
+class IMaterial : public IRes {
   public:
     explicit IMaterial(IMaterialPrototype *prototype);
-    virtual ~IMaterial() = default;
 
     static int str_to_id(const std::string &id);
 

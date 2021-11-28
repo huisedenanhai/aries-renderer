@@ -99,3 +99,15 @@ template <> struct adl_serializer<rttr::instance> {
 namespace ars {
 void to_json(nlohmann::json &js, const std::shared_ptr<IRes> &res);
 } // namespace ars
+
+#define NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_DEFINITION(Type, ...)               \
+    void to_json(nlohmann::json &nlohmann_json_j,                              \
+                 const Type &nlohmann_json_t) {                                \
+        NLOHMANN_JSON_EXPAND(                                                  \
+            NLOHMANN_JSON_PASTE(NLOHMANN_JSON_TO, __VA_ARGS__))                \
+    }                                                                          \
+    void from_json(const nlohmann::json &nlohmann_json_j,                      \
+                   Type &nlohmann_json_t) {                                    \
+        NLOHMANN_JSON_EXPAND(                                                  \
+            NLOHMANN_JSON_PASTE(NLOHMANN_JSON_FROM, __VA_ARGS__))              \
+    }

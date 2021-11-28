@@ -33,7 +33,8 @@ void draw_selected_object_outline(render::IView *view,
 void click_selection(render::IView *view,
                      float framebuffer_scale,
                      engine::Entity *&current_selected) {
-    if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+    if (!ImGui::IsWindowFocused() ||
+        !ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
         return;
     }
     auto mouse_pos = ImGui::GetMousePos();

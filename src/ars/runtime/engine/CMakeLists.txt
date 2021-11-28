@@ -1,4 +1,6 @@
 add_library(engine
+        Spawn.cpp
+        Spawn.h
         Entity.cpp
         Entity.h
         Entity.Editor.cpp

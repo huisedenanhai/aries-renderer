@@ -28,7 +28,7 @@ EntityData EntityData::from(Entity *entity) {
     for (auto comp : entity->components()) {
         nlohmann::json c_js = {
             {"type", comp->type().get_name().to_string()},
-            {"value", rttr::instance(comp)},
+            {"value", comp->serialize()},
         };
 
         comps_js.emplace_back(std::move(c_js));
@@ -55,8 +55,7 @@ void EntityData::to(Entity *entity, uint32_t modify_mask) const {
                 entity->remove_component(ty);
             }
             auto comp = entity->add_component(ty);
-            rttr::instance comp_inst(comp);
-            c_js["value"].get_to(comp_inst);
+            comp->deserialize(c_js["value"]);
         }
     }
 }

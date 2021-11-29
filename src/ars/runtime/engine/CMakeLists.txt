@@ -1,4 +1,6 @@
 add_library(engine
+        ResRef.cpp
+        ResRef.h
         Spawn.cpp
         Spawn.h
         Entity.cpp

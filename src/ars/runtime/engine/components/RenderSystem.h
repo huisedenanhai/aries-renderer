@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Entity.h"
+#include <ars/runtime/core/Reflect.h>
 #include <ars/runtime/render/IContext.h>
 #include <ars/runtime/render/IScene.h>
 #include <ars/runtime/render/res/Model.h>
@@ -33,7 +34,7 @@ struct RenderSystem {
 };
 
 class MeshRenderer : public IComponent {
-    ARS_COMPONENT(MeshRenderer, IComponent);
+    RTTR_DERIVE(IComponent);
 
   public:
     static void register_component();
@@ -55,7 +56,7 @@ class MeshRenderer : public IComponent {
 };
 
 class PointLight : public IComponent {
-    ARS_COMPONENT(PointLight, IComponent);
+    RTTR_DERIVE(IComponent);
 
   public:
     static void register_component();
@@ -74,7 +75,7 @@ class PointLight : public IComponent {
 };
 
 class DirectionalLight : public IComponent {
-    ARS_COMPONENT(DirectionalLight, IComponent);
+    RTTR_DERIVE(IComponent);
 
   public:
     static void register_component();

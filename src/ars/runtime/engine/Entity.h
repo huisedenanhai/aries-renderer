@@ -5,6 +5,7 @@
 #include <ars/runtime/core/misc/SoA.h>
 #include <filesystem>
 #include <memory>
+#include <nlohmann/json.hpp>
 #include <optional>
 #include <rttr/registration>
 #include <set>
@@ -20,36 +21,15 @@ class IComponent {
 
   public:
     virtual ~IComponent() = default;
-    virtual rttr::type type() = 0;
+    [[nodiscard]] rttr::type type() const;
+
+    virtual nlohmann::json serialize();
+    virtual void deserialize(const nlohmann::json &js);
+    virtual void on_inspector();
 
     virtual void init(Entity *entity) {}
     virtual void destroy() {}
-    virtual void on_inspector();
 };
-
-// Almost the same as RTTR_ENABLE, fix warning on some compiler with 'override'
-#define ARS_COMPONENT_RTTR_ENABLE(...)                                         \
-  public:                                                                      \
-    rttr::type get_type() const override {                                     \
-        return rttr::detail::get_type_from_instance(this);                     \
-    }                                                                          \
-    void *get_ptr() override {                                                 \
-        return reinterpret_cast<void *>(this);                                 \
-    }                                                                          \
-    rttr::detail::derived_info get_derived_info() override {                   \
-        return {reinterpret_cast<void *>(this),                                \
-                rttr::detail::get_type_from_instance(this)};                   \
-    }                                                                          \
-    using base_class_list = TYPE_LIST(__VA_ARGS__);                            \
-                                                                               \
-  private:
-
-#define ARS_COMPONENT(ty, ...)                                                 \
-  public:                                                                      \
-    rttr::type type() override {                                               \
-        return rttr::type::get<ty>();                                          \
-    }                                                                          \
-    ARS_COMPONENT_RTTR_ENABLE(__VA_ARGS__);
 
 namespace details {
 template <typename T> struct ComponentAutoRegister {

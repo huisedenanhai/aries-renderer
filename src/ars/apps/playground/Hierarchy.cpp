@@ -1,17 +1,17 @@
 #include <ars/runtime/core/Log.h>
+#include <ars/runtime/core/Reflect.h>
 #include <ars/runtime/core/ResData.h>
 #include <ars/runtime/engine/Engine.h>
 #include <ars/runtime/engine/Entity.Editor.h>
 #include <ars/runtime/render/IScene.h>
 #include <ars/runtime/render/IWindow.h>
 #include <imgui/imgui.h>
-#include <rttr/registration>
 #include <utility>
 
 using namespace ars;
 
 class MyComponent : public engine::IComponent {
-    ARS_COMPONENT(MyComponent, engine::IComponent);
+    RTTR_DERIVE(engine::IComponent);
 
   public:
     static void register_component() {

@@ -1,6 +1,5 @@
 #include "Model.h"
 #include "../IMesh.h"
-#include "../ITexture.h"
 #include "Texture.h"
 #include <ars/runtime/core/Log.h>
 #include <ars/runtime/core/misc/Visitor.h>

@@ -281,6 +281,19 @@ void IComponent::on_inspector() {
     gui::input_instance(*this);
 }
 
+nlohmann::json IComponent::serialize() {
+    return rttr::instance(this);
+}
+
+void IComponent::deserialize(const nlohmann::json &js) {
+    auto inst = rttr::instance(this);
+    js.get_to(inst);
+}
+
+rttr::type IComponent::type() const {
+    return get_type();
+}
+
 ComponentRegistry *global_component_registry() {
     static ComponentRegistry reg{};
     return &reg;

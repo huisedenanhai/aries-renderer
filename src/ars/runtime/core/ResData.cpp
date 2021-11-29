@@ -98,6 +98,17 @@ IDataProvider *Resources::resolve_path(const std::string &path,
 }
 
 std::shared_ptr<IRes> Resources::load_res(const std::string &path) {
+    auto cached_it = _cache.find(path);
+    if (cached_it != _cache.end()) {
+        ARS_LOG_INFO("Load cached resources {}", path);
+        return cached_it->second;
+    }
+    auto res = load_res_no_cache(path);
+    _cache[path] = res;
+    return res;
+}
+
+std::shared_ptr<IRes> Resources::load_res_no_cache(const std::string &path) {
     using namespace std::chrono;
 
     std::string relative_path{};

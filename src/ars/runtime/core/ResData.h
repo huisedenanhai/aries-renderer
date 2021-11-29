@@ -112,9 +112,11 @@ class Resources {
     }
 
   private:
+    std::shared_ptr<IRes> load_res_no_cache(const std::string &path);
     IDataProvider *resolve_path(const std::string &path,
                                 std::string &relative_path);
 
+    std::unordered_map<std::string, std::shared_ptr<IRes>> _cache{};
     // Keys are canonical path of mount point
     std::unordered_map<std::string, std::shared_ptr<IDataProvider>>
         _data_providers;

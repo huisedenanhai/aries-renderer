@@ -1,4 +1,6 @@
 add_library(core
+        Reflect.cpp
+        Reflect.h
         Serde.cpp
         Serde.h
         ResData.cpp

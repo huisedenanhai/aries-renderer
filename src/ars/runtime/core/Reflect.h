@@ -2,8 +2,6 @@
 
 #include <rttr/rttr_enable.h>
 
-namespace ars {}
-
 // Almost the same as RTTR_ENABLE, fix warning on some compiler with 'override'
 #define RTTR_DERIVE(...)                                                       \
   public:                                                                      \

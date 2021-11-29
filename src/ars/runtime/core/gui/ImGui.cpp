@@ -1,5 +1,6 @@
 #include "ImGui.h"
 #include <glm/gtc/quaternion.hpp>
+#include <spdlog/fmt/fmt.h>
 
 namespace ars::gui {
 bool input_text(const char *label, std::string &str) {
@@ -112,47 +113,7 @@ bool input_instance(rttr::instance instance) {
     return changed;
 }
 
-template <typename T, typename Func>
-bool input_property_type(rttr::instance instance,
-                         rttr::property property,
-                         bool &changed,
-                         Func &&func) {
-    if (property.get_type() != rttr::type::get<T>()) {
-        return false;
-    }
-
-    auto name = property.get_name().to_string();
-    auto value = property.get_value(instance).get_value<T>();
-    changed = func(name.c_str(), value);
-    if (changed) {
-        property.set_value(instance, value);
-    }
-    return true;
-}
-
 bool input_property(rttr::instance instance, rttr::property property) {
-    bool changed = false;
-    if (input_property_type<std::string>(
-            instance, property, changed, input_text)) {
-        return changed;
-    }
-    if (input_property_type<float>(
-            instance, property, changed, [&](const char *label, float &v) {
-                return ImGui::InputFloat(label, &v);
-            })) {
-        return changed;
-    }
-    if (input_property_type<int>(
-            instance, property, changed, [&](const char *label, int &v) {
-                return ImGui::InputInt(label, &v);
-            })) {
-        return changed;
-    }
-    if (input_property_type<glm::vec2>(
-            instance, property, changed, input_vec2)) {
-        return changed;
-    }
-
     std::optional<PropertyDisplay> display{};
     auto display_attr = property.get_metadata(PropertyAttribute::Display);
     if (display_attr.is_valid() &&
@@ -160,29 +121,122 @@ bool input_property(rttr::instance instance, rttr::property property) {
         display = display_attr.get_value<PropertyDisplay>();
     }
 
-    if (input_property_type<glm::vec3>(
-            instance,
-            property,
+    auto name = property.get_name().to_string();
+    auto value = property.get_value(instance);
+    bool changed = input_variant(name.c_str(), value, display);
+    if (changed) {
+        property.set_value(instance, value);
+    }
+    return changed;
+}
+
+template <typename T, typename Func>
+bool input_variant_type(const char *label,
+                        rttr::variant &v,
+                        bool &changed,
+                        Func &&func) {
+    auto type = v.get_type();
+    auto target_type = rttr::type::get<T>();
+    if (type == target_type) {
+        auto &value = v.template get_value<T>();
+        changed = func(label, value);
+        return true;
+    } else if (type.is_wrapper() &&
+               type.get_wrapped_type() == rttr::type::get<T>()) {
+        // Very strange the rttr returns const & to the wrapped value :(
+        // https://github.com/rttrorg/rttr/issues/167
+        auto &value = const_cast<T &>(v.template get_wrapped_value<T>());
+        changed = func(label, value);
+        return true;
+    }
+    return false;
+}
+
+bool input_variant(const char *label,
+                   rttr::variant &v,
+                   const std::optional<PropertyDisplay> &display) {
+    bool changed = false;
+    if (input_variant_type<std::string>(label, v, changed, input_text)) {
+        return changed;
+    }
+    if (input_variant_type<float>(
+            label, v, changed, [&](const char *label, float &v) {
+                return ImGui::InputFloat(label, &v);
+            })) {
+        return changed;
+    }
+    if (input_variant_type<int>(
+            label, v, changed, [&](const char *label, int &v) {
+                return ImGui::InputInt(label, &v);
+            })) {
+        return changed;
+    }
+    if (input_variant_type<glm::vec2>(label, v, changed, input_vec2)) {
+        return changed;
+    }
+
+    if (input_variant_type<glm::vec3>(
+            label,
+            v,
             changed,
             display == PropertyDisplay::Color ? input_color3 : input_vec3)) {
         return changed;
     }
-    if (input_property_type<glm::vec4>(
-            instance,
-            property,
+    if (input_variant_type<glm::vec4>(
+            label,
+            v,
             changed,
             display == PropertyDisplay::Color ? input_color4 : input_vec4)) {
         return changed;
     }
-    if (input_property_type<glm::quat>(
-            instance, property, changed, input_rotation)) {
+    if (input_variant_type<glm::quat>(label, v, changed, input_rotation)) {
         return changed;
     }
-    if (input_property_type<math::XformTRS<float>>(
-            instance, property, changed, input_xform)) {
+    if (input_variant_type<math::XformTRS<float>>(
+            label, v, changed, input_xform)) {
         return changed;
     }
 
-    return false;
+    if (v.is_sequential_container()) {
+        if (ImGui::TreeNode(label)) {
+            auto view = v.create_sequential_view();
+            auto size = view.get_size();
+            std::set<int> to_delete{};
+            auto is_dyn = view.is_dynamic();
+            for (int i = 0; i < size; i++) {
+                ImGui::PushID(i);
+                auto item = view.get_value(i);
+                // Items inherit metadata, otherwise it will be more complex to
+                // represent an array of color
+                if (input_variant(
+                        fmt::format("Item {}", i).c_str(), item, display)) {
+                    view.set_value(i, item);
+                    changed = true;
+                }
+                if (is_dyn) {
+                    ImGui::SameLine();
+                    if (ImGui::Button("Delete")) {
+                        to_delete.insert(i);
+                        changed = true;
+                    }
+                }
+                ImGui::PopID();
+            }
+            for (int i = static_cast<int>(size) - 1; i >= 0; i--) {
+                if (to_delete.count(i) > 0) {
+                    view.erase(view.begin() + i);
+                }
+            }
+            if (is_dyn) {
+                if (ImGui::Button("Add")) {
+                    view.set_size(view.get_size() + 1);
+                    changed = true;
+                }
+            }
+            ImGui::TreePop();
+        }
+        return changed;
+    }
+    return changed;
 }
 } // namespace ars::gui

@@ -74,10 +74,20 @@ void adl_serializer<rttr::instance>::to_json(json &js,
     for (auto &prop : ty.get_properties()) {
         auto prop_ty = prop.get_type();
         auto ser_it = serializers.find(prop_ty);
-        if (ser_it == serializers.end()) {
-            continue;
+        auto prop_name = prop.get_name().to_string();
+        if (ser_it != serializers.end()) {
+            js[prop_name] = ser_it->second(v, prop);
+        } else {
+            auto value = prop.get_value(v);
+            if (value.is_sequential_container()) {
+                auto js_arr = nlohmann::json::array();
+                auto view = value.create_sequential_view();
+                for (const auto &item : view) {
+                    js_arr.push_back(rttr::instance(item));
+                }
+                js[prop_name] = js_arr;
+            }
         }
-        js[prop.get_name().to_string()] = ser_it->second(v, prop);
     }
 }
 

@@ -27,6 +27,11 @@ enum class PropertyAttribute {
     Display
 };
 
+bool input_variant(
+    const char *label,
+    rttr::variant &v,
+    const std::optional<PropertyDisplay> &display = std::nullopt);
+
 bool input_property(rttr::instance instance, rttr::property property);
 
 template <typename T, typename Id>

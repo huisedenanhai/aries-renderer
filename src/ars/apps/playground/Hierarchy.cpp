@@ -1,6 +1,7 @@
 #include <ars/runtime/core/Log.h>
 #include <ars/runtime/core/Reflect.h>
 #include <ars/runtime/core/ResData.h>
+#include <ars/runtime/core/gui/ImGui.h>
 #include <ars/runtime/engine/Engine.h>
 #include <ars/runtime/engine/Entity.Editor.h>
 #include <ars/runtime/render/IScene.h>
@@ -23,7 +24,10 @@ class MyComponent : public engine::IComponent {
             .property("my_vec3", &MyComponent::my_vec3)
             .property("my_vec4", &MyComponent::my_vec4)
             .property("my_rotation", &MyComponent::my_rotation)
-            .property("my_xform", &MyComponent::my_xform);
+            .property("my_xform", &MyComponent::my_xform)
+            .property("my_strings", &MyComponent::my_strings)
+            .property("my_colors", &MyComponent::my_colors)(rttr::metadata(
+                gui::PropertyAttribute::Display, gui::PropertyDisplay::Color));
     }
 
     void init(engine::Entity *entity) override {
@@ -42,6 +46,8 @@ class MyComponent : public engine::IComponent {
     glm::vec4 my_vec4{};
     glm::quat my_rotation{};
     math::XformTRS<float> my_xform{};
+    std::vector<std::string> my_strings{"a", "b", "c"};
+    std::array<glm::vec3, 4> my_colors{};
 };
 
 struct Hello {

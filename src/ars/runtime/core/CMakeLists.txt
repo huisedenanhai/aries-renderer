@@ -1,5 +1,4 @@
 add_library(core
-        Reflect.cpp
         Reflect.h
         Serde.cpp
         Serde.h
@@ -7,7 +6,6 @@ add_library(core
         ResData.h
         Res.cpp
         Res.h
-        Log.cpp
         Log.h
         )
 aries_setup_common_target(core)

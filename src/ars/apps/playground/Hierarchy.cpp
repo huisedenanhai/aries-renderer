@@ -12,11 +12,17 @@
 
 using namespace ars;
 
+struct MyStruct {
+    std::string name = "Alice";
+    int age = 0;
+};
+
 class MyComponent : public engine::IComponent {
     RTTR_DERIVE(engine::IComponent);
 
   public:
     static void register_component() {
+
         engine::register_component<MyComponent>("MyComponent")
             .property("data", &MyComponent::data)
             .property("my_int", &MyComponent::my_int)
@@ -28,7 +34,13 @@ class MyComponent : public engine::IComponent {
             .property("my_xform", &MyComponent::my_xform)
             .property("my_strings", &MyComponent::my_strings)
             .property("my_colors", &MyComponent::my_colors)(rttr::metadata(
-                gui::PropertyAttribute::Display, gui::PropertyDisplay::Color));
+                gui::PropertyAttribute::Display, gui::PropertyDisplay::Color))
+            .property("my_struct", &MyComponent::my_struct)
+            .property("my_struct_vec", &MyComponent::my_struct_vec);
+
+        rttr::registration::class_<MyStruct>("MyStruct")
+            .property("name", &MyStruct::name)
+            .property("age", &MyStruct::age);
     }
 
     ~MyComponent() override {
@@ -68,6 +80,8 @@ class MyComponent : public engine::IComponent {
     math::XformTRS<float> my_xform{};
     std::vector<std::string> my_strings{"a", "b", "c"};
     std::array<glm::vec3, 4> my_colors{};
+    MyStruct my_struct{};
+    std::vector<MyStruct> my_struct_vec{};
 };
 
 struct Hello {

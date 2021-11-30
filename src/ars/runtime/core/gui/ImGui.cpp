@@ -104,6 +104,9 @@ bool input_xform(const char *label, math::XformTRS<float> &xform) {
 
 bool input_instance(rttr::instance instance) {
     auto ty = instance.get_derived_type();
+    if (ty.is_wrapper()) {
+        ty = ty.get_wrapped_type();
+    }
     bool changed = false;
 
     for (auto &prop : ty.get_properties()) {
@@ -235,6 +238,12 @@ bool input_variant(const char *label,
             }
             ImGui::TreePop();
         }
+        return changed;
+    }
+
+    if (ImGui::TreeNode(label)) {
+        changed = input_instance(rttr::instance(v)) || changed;
+        ImGui::TreePop();
         return changed;
     }
     return changed;

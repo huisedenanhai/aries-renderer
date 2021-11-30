@@ -68,14 +68,19 @@ template <typename Reg> static Reg register_callbacks() {
 
     return reg;
 }
+
+rttr::type try_unwrap(const rttr::type &ty) {
+    if (ty.is_wrapper()) {
+        return ty.get_wrapped_type();
+    }
+    return ty;
+}
 } // namespace
 
 void adl_serializer<rttr::variant>::to_json(json &js, const rttr::variant &v) {
     static auto serializers = register_callbacks<SerializerRegistry>();
-    auto ty = v.get_type();
-    if (ty.is_wrapper()) {
-        ty = ty.get_wrapped_type();
-    }
+    auto ty = try_unwrap(v.get_type());
+
     auto ser_it = serializers.find(ty);
     if (ser_it != serializers.end()) {
         js = ser_it->second(v);
@@ -92,7 +97,7 @@ void adl_serializer<rttr::variant>::to_json(json &js, const rttr::variant &v) {
     }
     js = json::object();
     auto inst = rttr::instance(v);
-    ty = inst.get_derived_type();
+    ty = try_unwrap(inst.get_derived_type());
     for (auto &prop : ty.get_properties()) {
         auto prop_name = prop.get_name().to_string();
         js[prop_name] = prop.get_value(inst);
@@ -102,10 +107,8 @@ void adl_serializer<rttr::variant>::to_json(json &js, const rttr::variant &v) {
 void adl_serializer<rttr::variant>::from_json(const json &js,
                                               rttr::variant &v) {
     static auto deserializers = register_callbacks<DeserializerRegistry>();
-    auto ty = v.get_type();
-    if (ty.is_wrapper()) {
-        ty = ty.get_wrapped_type();
-    }
+    auto ty = try_unwrap(v.get_type());
+
     auto de_it = deserializers.find(ty);
     if (de_it != deserializers.end()) {
         de_it->second(js, v);
@@ -127,7 +130,7 @@ void adl_serializer<rttr::variant>::from_json(const json &js,
     }
 
     auto inst = rttr::instance(v);
-    ty = inst.get_derived_type();
+    ty = try_unwrap(inst.get_derived_type());
     for (auto &prop : ty.get_properties()) {
         auto key = prop.get_name().to_string();
         if (js.find(key) == js.end()) {

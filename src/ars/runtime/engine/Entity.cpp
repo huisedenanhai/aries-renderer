@@ -148,11 +148,9 @@ void Entity::remove_component(const rttr::type &ty) {
 
 IComponent *Entity::add_component(const rttr::type &ty) {
     auto ty_name = ty.get_name().to_string();
-    const auto &regs = global_component_registry()->component_types;
-    auto regs_it = regs.find(ty_name);
-    if (regs_it == regs.end()) {
+    if (!ty.is_derived_from<IComponent>()) {
         ARS_LOG_ERROR(
-            "Try to add component type \"{}\", which is not registered.",
+            "Try to add type \"{}\", which does not derived from IComponent.",
             ty_name);
         return nullptr;
     }
@@ -165,11 +163,20 @@ IComponent *Entity::add_component(const rttr::type &ty) {
         return nullptr;
     }
 
-    auto comp = regs_it->second->create_instance();
+    bool success = false;
+    std::unique_ptr<IComponent> comp(
+        ty.create().convert<IComponent *>(&success));
+    if (!success) {
+        ARS_LOG_ERROR(
+            "Failed to create instance of {}: the component type "
+            "should be registered with method ars::engine::register_component",
+            ty_name,
+            name());
+    }
 
+    auto comp_ptr = comp.get();
     // Notice the initialization order
     _components[ty] = std::move(comp);
-    auto comp_ptr = _components[ty].get();
     comp_ptr->init(this);
     return comp_ptr;
 }
@@ -292,16 +299,5 @@ void IComponent::deserialize(const nlohmann::json &js) {
 
 rttr::type IComponent::type() const {
     return get_type();
-}
-
-ComponentRegistry *global_component_registry() {
-    static ComponentRegistry reg{};
-    return &reg;
-}
-
-void register_component_type_entry(
-    const std::string &name, std::unique_ptr<IComponentRegistryEntry> entry) {
-    global_component_registry()->component_types.emplace(name,
-                                                         std::move(entry));
 }
 } // namespace ars::engine

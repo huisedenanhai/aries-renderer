@@ -101,15 +101,17 @@ void entity_inspector(Entity *entity) {
             ImGui::OpenPopup(popup_key);
         }
         if (ImGui::BeginPopup(popup_key)) {
-            for (const auto &ty :
-                 global_component_registry()->component_types) {
-                auto &[ty_name, comp_reg] = ty;
-                // Skip existing component
-                if (entity->component(comp_reg->type()) != nullptr) {
+            for (const auto &ty : rttr::type::get_types()) {
+                if (!ty.is_class() || !ty.is_derived_from<IComponent>() ||
+                    ty == rttr::type::get<IComponent>()) {
                     continue;
                 }
-                if (ImGui::MenuItem(ty_name.c_str())) {
-                    entity->add_component(comp_reg->type());
+                // Skip existing component
+                if (entity->component(ty) != nullptr) {
+                    continue;
+                }
+                if (ImGui::MenuItem(ty.get_name().to_string().c_str())) {
+                    entity->add_component(ty);
                 }
             }
             ImGui::EndPopup();

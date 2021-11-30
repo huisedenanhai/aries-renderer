@@ -42,44 +42,9 @@ template <typename T> struct ComponentAutoRegister {
 };
 } // namespace details
 
-class IComponentRegistryEntry {
-  public:
-    virtual ~IComponentRegistryEntry() = default;
-    virtual std::unique_ptr<IComponent> create_instance() = 0;
-    virtual rttr::type type() = 0;
-};
-
-class ComponentRegistry {
-  public:
-    std::unordered_map<std::string, std::unique_ptr<IComponentRegistryEntry>>
-        component_types{};
-};
-
-template <typename T>
-class ComponentRegistryEntry : public IComponentRegistryEntry {
-  public:
-    std::unique_ptr<IComponent> create_instance() override {
-        return std::make_unique<T>();
-    }
-
-    rttr::type type() override {
-        return rttr::type::get<T>();
-    }
-};
-
-ComponentRegistry *global_component_registry();
-
-void register_component_type_entry(
-    const std::string &name, std::unique_ptr<IComponentRegistryEntry> entry);
-
-template <typename T> void register_component_type(const std::string &name) {
-    register_component_type_entry(
-        name, std::make_unique<ComponentRegistryEntry<T>>());
-}
-
 template <typename T> auto register_component(const std::string &name) {
-    register_component_type<T>(name);
-    return rttr::registration::class_<T>(name).template constructor<>();
+    return rttr::registration::class_<T>(name).template constructor<>()(
+        rttr::policy::ctor::as_raw_ptr);
 }
 
 class Scene {

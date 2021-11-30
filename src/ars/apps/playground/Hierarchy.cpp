@@ -31,21 +31,31 @@ class MyComponent : public engine::IComponent {
                 gui::PropertyAttribute::Display, gui::PropertyDisplay::Color));
     }
 
+    ~MyComponent() override {
+        ARS_LOG_INFO("Delete MyComponent");
+    }
+
     void on_inspector() override {
         if (ImGui::Button("Dump")) {
             std::stringstream ss;
             ss << std::setw(2) << serialize();
             ARS_LOG_INFO("MyComponent: {}", ss.str());
         }
+        ImGui::SameLine();
+        if (ImGui::Button("Reload")) {
+            auto js = serialize();
+            *this = {};
+            deserialize(js);
+        }
         IComponent::on_inspector();
     }
 
     void init(engine::Entity *entity) override {
-        ARS_LOG_INFO("Init");
+        ARS_LOG_INFO("Init MyComponent");
     }
 
     void destroy() override {
-        ARS_LOG_INFO("Destroy");
+        ARS_LOG_INFO("Destroy MyComponent");
     }
 
     std::string data{};

@@ -111,6 +111,21 @@ void adl_serializer<rttr::variant>::from_json(const json &js,
         de_it->second(js, v);
         return;
     }
+    if (v.is_sequential_container() && js.is_array()) {
+        auto size = js.size();
+        auto view = v.create_sequential_view();
+        if (view.is_dynamic()) {
+            view.set_size(size);
+        }
+        size = std::min(js.size(), view.get_size());
+        for (int i = 0; i < size; i++) {
+            auto item = view.get_value(i);
+            js[i].get_to(item);
+            view.set_value(i, item);
+        }
+        return;
+    }
+
     auto inst = rttr::instance(v);
     ty = inst.get_derived_type();
     for (auto &prop : ty.get_properties()) {

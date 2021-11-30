@@ -282,11 +282,11 @@ void IComponent::on_inspector() {
 }
 
 nlohmann::json IComponent::serialize() {
-    return rttr::instance(this);
+    return rttr::variant(this);
 }
 
 void IComponent::deserialize(const nlohmann::json &js) {
-    auto inst = rttr::instance(this);
+    auto inst = rttr::variant(this);
     js.get_to(inst);
 }
 

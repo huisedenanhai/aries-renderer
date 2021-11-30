@@ -89,9 +89,9 @@ template <typename T> struct adl_serializer<ars::math::XformTRS<T>> {
     }
 };
 
-template <> struct adl_serializer<rttr::instance> {
-    static void to_json(json &js, const rttr::instance &v);
-    static void from_json(const json &js, rttr::instance &v);
+template <> struct adl_serializer<rttr::variant> {
+    static void to_json(json &js, const rttr::variant &v);
+    static void from_json(const json &js, rttr::variant &v);
 };
 
 } // namespace nlohmann

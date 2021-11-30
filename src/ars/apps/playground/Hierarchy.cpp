@@ -1,6 +1,7 @@
 #include <ars/runtime/core/Log.h>
 #include <ars/runtime/core/Reflect.h>
 #include <ars/runtime/core/ResData.h>
+#include <ars/runtime/core/Serde.h>
 #include <ars/runtime/core/gui/ImGui.h>
 #include <ars/runtime/engine/Engine.h>
 #include <ars/runtime/engine/Entity.Editor.h>
@@ -28,6 +29,15 @@ class MyComponent : public engine::IComponent {
             .property("my_strings", &MyComponent::my_strings)
             .property("my_colors", &MyComponent::my_colors)(rttr::metadata(
                 gui::PropertyAttribute::Display, gui::PropertyDisplay::Color));
+    }
+
+    void on_inspector() override {
+        if (ImGui::Button("Dump")) {
+            std::stringstream ss;
+            ss << std::setw(2) << serialize();
+            ARS_LOG_INFO("MyComponent: {}", ss.str());
+        }
+        IComponent::on_inspector();
     }
 
     void init(engine::Entity *entity) override {

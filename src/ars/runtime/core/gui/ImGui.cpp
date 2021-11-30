@@ -208,6 +208,14 @@ bool input_variant(const char *label,
             auto is_dyn = view.is_dynamic();
             for (int i = 0; i < size; i++) {
                 ImGui::PushID(i);
+                if (is_dyn) {
+                    if (ImGui::Button("Delete")) {
+                        to_delete.insert(i);
+                        changed = true;
+                    }
+                    ImGui::SameLine();
+                }
+
                 auto item = view.get_value(i);
                 // Items inherit metadata, otherwise it will be more complex to
                 // represent an array of color
@@ -215,13 +223,6 @@ bool input_variant(const char *label,
                         fmt::format("Item {}", i).c_str(), item, display)) {
                     view.set_value(i, item);
                     changed = true;
-                }
-                if (is_dyn) {
-                    ImGui::SameLine();
-                    if (ImGui::Button("Delete")) {
-                        to_delete.insert(i);
-                        changed = true;
-                    }
                 }
                 ImGui::PopID();
             }

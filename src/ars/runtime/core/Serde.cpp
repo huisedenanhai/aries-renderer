@@ -182,6 +182,11 @@ void from_json(const nlohmann::json &js, std::shared_ptr<IRes> &res) {
         res = nullptr;
         return;
     }
-    res = s_resources->load_res(js.get<std::string>());
+    auto path = js.get<std::string>();
+    if (path.empty()) {
+        res = nullptr;
+        return;
+    }
+    res = s_resources->load_res(path);
 }
 } // namespace ars

@@ -181,23 +181,6 @@ IComponent *Entity::add_component(const rttr::type &ty) {
     return comp_ptr;
 }
 
-void Entity::save(const std::filesystem::path &path) {
-    nlohmann::json js = SpawnData::from(this);
-    std::ofstream os(path);
-    os << std::setw(2) << js << std::endl;
-    os.close();
-    ARS_LOG_INFO("Save entity {} to {}", name(), path.string());
-}
-
-void Entity::load(const std::filesystem::path &path) {
-    nlohmann::json js{};
-    std::ifstream is(path);
-    is >> js;
-    is.close();
-    SpawnData spawn = js;
-    spawn.to(this);
-}
-
 Entity *Scene::create_entity() {
     auto id = _entities.alloc();
     auto &entity = _entities.get<std::unique_ptr<Entity>>(id);

@@ -46,6 +46,12 @@ struct SpawnData : public IRes {
     // Data from root and all its descendants
     static SpawnData from(Entity *root);
 
+    // Load data to entity. This method will modify components on the root
+    // entity.
+    // The transform of the root entity is ignored.
+    // If the stored configuration contains existing component on the root
+    // entity, the existing one will be removed and recreated based on the
+    // spawn data.
     void to(Entity *root_entity) const;
 };
 } // namespace ars::engine

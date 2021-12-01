@@ -125,18 +125,6 @@ class Entity final {
     [[nodiscard]] math::XformTRS<float> cached_world_xform() const;
     void set_cached_world_xform(const math::XformTRS<float> &xform);
 
-    // A save file have only one root.
-    // Save the entity and all its children to file.
-    // The transform of this entity is ignored.
-    void save(const std::filesystem::path &path);
-    // Load saved entity. This method will modify components on the current
-    // entity.
-    // The transform of this entity is ignored.
-    // If the stored configuration contains existing component on this entity,
-    // the existing one will be removed and recreated based on the stored
-    // configuration.
-    void load(const std::filesystem::path &path);
-
     template <typename Func> void visit_preorder(Func &&func) {
         func(this);
         for (auto child : _children) {

@@ -1,3 +1,4 @@
+#include "Entity.h"
 #include <ars/runtime/core/Log.h>
 #include <ars/runtime/engine/Engine.h>
 #include <ars/runtime/engine/Entity.Editor.h>
@@ -78,7 +79,7 @@ class Editor : public engine::IApplication {
                     engine::load_model(_scene->root(), model);
                 }
                 if (ext == ARS_SPAWNABLE_EXTENSION) {
-                    _scene->root()->load(path.value());
+                    ars::editor::load_entity(_scene->root(), path.value());
                     _scene_save_dir = path;
                 }
             }
@@ -100,7 +101,7 @@ class Editor : public engine::IApplication {
 
     void save_current_scene() {
         if (_scene_save_dir.has_value()) {
-            _scene->root()->save(*_scene_save_dir);
+            ars::editor::save_entity(_scene->root(), *_scene_save_dir);
         } else {
             editor::open_save_as_modal(_save_as_state,
                                        "Save As",

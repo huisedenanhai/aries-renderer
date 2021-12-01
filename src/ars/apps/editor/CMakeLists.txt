@@ -1,4 +1,6 @@
 add_executable(aries_editor
+        Entity.cpp
+        Entity.h
         FileBrowser.cpp
         FileBrowser.h
         SaveAsModal.cpp

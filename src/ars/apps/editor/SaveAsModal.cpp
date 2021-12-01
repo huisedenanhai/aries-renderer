@@ -1,4 +1,5 @@
 #include "SaveAsModal.h"
+#include "Entity.h"
 #include <ars/runtime/core/gui/ImGui.h>
 #include <imgui/imgui.h>
 
@@ -41,7 +42,8 @@ void save_as_modal(SaveAsModalState &state,
                 if (save_dir->extension() != state.extension) {
                     save_dir->replace_extension(state.extension);
                 }
-                state.entity->save(save_dir.value());
+
+                save_entity(state.entity, save_dir.value());
             }
             if (close) {
                 state.open = false;

@@ -2,6 +2,7 @@
 #include "components/Components.h"
 #include <ars/runtime/core/Log.h>
 #include <ars/runtime/core/ResData.h>
+#include <ars/runtime/core/Serde.h>
 #include <ars/runtime/render/IContext.h>
 #include <ars/runtime/render/IScene.h>
 #include <ars/runtime/render/ITexture.h>
@@ -166,6 +167,7 @@ class Engine {
 
     void init_resources() {
         _resources = std::make_unique<Resources>();
+        ars::set_serde_res_provider(_resources.get());
     }
 
     void destroy_render() {

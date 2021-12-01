@@ -100,11 +100,13 @@ IDataProvider *Resources::resolve_path(const std::string &path,
 std::shared_ptr<IRes> Resources::load_res(const std::string &path) {
     auto cached_it = _cache.find(path);
     if (cached_it != _cache.end()) {
-        ARS_LOG_INFO("Load cached resources {}", path);
+        ARS_LOG_INFO("Load cached resources \"{}\"", path);
         return cached_it->second;
     }
     auto res = load_res_no_cache(path);
-    _cache[path] = res;
+    if (res != nullptr) {
+        _cache[path] = res;
+    }
     return res;
 }
 
@@ -114,8 +116,8 @@ std::shared_ptr<IRes> Resources::load_res_no_cache(const std::string &path) {
     std::string relative_path{};
     auto provider = resolve_path(path, relative_path);
     if (provider == nullptr) {
-        ARS_LOG_ERROR("Failed to load resources {}: No data provider found.",
-                      path);
+        ARS_LOG_ERROR(
+            "Failed to load resources \"{}\": No data provider found.", path);
         return {};
     }
 
@@ -123,7 +125,7 @@ std::shared_ptr<IRes> Resources::load_res_no_cache(const std::string &path) {
 
     auto res_data = provider->load(relative_path);
     if (!res_data.valid()) {
-        ARS_LOG_ERROR("Failed to load resources {}: Failed to load data.",
+        ARS_LOG_ERROR("Failed to load resources \"{}\": Failed to load data.",
                       path);
         return {};
     }
@@ -133,10 +135,10 @@ std::shared_ptr<IRes> Resources::load_res_no_cache(const std::string &path) {
     auto &ty = res_data.ty;
     auto loader_it = _res_loaders.find(ty);
     if (loader_it == _res_loaders.end()) {
-        ARS_LOG_ERROR(
-            "Failed to load resources {}: No loader registered for type {}.",
-            path,
-            ty);
+        ARS_LOG_ERROR("Failed to load resources \"{}\": No loader registered "
+                      "for type {}.",
+                      path,
+                      ty);
         return {};
     }
 
@@ -149,12 +151,12 @@ std::shared_ptr<IRes> Resources::load_res_no_cache(const std::string &path) {
     auto decode_duration = duration_cast<MilliSeconds>(mid - start);
     auto upload_duration = duration_cast<MilliSeconds>(stop - mid);
 
-    ARS_LOG_INFO(
-        "Load resource {} takes {}ms, fetch data takes {}ms, upload takes {}ms",
-        path,
-        total_duration.count(),
-        decode_duration.count(),
-        upload_duration.count());
+    ARS_LOG_INFO("Load resource \"{}\" takes {}ms, fetch data takes {}ms, "
+                 "upload takes {}ms",
+                 path,
+                 total_duration.count(),
+                 decode_duration.count(),
+                 upload_duration.count());
 
     res->set_path(path);
 

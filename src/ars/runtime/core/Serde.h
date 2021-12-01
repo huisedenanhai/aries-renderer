@@ -97,7 +97,11 @@ template <> struct adl_serializer<rttr::variant> {
 } // namespace nlohmann
 
 namespace ars {
+class Resources;
 void to_json(nlohmann::json &js, const std::shared_ptr<IRes> &res);
+void from_json(const nlohmann::json &js, std::shared_ptr<IRes> &res);
+
+void set_serde_res_provider(Resources *res);
 } // namespace ars
 
 #define NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_DEFINITION(Type, ...)               \

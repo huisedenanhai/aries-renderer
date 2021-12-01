@@ -1,6 +1,7 @@
 #include "Spawn.h"
 #include "Entity.h"
 #include <ars/runtime/core/Log.h>
+#include <ars/runtime/core/ResData.h>
 #include <ars/runtime/core/Serde.h>
 
 namespace ars::engine {
@@ -120,5 +121,16 @@ void SpawnData::to(Entity *root_entity) const {
             entities[i].to(e, EntityData::MODIFY_MASK_COMPONENTS_BIT);
         }
     }
+}
+
+std::shared_ptr<SpawnData> load_spawn_data(const ResData &data) {
+    if (data.ty != RES_TYPE_NAME_SPAWN_DATA) {
+        ARS_LOG_ERROR("Failed to load spawn data: invalid data type");
+        return nullptr;
+    }
+    SpawnDataResMeta meta = data.meta;
+    auto spawn = std::make_shared<SpawnData>();
+    *spawn = nlohmann::json::from_bson(data.data);
+    return spawn;
 }
 } // namespace ars::engine

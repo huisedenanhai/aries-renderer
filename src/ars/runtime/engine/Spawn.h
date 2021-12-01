@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ars/runtime/core/Res.h>
+#include <ars/runtime/core/ResData.h>
 #include <ars/runtime/core/math/Transform.h>
 #include <nlohmann/json.hpp>
 #include <string>
@@ -54,4 +55,15 @@ struct SpawnData : public IRes {
     // spawn data.
     void to(Entity *root_entity) const;
 };
+
+constexpr const char *RES_TYPE_NAME_SPAWN_DATA = "ars::engine::SpawnData";
+
+struct SpawnDataResMeta {
+    DataSlice data;
+
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(SpawnDataResMeta, data)
+};
+
+std::shared_ptr<SpawnData> load_spawn_data(const ResData &data);
+
 } // namespace ars::engine

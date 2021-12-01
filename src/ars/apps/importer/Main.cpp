@@ -1,6 +1,7 @@
 #include <ars/runtime/core/Log.h>
 #include <ars/runtime/core/ResData.h>
 #include <ars/runtime/engine/Engine.h>
+#include <ars/runtime/engine/Spawn.h>
 #include <ars/runtime/render/res/Material.h>
 #include <ars/runtime/render/res/Mesh.h>
 #include <ars/runtime/render/res/Model.h>
@@ -11,6 +12,8 @@
 #include <tiny_gltf.h>
 
 using namespace ars;
+
+constexpr const char *CACHE_FOLDER = ".ars";
 
 void save(const ResData &data, const std::filesystem::path &path) {
     std::filesystem::create_directories(path.parent_path());
@@ -95,11 +98,15 @@ void import_texture(const std::filesystem::path &path) {
     res.data.resize(pixels.size);
     std::memcpy(res.data.data(), pixel_data, pixels.size);
 
-    save(res, ".ars" / path);
+    save(res, CACHE_FOLDER / path);
 }
 
 void gltf_warn(const std::filesystem::path &path, const std::string &info) {
     ARS_LOG_WARN("Loading {}: {}", path.string(), info);
+}
+
+std::string name_or_index(const std::string &name, int index) {
+    return name.empty() ? std::to_string(index) : name;
 }
 
 void gltf_decode_accessor(const tinygltf::Model &gltf,
@@ -120,16 +127,30 @@ template <typename T, typename R> R cast_value(const unsigned char *ptr) {
     return static_cast<R>(*reinterpret_cast<const T *>(ptr));
 }
 
+std::filesystem::path gltf_mesh_path(const std::filesystem::path &path,
+                                     const tinygltf::Model &gltf,
+                                     int mesh_index,
+                                     int prim_index) {
+    if (mesh_index < 0 || prim_index < 0) {
+        return "";
+    }
+    return path.parent_path() / "meshes" /
+           fmt::format("{}.{}",
+                       name_or_index(gltf.meshes[mesh_index].name, mesh_index),
+                       prim_index);
+}
+
 void import_gltf_meshes(const std::filesystem::path &path,
                         const tinygltf::Model &gltf) {
-    auto target_dir = ".ars" / path.parent_path() / "meshes";
+    auto target_dir = CACHE_FOLDER / path.parent_path() / "meshes";
     std::filesystem::create_directories(target_dir);
-    for (auto &m : gltf.meshes) {
+    for (int mesh_index = 0; mesh_index < gltf.meshes.size(); mesh_index++) {
+        auto &m = gltf.meshes[mesh_index];
         for (int prim_index = 0; prim_index < m.primitives.size();
              prim_index++) {
             auto &p = m.primitives[prim_index];
-            auto save_path =
-                target_dir / fmt::format("{}.{}", m.name, prim_index);
+            auto save_path = CACHE_FOLDER /
+                             gltf_mesh_path(path, gltf, mesh_index, prim_index);
 
             render::MeshResMeta meta{};
             ResData data{};
@@ -294,16 +315,27 @@ std::filesystem::path gltf_texture_path(const std::filesystem::path &path,
     return path.parent_path() / gltf.images[image].uri;
 }
 
+std::filesystem::path gltf_material_path(const std::filesystem::path &path,
+                                         const tinygltf::Model &gltf,
+                                         int mat_index) {
+    if (mat_index < 0) {
+        return "";
+    }
+    return path.parent_path() / "materials" /
+           name_or_index(gltf.materials[mat_index].name, mat_index);
+}
+
 void import_gltf_materials(const std::filesystem::path &path,
                            const tinygltf::Model &gltf) {
-    auto target_dir = ".ars" / path.parent_path() / "materials";
+    auto target_dir = CACHE_FOLDER / path.parent_path() / "materials";
     std::filesystem::create_directories(target_dir);
 
     auto tex = [&](int index) -> std::string {
         return gltf_texture_path(path, gltf, index).string();
     };
 
-    for (auto &gltf_mat : gltf.materials) {
+    for (int mat_index = 0; mat_index < gltf.materials.size(); mat_index++) {
+        auto &gltf_mat = gltf.materials[mat_index];
         render::MaterialResMeta meta{};
         meta.type = render::MaterialType::MetallicRoughnessPBR;
 
@@ -341,7 +373,8 @@ void import_gltf_materials(const std::filesystem::path &path,
         meta.properties.size = data.data.size();
         data.meta = meta;
 
-        auto save_path = target_dir / gltf_mat.name;
+        auto save_path =
+            CACHE_FOLDER / gltf_material_path(path, gltf, mat_index);
         data.save(preferred_res_path(save_path));
     }
 }
@@ -383,6 +416,39 @@ void guess_gltf_texture_settings(const std::filesystem::path &path,
         }
 
         get_import_setting(gltf_texture_path(path, gltf, index), settings);
+    }
+}
+
+engine::SpawnData import_gltf_scene(const std::filesystem::path &path,
+                                    const tinygltf::Model &gltf,
+                                    int scene_index) {
+    return {};
+}
+
+void save_spawn_data(const engine::SpawnData &spawn,
+                     const std::filesystem::path &path) {
+    ResData data{};
+    data.ty = engine::RES_TYPE_NAME_SPAWN_DATA;
+    auto js = spawn;
+    nlohmann::json::to_bson(js, data.data);
+
+    engine::SpawnDataResMeta meta{};
+    meta.data.offset = 0;
+    meta.data.size = data.data.size();
+    data.meta = meta;
+
+    data.save(preferred_res_path(path));
+}
+
+void import_gltf_scenes(const std::filesystem::path &path,
+                        const tinygltf::Model &gltf) {
+    auto target_dir = CACHE_FOLDER / path.parent_path() / "scenes";
+    std::filesystem::create_directories(target_dir);
+
+    for (int i = 0; i < gltf.scenes.size(); i++) {
+        auto spawn = import_gltf_scene(path, gltf, i);
+        auto save_path = target_dir / name_or_index(gltf.scenes[i].name, i);
+        save_spawn_data(spawn, save_path);
     }
 }
 
@@ -439,6 +505,7 @@ void import_gltf(const std::filesystem::path &path) {
     import_gltf_meshes(path, gltf);
     import_gltf_materials(path, gltf);
     guess_gltf_texture_settings(path, gltf);
+    import_gltf_scenes(path, gltf);
 }
 
 class Importer : public engine::IApplication {
@@ -459,7 +526,7 @@ class Importer : public engine::IApplication {
         for (const auto &entry :
              recursive_directory_iterator(std::filesystem::current_path())) {
             auto path = std::filesystem::relative(entry.path());
-            if (path.root_directory() == ".ars") {
+            if (path.root_directory() == CACHE_FOLDER) {
                 continue;
             }
             if (entry.is_regular_file()) {

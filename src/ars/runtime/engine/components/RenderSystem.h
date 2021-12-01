@@ -51,6 +51,14 @@ class MeshRenderer : public IComponent {
     [[nodiscard]] std::vector<std::unique_ptr<render::IRenderObject>> &
     primitives() const;
 
+    struct PrimitiveHandle {
+        std::shared_ptr<IRes> mesh;
+        std::shared_ptr<IRes> material;
+    };
+
+    [[nodiscard]] std::vector<PrimitiveHandle> primitive_handles() const;
+    void set_primitive_handles(std::vector<PrimitiveHandle> handles);
+
     RenderSystem *_render_system{};
     RenderSystem::Objects::Id _id{};
 };

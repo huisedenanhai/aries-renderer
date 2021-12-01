@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../Res.h"
 #include "../math/Transform.h"
 #include <glm/glm.hpp>
 #include <imgui/imgui.h>
@@ -15,6 +16,7 @@ bool input_color3(const char *label, glm::vec3 &v);
 bool input_color4(const char *label, glm::vec4 &v);
 bool input_rotation(const char *label, glm::quat &q);
 bool input_xform(const char *label, math::XformTRS<float> &xform);
+bool input_res(const char *label, std::shared_ptr<IRes> &v);
 bool input_instance(rttr::instance instance);
 
 enum class PropertyDisplay {

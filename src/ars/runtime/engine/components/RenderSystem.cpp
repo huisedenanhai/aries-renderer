@@ -1,10 +1,20 @@
 #include "RenderSystem.h"
 #include <ars/runtime/core/Log.h>
 #include <ars/runtime/core/gui/ImGui.h>
+#include <ars/runtime/render/IMaterial.h>
+#include <ars/runtime/render/IMesh.h>
 
 namespace ars::engine {
 void MeshRenderer::register_component() {
-    engine::register_component<MeshRenderer>("ars::engine::MeshRenderer");
+    rttr::registration::class_<PrimitiveHandle>(
+        "ars::engine::MeshRenderer::PrimitiveHandle")
+        .property("mesh", &PrimitiveHandle::mesh)
+        .property("material", &PrimitiveHandle::material);
+
+    engine::register_component<MeshRenderer>("ars::engine::MeshRenderer")
+        .property("primitives",
+                  &MeshRenderer::primitive_handles,
+                  &MeshRenderer::set_primitive_handles);
 }
 
 void MeshRenderer::init(Entity *entity) {
@@ -57,6 +67,37 @@ void MeshRenderer::remove_primitive(size_t index) {
         return;
     }
     prims.erase(std::next(prims.begin(), static_cast<int>(index)));
+}
+
+std::vector<MeshRenderer::PrimitiveHandle>
+MeshRenderer::primitive_handles() const {
+    std::vector<PrimitiveHandle> handles{};
+    auto &prims = primitives();
+    handles.reserve(prims.size());
+    for (auto &p : prims) {
+        PrimitiveHandle h{};
+        h.mesh = p->mesh();
+        h.material = p->material();
+        handles.push_back(h);
+    }
+    return handles;
+}
+
+void MeshRenderer::set_primitive_handles(std::vector<PrimitiveHandle> handles) {
+    auto &prims = primitives();
+    if (prims.size() > handles.size()) {
+        prims.resize(handles.size());
+    }
+    while (prims.size() < handles.size()) {
+        add_primitive();
+    }
+    assert(prims.size() == handles.size());
+    for (int i = 0; i < handles.size(); i++) {
+        prims[i]->set_mesh(
+            std::dynamic_pointer_cast<render::IMesh>(handles[i].mesh));
+        prims[i]->set_material(
+            std::dynamic_pointer_cast<render::IMaterial>(handles[i].material));
+    }
 }
 
 void PointLight::register_component() {

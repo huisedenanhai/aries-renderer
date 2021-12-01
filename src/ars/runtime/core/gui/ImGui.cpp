@@ -199,6 +199,10 @@ bool input_variant(const char *label,
             label, v, changed, input_xform)) {
         return changed;
     }
+    if (input_variant_type<std::shared_ptr<IRes>>(
+            label, v, changed, input_res)) {
+        return changed;
+    }
 
     if (v.is_sequential_container()) {
         if (ImGui::TreeNode(label)) {
@@ -248,5 +252,11 @@ bool input_variant(const char *label,
         return changed;
     }
     return changed;
+}
+
+bool input_res(const char *label, std::shared_ptr<IRes> &v) {
+    ImGui::Text("%s", label);
+    ImGui::Text("%s", v == nullptr ? "<NULL>" : v->path().c_str());
+    return false;
 }
 } // namespace ars::gui

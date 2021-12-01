@@ -21,6 +21,9 @@ void draw_selected_object_outline(render::IView *view,
     for (int i = 0; i < mesh_renderer->primitive_count(); i++) {
         auto overlay = view->overlay();
         auto mesh = mesh_renderer->primitive(i)->mesh();
+        if (mesh == nullptr) {
+            continue;
+        }
         overlay->draw_outline(0, current_selected->cached_world_xform(), mesh);
         auto aabb = mesh->aabb();
         overlay->draw_wire_box(current_selected->cached_world_xform(),

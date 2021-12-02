@@ -422,6 +422,7 @@ void guess_gltf_texture_settings(const std::filesystem::path &path,
 engine::SpawnData import_gltf_scene(const std::filesystem::path &path,
                                     const tinygltf::Model &gltf,
                                     int scene_index) {
+    // TODO
     return {};
 }
 

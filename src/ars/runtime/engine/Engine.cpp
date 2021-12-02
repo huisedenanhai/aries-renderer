@@ -8,7 +8,6 @@
 #include <ars/runtime/core/Serde.h>
 #include <ars/runtime/render/IContext.h>
 #include <ars/runtime/render/IScene.h>
-#include <ars/runtime/render/ITexture.h>
 #include <ars/runtime/render/IWindow.h>
 #include <cassert>
 #include <chrono>

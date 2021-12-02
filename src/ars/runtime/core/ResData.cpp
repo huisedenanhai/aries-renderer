@@ -116,7 +116,6 @@ std::shared_ptr<IRes> Resources::load_res(const std::string &path) {
     auto canonical_path = canonical_res_path(path);
     auto cached_it = _cache.find(canonical_path);
     if (cached_it != _cache.end()) {
-        ARS_LOG_INFO("Load cached resources \"{}\"", path);
         return cached_it->second;
     }
     auto res = load_res_no_cache(canonical_path);
@@ -167,12 +166,14 @@ std::shared_ptr<IRes> Resources::load_res_no_cache(const std::string &path) {
     auto decode_duration = duration_cast<MilliSeconds>(mid - start);
     auto upload_duration = duration_cast<MilliSeconds>(stop - mid);
 
-    ARS_LOG_INFO("Load resource \"{}\" takes {}ms, fetch data takes {}ms, "
-                 "upload takes {}ms",
-                 path,
-                 total_duration.count(),
-                 decode_duration.count(),
-                 upload_duration.count());
+    // TODO better resource loading speed profiler
+
+    // ARS_LOG_INFO("Load resource \"{}\" takes {}ms, fetch data takes {}ms, "
+    //             "upload takes {}ms",
+    //             path,
+    //             total_duration.count(),
+    //             decode_duration.count(),
+    //             upload_duration.count());
 
     res->set_path(path);
 

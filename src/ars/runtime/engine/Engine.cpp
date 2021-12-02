@@ -1,4 +1,7 @@
 #include "Engine.h"
+#include "ars/runtime/render/res/Material.h"
+#include "ars/runtime/render/res/Mesh.h"
+#include "ars/runtime/render/res/Texture.h"
 #include "components/Components.h"
 #include <ars/runtime/core/Log.h>
 #include <ars/runtime/core/ResData.h>
@@ -167,11 +170,30 @@ class Engine {
 
     void init_resources() {
         _resources = std::make_unique<Resources>();
+        auto ctx = _render_context.get();
+        auto res = _resources.get();
+        res->register_res_loader(
+            ars::render::RES_TYPE_NAME_TEXTURE,
+            ars::make_loader([ctx](const ars::ResData &data) {
+                return load_texture(ctx, data);
+            }));
+        res->register_res_loader(
+            ars::render::RES_TYPE_NAME_MESH,
+            ars::make_loader([ctx](const ars::ResData &data) {
+                return load_mesh(ctx, data);
+            }));
+        res->register_res_loader(
+            ars::render::RES_TYPE_NAME_MATERIAL,
+            ars::make_loader([ctx, res](const ars::ResData &data) {
+                return load_material(ctx, res, data);
+            }));
+
         ars::set_serde_res_provider(_resources.get());
     }
 
     void destroy_render() {
         _main_window.reset();
+        _resources.reset();
         _render_context.reset();
 
         render::destroy_render_backend();

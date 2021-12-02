@@ -27,6 +27,45 @@ std::vector<T> read_to_vec(Reader &&reader, size_t n) {
     return v;
 }
 
+std::string name_or_index(const std::string &name, int index) {
+    return name.empty() ? std::to_string(index) : name;
+}
+
+std::string gltf_mesh_path(const std::filesystem::path &path,
+                           const tinygltf::Model &gltf,
+                           int mesh_index,
+                           int prim_index) {
+    if (mesh_index < 0 || prim_index < 0) {
+        return "";
+    }
+    return canonical_res_path(
+        path / "meshes" /
+        fmt::format("{}.{}",
+                    name_or_index(gltf.meshes[mesh_index].name, mesh_index),
+                    prim_index));
+}
+
+std::string gltf_texture_path(const std::filesystem::path &path,
+                              const tinygltf::Model &gltf,
+                              int index) {
+    if (index < 0) {
+        return "";
+    }
+    auto image = gltf.textures[index].source;
+    return canonical_res_path(path.parent_path() / gltf.images[image].uri);
+}
+
+std::string gltf_material_path(const std::filesystem::path &path,
+                               const tinygltf::Model &gltf,
+                               int mat_index) {
+    if (mat_index < 0) {
+        return "";
+    }
+    return canonical_res_path(
+        path / "materials" /
+        name_or_index(gltf.materials[mat_index].name, mat_index));
+}
+
 void load_meshes(IContext *context,
                  const std::filesystem::path &path,
                  const tinygltf::Model &gltf,
@@ -43,14 +82,17 @@ void load_meshes(IContext *context,
     };
 
     model.meshes.reserve(gltf.meshes.size());
-    for (auto &gltf_mesh : gltf.meshes) {
+    for (int mesh_index = 0; mesh_index < gltf.meshes.size(); mesh_index++) {
+        auto &gltf_mesh = gltf.meshes[mesh_index];
         Model::Mesh mesh{};
         mesh.name = gltf_mesh.name;
 
         auto &primitives = mesh.primitives;
         primitives.reserve(gltf_mesh.primitives.size());
 
-        for (auto &gltf_prim : gltf_mesh.primitives) {
+        for (int prim_index = 0; prim_index < gltf_mesh.primitives.size();
+             prim_index++) {
+            auto &gltf_prim = gltf_mesh.primitives[prim_index];
             auto visit_attr = [&](const std::string &attr_name,
                                   auto &&func,
                                   int accessor_type,
@@ -194,6 +236,7 @@ void load_meshes(IContext *context,
                            0,
                            triangle_count);
             m->set_triangle_count(triangle_count);
+            m->set_path(gltf_mesh_path(path, gltf, mesh_index, prim_index));
 
             Model::Primitive prim{};
             prim.mesh = std::move(m);
@@ -344,8 +387,9 @@ void load_cameras(const std::filesystem::path &path,
 std::shared_ptr<ITexture> load_texture(IContext *context,
                                        const std::filesystem::path &path,
                                        const tinygltf::Model &gltf,
-                                       const tinygltf::Texture &gltf_tex,
+                                       int tex_index,
                                        bool need_srgb) {
+    const auto &gltf_tex = gltf.textures[tex_index];
     auto &image = gltf.images[gltf_tex.source];
     int width = image.width;
     int height = image.height;
@@ -379,6 +423,7 @@ std::shared_ptr<ITexture> load_texture(IContext *context,
 
     auto texture = context->create_texture(info);
 
+    texture->set_path(gltf_texture_path(path, gltf, tex_index));
     texture->set_data((void *)image.image.data(),
                       width * height * channels,
                       0,
@@ -421,13 +466,14 @@ void load_textures(IContext *context,
 
         tex.name = gltf_tex.name;
         tex.texture =
-            load_texture(context, path, gltf, gltf_tex, need_srgb[index]);
+            load_texture(context, path, gltf, index, need_srgb[index]);
 
         model.textures.emplace_back(std::move(tex));
     }
 }
 
 void load_materials(IContext *context,
+                    const std::filesystem::path &path,
                     const tinygltf::Model &gltf,
                     Model &model) {
     auto tex = [&](int index) {
@@ -435,7 +481,8 @@ void load_materials(IContext *context,
     };
 
     model.materials.reserve(gltf.materials.size());
-    for (auto &gltf_mat : gltf.materials) {
+    for (int mat_index = 0; mat_index < gltf.materials.size(); mat_index++) {
+        auto &gltf_mat = gltf.materials[mat_index];
         Model::Material mat{};
 
         mat.name = gltf_mat.name;
@@ -444,6 +491,7 @@ void load_materials(IContext *context,
                 ->create_material();
         auto &pbr = gltf_mat.pbrMetallicRoughness;
 
+        m->set_path(gltf_material_path(path, gltf, mat_index));
         m->set("base_color_tex", tex(pbr.baseColorTexture.index));
         m->set("base_color_factor",
                glm::vec4(pbr.baseColorFactor[0],
@@ -511,7 +559,7 @@ Model load_gltf(IContext *context,
     load_scenes(gltf, model);
     load_cameras(path, gltf, model);
     load_textures(context, path, gltf, model);
-    load_materials(context, gltf, model);
+    load_materials(context, path, gltf, model);
     load_lights(gltf, model);
 
     return model;

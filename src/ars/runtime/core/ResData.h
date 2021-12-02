@@ -9,6 +9,7 @@
 
 namespace ars {
 std::string canonical_res_path(const std::string &path);
+std::string canonical_res_path(const std::filesystem::path &path);
 bool starts_with(const std::string &str, const std::string &prefix);
 std::vector<std::string> split_by(const std::string &str,
                                   const std::string &sep);
@@ -65,6 +66,9 @@ class IDataProvider {
   public:
     virtual ~IDataProvider() = default;
 
+    // The path will not start with '/'
+    // Need to do necessary modification to the path like automatically append
+    // .ares extension
     virtual ResData load(const std::string &path) = 0;
 };
 
@@ -105,6 +109,7 @@ class Resources {
     void register_res_loader(const std::string &ty,
                              const std::shared_ptr<IResLoader> &loader);
 
+    // Should not append .ares extension in path
     std::shared_ptr<IRes> load_res(const std::string &path);
 
     template <typename T> std::shared_ptr<T> load(const std::string &path) {

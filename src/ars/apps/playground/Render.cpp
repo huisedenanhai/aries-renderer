@@ -92,21 +92,6 @@ class Application : public ars::engine::IApplication {
         auto tex = load_texture(ctx, "test.jpg");
 
         auto res = ars::engine::resources();
-        res->register_res_loader(
-            ars::render::RES_TYPE_NAME_TEXTURE,
-            ars::make_loader([ctx](const ars::ResData &data) {
-                return load_texture(ctx, data);
-            }));
-        res->register_res_loader(
-            ars::render::RES_TYPE_NAME_MESH,
-            ars::make_loader([ctx](const ars::ResData &data) {
-                return load_mesh(ctx, data);
-            }));
-        res->register_res_loader(
-            ars::render::RES_TYPE_NAME_MATERIAL,
-            ars::make_loader([ctx, res](const ars::ResData &data) {
-                return load_material(ctx, res, data);
-            }));
         res->mount("/", std::make_shared<ars::FolderDataProvider>(".ars"));
 
         tex = res->load<ITexture>("test.jpg");
@@ -140,12 +125,14 @@ class Application : public ars::engine::IApplication {
         auto e = _scene->create_entity();
         auto mesh_rd = e->add_component<ars::engine::MeshRenderer>();
         auto prim = mesh_rd->add_primitive();
-        auto mesh = res->load<IMesh>("FlightHelmetWithLight/meshes/"
-                                     "RubberWood_low.001.0.ares");
+        auto mesh = res->load<IMesh>(
+            "FlightHelmetWithLight/FlightHelmetWithLight.gltf/meshes/"
+            "RubberWood_low.001.0");
         prim->set_mesh(mesh);
 
-        auto mat = res->load<IMaterial>("FlightHelmetWithLight/materials/"
-                                        "RubberWoodMat.001.ares");
+        auto mat = res->load<IMaterial>(
+            "FlightHelmetWithLight/FlightHelmetWithLight.gltf/materials/"
+            "RubberWoodMat.001");
         prim->set_material(mat);
     }
 

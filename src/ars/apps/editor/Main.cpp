@@ -35,6 +35,9 @@ class Editor : public engine::IApplication {
         auto &io = ImGui::GetIO();
         io.ConfigWindowsMoveFromTitleBarOnly = true;
 
+        auto res = ars::engine::resources();
+        res->mount("/", std::make_shared<ars::FolderDataProvider>(".ars"));
+
         _light_bulb_icon =
             render::load_texture(engine::render_context(), "light-bulb.png");
 

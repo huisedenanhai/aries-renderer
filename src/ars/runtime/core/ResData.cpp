@@ -5,22 +5,34 @@
 
 namespace ars {
 std::string canonical_res_path(const std::string &path) {
-    // include trailing zero and possible prefix '/'
-    auto cs = std::make_unique<char[]>(path.size() + 3);
-    cs[0] = '/';
-    int i = 1;
-    for (auto c : path) {
-        if (cs[i - 1] == '/' && c == '/') {
+    auto folders = split_by(path, "/");
+    std::vector<std::string_view> canonical_folders{};
+    for (auto &f : folders) {
+        if (f.empty() || f == ".") {
             continue;
         }
-        cs[i++] = c;
+        if (f == ".." && !canonical_folders.empty()) {
+            canonical_folders.pop_back();
+            continue;
+        }
+        canonical_folders.push_back(f);
     }
-    // Remove last '/'
-    if (i > 1 && cs[i - 1] == '/') {
-        i--;
+
+    if (canonical_folders.empty()) {
+        return "/";
     }
-    cs[i] = 0;
-    return {cs.get()};
+
+    std::stringstream ss;
+    for (auto &f : canonical_folders) {
+        ss << "/" << f;
+    }
+    return ss.str();
+}
+
+std::string canonical_res_path(const std::filesystem::path &path) {
+    auto res_path = path.string();
+    std::replace(res_path.begin(), res_path.end(), '\\', '/');
+    return canonical_res_path(res_path);
 }
 
 bool starts_with(const std::string &str, const std::string &prefix) {
@@ -44,7 +56,6 @@ std::vector<std::string> split_by(const std::string &str,
     auto sep_len = sep.size();
 
     while (offset < len) {
-        ARS_LOG_INFO("Sub {}", str.substr(offset));
         auto p = str.find(sep, offset);
         if (p != std::string::npos) {
             res.push_back(str.substr(offset, p - offset));
@@ -94,18 +105,23 @@ IDataProvider *Resources::resolve_path(const std::string &path,
     }
 
     relative_path = canonical_path.substr(root.size());
+    // Remove prefix '/'
+    if (!relative_path.empty() && relative_path[0] == '/') {
+        relative_path = relative_path.substr(1);
+    }
     return provider;
 }
 
 std::shared_ptr<IRes> Resources::load_res(const std::string &path) {
-    auto cached_it = _cache.find(path);
+    auto canonical_path = canonical_res_path(path);
+    auto cached_it = _cache.find(canonical_path);
     if (cached_it != _cache.end()) {
         ARS_LOG_INFO("Load cached resources \"{}\"", path);
         return cached_it->second;
     }
-    auto res = load_res_no_cache(path);
+    auto res = load_res_no_cache(canonical_path);
     if (res != nullptr) {
-        _cache[path] = res;
+        _cache[canonical_path] = res;
     }
     return res;
 }
@@ -239,7 +255,7 @@ void ResData::reset() {
 }
 
 ResData FolderDataProvider::load(const std::string &path) {
-    auto full_path = _root / preferred_res_path(path);
+    auto full_path = _root / (path + ".ares");
     ResData data{};
     if (!is_regular_file(full_path)) {
         return data;

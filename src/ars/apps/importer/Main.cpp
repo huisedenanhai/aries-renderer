@@ -134,7 +134,7 @@ std::filesystem::path gltf_mesh_path(const std::filesystem::path &path,
     if (mesh_index < 0 || prim_index < 0) {
         return "";
     }
-    return path.parent_path() / "meshes" /
+    return path / "meshes" /
            fmt::format("{}.{}",
                        name_or_index(gltf.meshes[mesh_index].name, mesh_index),
                        prim_index);
@@ -142,7 +142,7 @@ std::filesystem::path gltf_mesh_path(const std::filesystem::path &path,
 
 void import_gltf_meshes(const std::filesystem::path &path,
                         const tinygltf::Model &gltf) {
-    auto target_dir = CACHE_FOLDER / path.parent_path() / "meshes";
+    auto target_dir = CACHE_FOLDER / path / "meshes";
     std::filesystem::create_directories(target_dir);
     for (int mesh_index = 0; mesh_index < gltf.meshes.size(); mesh_index++) {
         auto &m = gltf.meshes[mesh_index];
@@ -321,13 +321,13 @@ std::filesystem::path gltf_material_path(const std::filesystem::path &path,
     if (mat_index < 0) {
         return "";
     }
-    return path.parent_path() / "materials" /
+    return path / "materials" /
            name_or_index(gltf.materials[mat_index].name, mat_index);
 }
 
 void import_gltf_materials(const std::filesystem::path &path,
                            const tinygltf::Model &gltf) {
-    auto target_dir = CACHE_FOLDER / path.parent_path() / "materials";
+    auto target_dir = CACHE_FOLDER / path / "materials";
     std::filesystem::create_directories(target_dir);
 
     auto tex = [&](int index) -> std::string {
@@ -442,7 +442,7 @@ void save_spawn_data(const engine::SpawnData &spawn,
 
 void import_gltf_scenes(const std::filesystem::path &path,
                         const tinygltf::Model &gltf) {
-    auto target_dir = CACHE_FOLDER / path.parent_path() / "scenes";
+    auto target_dir = CACHE_FOLDER / path / "scenes";
     std::filesystem::create_directories(target_dir);
 
     for (int i = 0; i < gltf.scenes.size(); i++) {

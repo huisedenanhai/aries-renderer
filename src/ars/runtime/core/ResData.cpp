@@ -35,6 +35,10 @@ std::string canonical_res_path(const std::filesystem::path &path) {
     return canonical_res_path(res_path);
 }
 
+std::string canonical_res_path(const char *path) {
+    return canonical_res_path(std::string(path));
+}
+
 bool starts_with(const std::string &str, const std::string &prefix) {
     if (prefix.size() > str.size()) {
         return false;

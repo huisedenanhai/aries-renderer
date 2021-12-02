@@ -10,6 +10,7 @@
 namespace ars {
 std::string canonical_res_path(const std::string &path);
 std::string canonical_res_path(const std::filesystem::path &path);
+std::string canonical_res_path(const char *path);
 bool starts_with(const std::string &str, const std::string &prefix);
 std::vector<std::string> split_by(const std::string &str,
                                   const std::string &sep);

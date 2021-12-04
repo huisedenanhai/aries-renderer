@@ -223,4 +223,12 @@ Drawer *View::drawer() const {
 OverlayRenderer *View::vk_overlay() const {
     return _overlay_renderer.get();
 }
+
+void View::set_environment_radiance(const glm::vec3 &radiance) {
+    _env_radiance = radiance;
+}
+
+glm::vec3 View::environment_radiance() {
+    return _env_radiance;
+}
 } // namespace ars::render::vk

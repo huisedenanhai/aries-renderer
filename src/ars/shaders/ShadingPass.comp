@@ -25,6 +25,7 @@ layout(set = 1, binding = 0) uniform Param {
     int point_light_count;
     int directional_light_count;
     mat4 I_P;
+    vec3 env_randiance;
 };
 
 // Light position and direction are in view space
@@ -37,7 +38,7 @@ layout(set = 1, binding = 2) buffer DirectionalLights {
 };
 
 vec3 get_env_radiance() {
-    return vec3(1.0);
+    return env_randiance;
 }
 
 vec3 get_env_irradiance() {

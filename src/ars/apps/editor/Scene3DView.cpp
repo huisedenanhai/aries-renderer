@@ -104,7 +104,7 @@ void transform_gizmo(Scene3DViewState &state,
     }
 }
 
-void gizmo_menu(Scene3DViewState &state) {
+void gizmo_menu(Scene3DViewState &state, render::IView *view) {
     if (ImGui::BeginMenuBar()) {
         if (ImGui::BeginMenu("Gizmo")) {
             ImGui::Text("Operation");
@@ -162,6 +162,16 @@ void gizmo_menu(Scene3DViewState &state) {
             gui::input_color4("Color", state.ground_wire_grid_color);
             ImGui::PopID();
 
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Render")) {
+            auto &strength = state.env_radiance_strength;
+            auto color =
+                view->environment_radiance() / std::max(0.01f, strength);
+            gui::input_color3("Env Color", color);
+            ImGui::InputFloat("Env Strength", &strength);
+            strength = std::max(0.0f, strength);
+            view->set_environment_radiance(color * state.env_radiance_strength);
             ImGui::EndMenu();
         }
         ImGui::EndMenuBar();
@@ -319,7 +329,7 @@ void scene_3d_view(Scene3DViewState &state,
         return;
     }
 
-    gizmo_menu(state);
+    gizmo_menu(state, view);
 
     draw_selected_object_outline(view, current_selected);
     draw_ground_wire_frame(state, view);

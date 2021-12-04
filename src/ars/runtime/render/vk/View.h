@@ -48,6 +48,8 @@ class View : public IView {
                                           uint32_t width,
                                           uint32_t height) override;
     IOverlay *overlay() override;
+    void set_environment_radiance(const glm::vec3 &radiance) override;
+    glm::vec3 environment_radiance() override;
     OverlayRenderer *vk_overlay() const;
 
     [[nodiscard]] Context *context() const;
@@ -80,5 +82,6 @@ class View : public IView {
     std::unique_ptr<Renderer> _renderer{};
     std::unique_ptr<OverlayRenderer> _overlay_renderer{};
     std::unique_ptr<Drawer> _drawer{};
+    glm::vec3 _env_radiance = glm::vec3(0.1f);
 };
 } // namespace ars::render::vk

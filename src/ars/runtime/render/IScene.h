@@ -175,6 +175,9 @@ class IView {
 
     virtual IOverlay *overlay() = 0;
 
+    virtual void set_environment_radiance(const glm::vec3 &radiance) = 0;
+    virtual glm::vec3 environment_radiance() = 0;
+
     [[nodiscard]] glm::mat4 view_matrix();
     [[nodiscard]] glm::mat4 projection_matrix();
     // Transform a quad with object space position (-0.5, -0.5) to (0.5, 0.5) to

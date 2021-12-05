@@ -1,5 +1,5 @@
 #include "Entity.Editor.h"
-#include <ars/runtime/core/gui/ImGui.h>
+#include "gui/ImGui.h"
 
 namespace ars::engine::editor {
 namespace {

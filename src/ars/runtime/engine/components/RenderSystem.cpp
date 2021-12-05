@@ -1,6 +1,6 @@
 #include "RenderSystem.h"
+#include "../gui/ImGui.h"
 #include <ars/runtime/core/Log.h>
-#include <ars/runtime/core/gui/ImGui.h>
 #include <ars/runtime/render/IMaterial.h>
 #include <ars/runtime/render/IMesh.h>
 

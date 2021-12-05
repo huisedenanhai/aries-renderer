@@ -14,3 +14,4 @@ target_link_libraries(engine PUBLIC
         render)
 
 add_subdirectory(components)
+add_subdirectory(gui)

@@ -13,7 +13,7 @@ add_library(render
         IMaterial.cpp
         IMaterial.h)
 
-target_link_libraries(render PUBLIC core)
+target_link_libraries(render PUBLIC core imgui)
 target_link_libraries(render PRIVATE glfw imgui_glfw)
 aries_setup_common_target(render)
 

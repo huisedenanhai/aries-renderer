@@ -33,9 +33,13 @@ struct TextureInfo {
 
 uint32_t calculate_mip_levels(uint32_t width, uint32_t height, uint32_t depth);
 
+constexpr const char *RES_TYPE_NAME_TEXTURE = "ars::render::ITexture";
+
 class ITexture : public IRes {
   public:
     explicit ITexture(const TextureInfo &info);
+
+    std::string res_type() const override;
 
     [[nodiscard]] TextureType type() const;
     [[nodiscard]] Format format() const;

@@ -57,6 +57,10 @@ WrapMode ITexture::wrap_w() const {
     return _info.wrap_w;
 }
 
+std::string ITexture::res_type() const {
+    return RES_TYPE_NAME_TEXTURE;
+}
+
 uint32_t calculate_mip_levels(uint32_t width, uint32_t height, uint32_t depth) {
     return static_cast<uint32_t>(
                std::floor(std::log2(std::max({width, height, depth})))) +

@@ -13,6 +13,8 @@ namespace ars::render {
 class ITexture;
 class IMaterial;
 
+constexpr const char *RES_TYPE_NAME_MATERIAL = "ars::render::IMaterial";
+
 enum class MaterialPropertyType { Texture, Int, Float, Float2, Float3, Float4 };
 
 template <typename T> struct MaterialPropertyTypeTrait;
@@ -137,6 +139,8 @@ class IMaterialPrototype {
 class IMaterial : public IRes {
   public:
     explicit IMaterial(IMaterialPrototype *prototype);
+
+    std::string res_type() const override;
 
     static int str_to_id(const std::string &id);
 

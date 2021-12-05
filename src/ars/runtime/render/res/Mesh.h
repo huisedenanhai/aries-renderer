@@ -5,8 +5,6 @@
 #include <ars/runtime/core/Serde.h>
 
 namespace ars::render {
-constexpr const char *RES_TYPE_NAME_MESH = "ars::render::IMesh";
-
 struct MeshResMeta {
     math::AABB<float> aabb;
     DataSlice position;

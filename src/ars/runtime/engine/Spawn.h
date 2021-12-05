@@ -27,7 +27,11 @@ struct EntityData {
     void to(Entity *entity, uint32_t modify_mask = MODIFY_MASK_ALL) const;
 };
 
+constexpr const char *RES_TYPE_NAME_SPAWN_DATA = "ars::engine::SpawnData";
+
 struct SpawnData : public IRes {
+    std::string res_type() const override;
+
     std::vector<EntityData> entities{};
 
     struct Hierarchy {
@@ -55,8 +59,6 @@ struct SpawnData : public IRes {
     // spawn data.
     void to(Entity *root_entity) const;
 };
-
-constexpr const char *RES_TYPE_NAME_SPAWN_DATA = "ars::engine::SpawnData";
 
 struct SpawnDataResMeta {
     DataSlice data;

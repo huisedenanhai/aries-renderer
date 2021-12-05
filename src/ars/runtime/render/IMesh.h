@@ -12,9 +12,13 @@ struct MeshInfo {
     size_t triangle_capacity = 0;
 };
 
+constexpr const char *RES_TYPE_NAME_MESH = "ars::render::IMesh";
+
 class IMesh : public IRes {
   public:
     explicit IMesh(const MeshInfo &info);
+
+    std::string res_type() const override;
 
     // Capacity can not be changed after initialization.
     [[nodiscard]] size_t vertex_capacity() const;

@@ -42,6 +42,10 @@ std::optional<MaterialPropertyVariant> IMaterial::get_variant(int id) {
     return std::nullopt;
 }
 
+std::string IMaterial::res_type() const {
+    return RES_TYPE_NAME_MATERIAL;
+}
+
 MaterialPropertyInfo::MaterialPropertyInfo(const char *name,
                                            MaterialPropertyType type,
                                            Setter setter,

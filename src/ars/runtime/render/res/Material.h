@@ -6,8 +6,6 @@
 namespace ars::render {
 class IContext;
 
-constexpr const char *RES_TYPE_NAME_MATERIAL = "ars::render::IMaterial";
-
 struct MaterialResMeta {
     MaterialType type = MaterialType::Error;
     DataSlice properties;

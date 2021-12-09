@@ -40,9 +40,10 @@ vec3 get_shading_normal_ts() {
 vec3 get_shading_normal_vs() {
     vec3 normal_ts = get_shading_normal_ts();
     // avoid NAN when tangent is not present
-    return normal_ts.x * safe_normalize(tangent_vs) +
-           normal_ts.y * safe_normalize(bitangent_vs) +
-           normal_ts.z * safe_normalize(normal_vs);
+    vec3 shading_normal_vs = normal_ts.x * safe_normalize(tangent_vs) +
+                             normal_ts.y * safe_normalize(bitangent_vs) +
+                             normal_ts.z * safe_normalize(normal_vs);
+    return gl_FrontFacing ? shading_normal_vs : -shading_normal_vs;
 }
 
 float get_occlusion() {

@@ -5,7 +5,7 @@
 #include <Misc.glsl>
 #include <ShadingModel.glsl>
 
-layout(location = 0) in vec3 positoin_vs;
+layout(location = 0) in vec3 position_vs;
 layout(location = 1) in vec3 normal_vs;
 layout(location = 2) in vec3 bitangent_vs;
 layout(location = 3) in vec3 tangent_vs;

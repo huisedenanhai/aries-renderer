@@ -8,6 +8,9 @@
 #include <string>
 
 namespace ars::gui {
+// Payload: const char*
+constexpr const char *DRAG_DROP_TARGET_RESOURCES = "ARS_DRAG_DROP_RESOURCES";
+
 bool input_text(const char *label, std::string &str);
 bool input_vec2(const char *label, glm::vec2 &v);
 bool input_vec3(const char *label, glm::vec3 &v);

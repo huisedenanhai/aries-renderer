@@ -1,4 +1,6 @@
 #include "ImGui.h"
+#include "../Engine.h"
+#include <ars/runtime/core/ResData.h>
 #include <glm/gtc/quaternion.hpp>
 #include <spdlog/fmt/fmt.h>
 
@@ -256,7 +258,17 @@ bool input_variant(const char *label,
 
 bool input_res(const char *label, std::shared_ptr<IRes> &v) {
     ImGui::Text("%s", label);
-    ImGui::Text("%s", v == nullptr ? "<NULL>" : v->path().c_str());
-    return false;
+    ImGui::Selectable(v == nullptr ? "<NULL>" : v->path().c_str());
+    bool changed = false;
+    if (ImGui::BeginDragDropTarget()) {
+        auto payload = reinterpret_cast<const char *>(
+            ImGui::AcceptDragDropPayload(DRAG_DROP_TARGET_RESOURCES));
+        if (payload) {
+            v = engine::resources()->load_res(payload);
+            changed = true;
+        }
+        ImGui::EndDragDropTarget();
+    }
+    return changed;
 }
 } // namespace ars::gui

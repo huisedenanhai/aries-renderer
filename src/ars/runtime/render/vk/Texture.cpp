@@ -483,8 +483,15 @@ TextureCreateInfo translate(const TextureInfo &info) {
         up.image_type = VK_IMAGE_TYPE_2D;
         up.view_type = VK_IMAGE_VIEW_TYPE_2D;
         break;
+    case TextureType::CubeMap:
+        up.image_type = VK_IMAGE_TYPE_2D;
+        up.view_type = VK_IMAGE_VIEW_TYPE_CUBE;
+        break;
     }
     up.array_layers = info.array_layers;
+    if (info.type == TextureType::CubeMap) {
+        up.array_layers = 6 * info.array_layers;
+    }
     up.mip_levels = info.mip_levels;
     up.extent.width = info.width;
     up.extent.height = info.height;

@@ -50,6 +50,10 @@ class View : public IView {
     IOverlay *overlay() override;
     void set_environment_radiance(const glm::vec3 &radiance) override;
     glm::vec3 environment_radiance() override;
+    void set_environment_cube_map(
+        const std::shared_ptr<ITexture> &cube_map) override;
+    std::shared_ptr<ITexture> environment_cube_map() override;
+
     OverlayRenderer *vk_overlay() const;
 
     [[nodiscard]] Context *context() const;
@@ -83,5 +87,6 @@ class View : public IView {
     std::unique_ptr<OverlayRenderer> _overlay_renderer{};
     std::unique_ptr<Drawer> _drawer{};
     glm::vec3 _env_radiance = glm::vec3(0.1f);
+    std::shared_ptr<ITexture> _env_cube_map{};
 };
 } // namespace ars::render::vk

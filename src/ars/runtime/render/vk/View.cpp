@@ -231,4 +231,16 @@ void View::set_environment_radiance(const glm::vec3 &radiance) {
 glm::vec3 View::environment_radiance() {
     return _env_radiance;
 }
+
+void View::set_environment_cube_map(const std::shared_ptr<ITexture> &cube_map) {
+    if (cube_map->type() != TextureType::CubeMap) {
+        ARS_LOG_ERROR("Failed to set environment cube map: not cube map");
+        return;
+    }
+    _env_cube_map = cube_map;
+}
+
+std::shared_ptr<ITexture> View::environment_cube_map() {
+    return _env_cube_map;
+}
 } // namespace ars::render::vk

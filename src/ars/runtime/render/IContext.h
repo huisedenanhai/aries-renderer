@@ -57,11 +57,6 @@ class IContext {
     // Texture/Mesh/IMaterial generally requires multiple ownership. return a
     // shared_ptr by default.
     std::shared_ptr<ITexture> create_texture(const TextureInfo &info);
-    std::shared_ptr<ITexture>
-    create_texture_2d(Format format,
-                      uint32_t width,
-                      uint32_t height,
-                      uint32_t mip_levels = MAX_MIP_LEVELS);
 
     virtual std::shared_ptr<IMesh> create_mesh(const MeshInfo &info) = 0;
     // Return the prototype for error color material if the material type is not

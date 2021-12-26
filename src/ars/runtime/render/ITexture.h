@@ -6,7 +6,7 @@
 #include <memory>
 
 namespace ars::render {
-enum class TextureType { Texture2D };
+enum class TextureType { Texture2D, CubeMap };
 
 enum class FilterMode { Linear, Nearest };
 
@@ -29,6 +29,20 @@ struct TextureInfo {
     WrapMode wrap_u = WrapMode::Repeat;
     WrapMode wrap_v = WrapMode::Repeat;
     WrapMode wrap_w = WrapMode::Repeat;
+
+    static TextureInfo create(TextureType type,
+                              Format format,
+                              uint32_t width,
+                              uint32_t height,
+                              uint32_t mip_levels = MAX_MIP_LEVELS);
+    static TextureInfo create_2d(Format format,
+                                 uint32_t width,
+                                 uint32_t height,
+                                 uint32_t mip_levels = MAX_MIP_LEVELS);
+    // Width and height for cube map must be equal
+    static TextureInfo create_cube_map(Format format,
+                                       uint32_t size,
+                                       uint32_t mip_levels = MAX_MIP_LEVELS);
 };
 
 uint32_t calculate_mip_levels(uint32_t width, uint32_t height, uint32_t depth);

@@ -118,6 +118,10 @@ class Application : public ars::engine::IApplication {
         _fly_camera.xform.set_translation({0, 0.3f, 2.0f});
         ars::engine::load_model(_scene->root(), model);
         load_test_mesh();
+
+        // Test create cube map
+        auto cube_map = ctx->create_texture(
+            TextureInfo::create_cube_map(Format::R8G8B8A8_SRGB, 256));
     }
 
     void load_test_mesh() {

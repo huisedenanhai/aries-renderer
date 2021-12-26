@@ -40,8 +40,8 @@ std::shared_ptr<ITexture> load_texture(IContext *context,
         return nullptr;
     }
 
-    auto texture = context->create_texture_2d(
-        get_8_bit_texture_format(channels, true), width, height);
+    auto texture = context->create_texture(TextureInfo::create_2d(
+        get_8_bit_texture_format(channels, true), width, height));
 
     auto mid = high_resolution_clock::now();
 

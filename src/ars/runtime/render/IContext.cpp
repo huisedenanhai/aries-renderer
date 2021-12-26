@@ -57,21 +57,6 @@ IContext::create(WindowInfo *window_info) {
     return {std::move(context), std::move(window)};
 }
 
-std::shared_ptr<ITexture> IContext::create_texture_2d(Format format,
-                                                      uint32_t width,
-                                                      uint32_t height,
-                                                      uint32_t mip_levels) {
-    TextureInfo info{};
-    info.format = format;
-    info.type = TextureType::Texture2D;
-    info.width = width;
-    info.height = height;
-    info.depth = 1;
-    info.mip_levels = mip_levels;
-    info.array_layers = 1;
-    return create_texture(info);
-}
-
 std::shared_ptr<ITexture> IContext::create_texture(const TextureInfo &info) {
     // fix out of range inputs
     auto tex = info;

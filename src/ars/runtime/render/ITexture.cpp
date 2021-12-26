@@ -66,4 +66,33 @@ uint32_t calculate_mip_levels(uint32_t width, uint32_t height, uint32_t depth) {
                std::floor(std::log2(std::max({width, height, depth})))) +
            1;
 }
+
+TextureInfo TextureInfo::create(TextureType type,
+                                Format format,
+                                uint32_t width,
+                                uint32_t height,
+                                uint32_t mip_levels) {
+    TextureInfo info{};
+    info.format = format;
+    info.type = TextureType::Texture2D;
+    info.width = width;
+    info.height = height;
+    info.depth = 1;
+    info.mip_levels = mip_levels;
+    info.array_layers = 1;
+    return info;
+}
+
+TextureInfo TextureInfo::create_2d(Format format,
+                                   uint32_t width,
+                                   uint32_t height,
+                                   uint32_t mip_levels) {
+    return create(TextureType::Texture2D, format, width, height, mip_levels);
+}
+
+TextureInfo TextureInfo::create_cube_map(Format format,
+                                         uint32_t size,
+                                         uint32_t mip_levels) {
+    return create(TextureType::CubeMap, format, size, size, mip_levels);
+}
 } // namespace ars::render

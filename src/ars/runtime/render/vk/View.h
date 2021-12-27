@@ -53,6 +53,7 @@ class View : public IView {
     void set_environment_cube_map(
         const std::shared_ptr<ITexture> &cube_map) override;
     std::shared_ptr<ITexture> environment_cube_map() override;
+    Handle<Texture> environment_cube_map_vk();
 
     OverlayRenderer *vk_overlay() const;
 

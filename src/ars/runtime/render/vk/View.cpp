@@ -237,10 +237,23 @@ void View::set_environment_cube_map(const std::shared_ptr<ITexture> &cube_map) {
         ARS_LOG_ERROR("Failed to set environment cube map: not cube map");
         return;
     }
-    _env_cube_map = cube_map;
+    if (cube_map == nullptr) {
+        _env_cube_map =
+            _scene->context()->default_texture(DefaultTexture::WhiteCubeMap);
+    } else {
+        _env_cube_map = cube_map;
+    }
 }
 
 std::shared_ptr<ITexture> View::environment_cube_map() {
+    if (_env_cube_map == nullptr) {
+        _env_cube_map =
+            _scene->context()->default_texture(DefaultTexture::WhiteCubeMap);
+    }
     return _env_cube_map;
+}
+
+Handle<Texture> View::environment_cube_map_vk() {
+    return upcast(environment_cube_map().get());
 }
 } // namespace ars::render::vk

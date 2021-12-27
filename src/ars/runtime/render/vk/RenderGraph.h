@@ -13,7 +13,7 @@ struct PassDependency {
     VkPipelineStageFlags stage_mask{};
 };
 
-// Textures in the src vector should be unique, do does the dst vector
+// Textures in the src vector should be unique, so does the dst vector
 // Textures should be not null
 void barrier(CommandBuffer *cmd,
              const std::vector<PassDependency> &src_deps,

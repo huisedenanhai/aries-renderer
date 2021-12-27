@@ -1,3 +1,5 @@
+#include "ars/runtime/core/misc/Defer.h"
+#include <ars/runtime/core/Log.h>
 #include <ars/runtime/core/input/Keyboard.h>
 #include <ars/runtime/core/input/Mouse.h>
 #include <ars/runtime/engine/Engine.h>
@@ -12,6 +14,7 @@
 #include <ars/runtime/render/res/Model.h>
 #include <ars/runtime/render/res/Texture.h>
 #include <imgui/imgui.h>
+#include <stb_image.h>
 #include <string>
 
 using namespace ars::render;
@@ -122,6 +125,30 @@ class Application : public ars::engine::IApplication {
         // Test create cube map
         auto cube_map = ctx->create_texture(
             TextureInfo::create_cube_map(Format::R8G8B8A8_SRGB, 256));
+        std::vector<std::string> face_names{"px", "nx", "py", "ny", "pz", "nz"};
+        for (int i = 0; i < 6; i++) {
+            auto face_file_name =
+                fmt::format("CubeMaps/SmallStudio/{}.png", face_names[i]);
+            int w, h, c;
+            auto data = stbi_load(face_file_name.c_str(), &w, &h, &c, 4);
+            ARS_DEFER([&]() { stbi_image_free(data); });
+            if (w != 256 || h != 256) {
+                ARS_LOG_ERROR("This playground require cube map of size 256");
+                continue;
+            }
+            cube_map->set_data(data,
+                               w * h * c * sizeof(unsigned char),
+                               0,
+                               i,
+                               0,
+                               0,
+                               0,
+                               w,
+                               h,
+                               1);
+        }
+        cube_map->generate_mipmap();
+        _view->set_environment_cube_map(cube_map);
     }
 
     void load_test_mesh() {

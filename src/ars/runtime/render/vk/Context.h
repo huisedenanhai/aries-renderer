@@ -60,7 +60,7 @@ class Queue {
     VkQueue _queue = VK_NULL_HANDLE;
 };
 
-enum class DefaultTexture : uint32_t { White, Normal, Count };
+enum class DefaultTexture : uint32_t { White, Normal, WhiteCubeMap, Count };
 
 struct ContextProperties {
     bool anisotropic_sampler_enabled = false;
@@ -111,7 +111,8 @@ class Context : public IContext {
 
     std::shared_ptr<ITexture> default_texture(DefaultTexture tex);
 
-    std::shared_ptr<ITexture> create_single_color_texture(glm::vec4 color);
+    std::shared_ptr<ITexture> create_single_color_texture_2d(glm::vec4 color);
+    std::shared_ptr<ITexture> create_single_color_cube_map(glm::vec4 color);
 
     Handle<Texture> create_texture(const TextureCreateInfo &info);
     Handle<CommandBuffer> create_command_buffer(VkCommandBufferLevel level);

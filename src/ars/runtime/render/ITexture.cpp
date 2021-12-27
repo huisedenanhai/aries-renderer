@@ -74,7 +74,7 @@ TextureInfo TextureInfo::create(TextureType type,
                                 uint32_t mip_levels) {
     TextureInfo info{};
     info.format = format;
-    info.type = TextureType::Texture2D;
+    info.type = type;
     info.width = width;
     info.height = height;
     info.depth = 1;

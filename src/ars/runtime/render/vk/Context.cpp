@@ -892,7 +892,7 @@ std::shared_ptr<ITexture> Context::default_texture(DefaultTexture tex) {
 }
 
 std::shared_ptr<ITexture>
-Context::create_single_color_texture(glm::vec4 color) {
+Context::create_single_color_texture_2d(glm::vec4 color) {
     TextureInfo info{};
     info.format = Format::R32G32B32A32_SFLOAT;
     info.width = 1;
@@ -907,12 +907,32 @@ Context::create_single_color_texture(glm::vec4 color) {
 
 void Context::init_default_textures() {
     _default_textures[static_cast<uint32_t>(DefaultTexture::White)] =
-        create_single_color_texture({1.0f, 1.0f, 1.0f, 1.0f});
+        create_single_color_texture_2d({1.0f, 1.0f, 1.0f, 1.0f});
     _default_textures[static_cast<uint32_t>(DefaultTexture::Normal)] =
-        create_single_color_texture({0.5f, 0.5f, 1.0f, 1.0f});
+        create_single_color_texture_2d({0.5f, 0.5f, 1.0f, 1.0f});
+    _default_textures[static_cast<uint32_t>(
+        DefaultTexture::WhiteCubeMap)] =
+        create_single_color_cube_map({1.0f, 1.0f, 1.0f, 1.0f});
 }
 
 Lut *Context::lut() const {
     return _lut.get();
+}
+
+std::shared_ptr<ITexture>
+Context::create_single_color_cube_map(glm::vec4 color) {
+    TextureInfo info{};
+    info.type = TextureType::CubeMap;
+    info.format = Format::R32G32B32A32_SFLOAT;
+    info.width = 1;
+    info.height = 1;
+    info.depth = 1;
+    info.mip_levels = 1;
+
+    auto tex = IContext::create_texture(info);
+    for (int i = 0; i < 6; i++) {
+        tex->set_data(&color, sizeof(glm::vec4), 0, i, 0, 0, 0, 1, 1, 1);
+    }
+    return tex;
 }
 } // namespace ars::render::vk

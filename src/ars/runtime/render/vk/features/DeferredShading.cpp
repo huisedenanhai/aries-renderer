@@ -20,13 +20,15 @@ void DeferredShading::render(CommandBuffer *cmd) {
     _pipeline->bind(cmd);
 
     DescriptorEncoder desc{};
-    desc.set_texture(0, 0, _view->render_target(NamedRT_GBuffer0).get());
-    desc.set_texture(0, 1, _view->render_target(NamedRT_GBuffer1).get());
-    desc.set_texture(0, 2, _view->render_target(NamedRT_GBuffer2).get());
-    desc.set_texture(0, 3, _view->render_target(NamedRT_GBuffer3).get());
-    desc.set_texture(0, 4, _view->render_target(NamedRT_Depth).get());
-    desc.set_texture(0, 5, _view->context()->lut()->brdf_lut().get());
-    desc.set_texture(0, 6, final_color.get());
+
+    desc.set_texture(0, 0, final_color.get());
+    desc.set_texture(0, 1, _view->render_target(NamedRT_GBuffer0).get());
+    desc.set_texture(0, 2, _view->render_target(NamedRT_GBuffer1).get());
+    desc.set_texture(0, 3, _view->render_target(NamedRT_GBuffer2).get());
+    desc.set_texture(0, 4, _view->render_target(NamedRT_GBuffer3).get());
+    desc.set_texture(0, 5, _view->render_target(NamedRT_Depth).get());
+    desc.set_texture(0, 6, _view->context()->lut()->brdf_lut().get());
+    desc.set_texture(0, 7, _view->environment_cube_map_vk().get());
 
     struct ShadingParam {
         int32_t width;
@@ -34,6 +36,7 @@ void DeferredShading::render(CommandBuffer *cmd) {
         int32_t point_light_count;
         int32_t directional_light_count;
         glm::mat4 I_P;
+        glm::mat4 I_V;
         glm::vec4 env_radiance;
     };
 
@@ -50,7 +53,7 @@ void DeferredShading::render(CommandBuffer *cmd) {
     auto p_matrix = _view->projection_matrix();
 
     param.I_P = glm::inverse(p_matrix);
-
+    param.I_V = glm::inverse(v_matrix);
     desc.set_buffer_data(1, 0, param);
 
     struct alignas(16) PointLightData {

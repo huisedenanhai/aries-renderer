@@ -48,11 +48,25 @@ vec3 get_env_irradiance(vec3 v_ws) {
     return get_env_radiance(v_ws) * PI;
 }
 
-vec3 shade_background(vec2 uv) {
-    float depth01 = texture(depth_stencil_tex, uv).r;
-    vec3 pos_vs = reconstruct_position_from_ss(I_P, uv, depth01);
-    vec3 v_vs = -normalize(pos_vs);
-    vec3 v_ws = transform_vector(I_V, v_vs);
+struct ShadingPoint {
+    vec2 screen_uv;
+    float depth01;
+    vec3 pos_vs;
+    vec3 v_vs;
+    vec3 v_ws;
+};
+
+ShadingPoint get_shading_point(vec2 uv) {
+    ShadingPoint info;
+    info.screen_uv = uv;
+    info.depth01 = texture(depth_stencil_tex, uv).r;
+    info.pos_vs = reconstruct_position_from_ss(I_P, uv, info.depth01);
+    info.v_vs = -normalize(info.pos_vs);
+    info.v_ws = transform_vector(I_V, info.v_vs);
+    return info;
+}
+
+vec3 shade_background(vec3 v_ws) {
     return get_env_radiance(v_ws);
 }
 
@@ -60,7 +74,7 @@ vec3 shade_unlit(GBuffer gbuffer) {
     return gbuffer.base_color.rgb;
 }
 
-vec3 shade_metallic_roughness_pbr(GBuffer gbuffer, vec2 uv) {
+vec3 shade_metallic_roughness_pbr(GBuffer gbuffer, ShadingPoint shading_point) {
     MetallicRoughnessPBRGBuffer material = decode_material(gbuffer.material);
 
     MetallicRoughnessPBR brdf;
@@ -71,10 +85,9 @@ vec3 shade_metallic_roughness_pbr(GBuffer gbuffer, vec2 uv) {
     vec3 fd = diffuse_BRDF(brdf);
 
     // Extract geometry info
-    float depth01 = texture(depth_stencil_tex, uv).r;
-    vec3 pos_vs = reconstruct_position_from_ss(I_P, uv, depth01);
-    vec3 v_vs = -normalize(pos_vs);
-    vec3 v_ws = transform_vector(I_V, v_vs);
+    vec3 pos_vs = shading_point.pos_vs;
+    vec3 v_vs = shading_point.v_vs;
+    vec3 v_ws = shading_point.v_ws;
     vec3 n_vs = normalize(gbuffer.normal_vs);
 
     vec3 direct_radiance = vec3(0.0);
@@ -107,14 +120,15 @@ vec3 shade_metallic_roughness_pbr(GBuffer gbuffer, vec2 uv) {
 }
 
 vec3 shade(GBuffer gbuffer, vec2 uv) {
+    ShadingPoint shading_point = get_shading_point(uv);
     if (gbuffer.shading_model == SHADING_MODEL_BACKGROUND) {
-        return shade_background(uv);
+        return shade_background(shading_point.v_ws);
     }
     if (gbuffer.shading_model == SHADING_MODEL_UNLIT) {
         return shade_unlit(gbuffer);
     }
     if (gbuffer.shading_model == SHADING_MODEL_METALLIC_ROUGHNESS_PBR) {
-        return shade_metallic_roughness_pbr(gbuffer, uv);
+        return shade_metallic_roughness_pbr(gbuffer, shading_point);
     }
     return vec3(0);
 }

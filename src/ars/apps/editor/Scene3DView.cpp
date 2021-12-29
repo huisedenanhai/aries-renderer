@@ -2,6 +2,7 @@
 #include <ars/runtime/core/input/Keyboard.h>
 #include <ars/runtime/engine/components/RenderSystem.h>
 #include <ars/runtime/engine/gui/ImGui.h>
+#include <ars/runtime/render/IEnvironment.h>
 #include <ars/runtime/render/IMesh.h>
 #include <imgui/imgui.h>
 #include <imguizmo/ImGuizmo.h>
@@ -166,12 +167,12 @@ void gizmo_menu(Scene3DViewState &state, render::IView *view) {
         }
         if (ImGui::BeginMenu("Render")) {
             auto &strength = state.env_radiance_strength;
-            auto color =
-                view->environment_radiance() / std::max(0.01f, strength);
+            auto env = view->environment();
+            auto color = env->radiance() / std::max(0.01f, strength);
             gui::input_color3("Env Color", color);
             ImGui::InputFloat("Env Strength", &strength);
             strength = std::max(0.0f, strength);
-            view->set_environment_radiance(color * state.env_radiance_strength);
+            env->set_radiance(color * state.env_radiance_strength);
             ImGui::EndMenu();
         }
         ImGui::EndMenuBar();

@@ -37,7 +37,7 @@ void main() {
     }
 
     env_brdf /= float(sample_count);
-    // The integeration computes the output radiance with uniform environment
+    // The integration computes the output radiance with uniform environment
     // light with radiance of 1.
     // But when the term used for actual shading, we want to multiply it with
     // irradiance. the irradiance of uniform radiance is PI. scale the env brdf

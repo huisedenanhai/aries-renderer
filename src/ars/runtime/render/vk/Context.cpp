@@ -1,4 +1,5 @@
 #include "Context.h"
+#include "Environment.h"
 #include "Lut.h"
 #include "Material.h"
 #include "Mesh.h"
@@ -910,8 +911,7 @@ void Context::init_default_textures() {
         create_single_color_texture_2d({1.0f, 1.0f, 1.0f, 1.0f});
     _default_textures[static_cast<uint32_t>(DefaultTexture::Normal)] =
         create_single_color_texture_2d({0.5f, 0.5f, 1.0f, 1.0f});
-    _default_textures[static_cast<uint32_t>(
-        DefaultTexture::WhiteCubeMap)] =
+    _default_textures[static_cast<uint32_t>(DefaultTexture::WhiteCubeMap)] =
         create_single_color_cube_map({1.0f, 1.0f, 1.0f, 1.0f});
 }
 
@@ -934,5 +934,9 @@ Context::create_single_color_cube_map(glm::vec4 color) {
         tex->set_data(&color, sizeof(glm::vec4), 0, i, 0, 0, 0, 1, 1, 1);
     }
     return tex;
+}
+
+std::shared_ptr<IEnvironment> Context::create_environment() {
+    return std::make_shared<Environment>(this);
 }
 } // namespace ars::render::vk

@@ -1,5 +1,6 @@
 #include "View.h"
 #include "Context.h"
+#include "Environment.h"
 #include "Material.h"
 #include "Mesh.h"
 #include "Pipeline.h"
@@ -224,36 +225,18 @@ OverlayRenderer *View::vk_overlay() const {
     return _overlay_renderer.get();
 }
 
-void View::set_environment_radiance(const glm::vec3 &radiance) {
-    _env_radiance = radiance;
+std::shared_ptr<IEnvironment> View::environment() {
+    return environment_vk();
 }
 
-glm::vec3 View::environment_radiance() {
-    return _env_radiance;
+void View::set_environment(const std::shared_ptr<IEnvironment> &environment) {
+    _environment = std::dynamic_pointer_cast<Environment>(environment);
 }
 
-void View::set_environment_cube_map(const std::shared_ptr<ITexture> &cube_map) {
-    if (cube_map->type() != TextureType::CubeMap) {
-        ARS_LOG_ERROR("Failed to set environment cube map: not cube map");
-        return;
+std::shared_ptr<Environment> View::environment_vk() {
+    if (_environment == nullptr) {
+        set_environment(_scene->context()->create_environment());
     }
-    if (cube_map == nullptr) {
-        _env_cube_map =
-            _scene->context()->default_texture(DefaultTexture::WhiteCubeMap);
-    } else {
-        _env_cube_map = cube_map;
-    }
-}
-
-std::shared_ptr<ITexture> View::environment_cube_map() {
-    if (_env_cube_map == nullptr) {
-        _env_cube_map =
-            _scene->context()->default_texture(DefaultTexture::WhiteCubeMap);
-    }
-    return _env_cube_map;
-}
-
-Handle<Texture> View::environment_cube_map_vk() {
-    return upcast(environment_cube_map().get());
+    return _environment;
 }
 } // namespace ars::render::vk

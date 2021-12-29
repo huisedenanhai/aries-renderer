@@ -1,4 +1,6 @@
 aries_target_sources(render PRIVATE
+        Environment.cpp
+        Environment.h
         Lut.cpp
         Lut.h
         RenderGraph.cpp

@@ -1,5 +1,6 @@
 #include "DeferredShading.h"
 #include "../Context.h"
+#include "../Environment.h"
 #include "../Lut.h"
 #include "../Scene.h"
 
@@ -16,6 +17,7 @@ DeferredShading::DeferredShading(View *view, NamedRT final_color_rt)
 void DeferredShading::render(CommandBuffer *cmd) {
     auto final_color = _view->render_target(_final_color_rt);
     auto final_color_extent = final_color->info().extent;
+    auto env = _view->environment_vk();
 
     _pipeline->bind(cmd);
 
@@ -28,7 +30,7 @@ void DeferredShading::render(CommandBuffer *cmd) {
     desc.set_texture(0, 4, _view->render_target(NamedRT_GBuffer3).get());
     desc.set_texture(0, 5, _view->render_target(NamedRT_Depth).get());
     desc.set_texture(0, 6, _view->context()->lut()->brdf_lut().get());
-    desc.set_texture(0, 7, _view->environment_cube_map_vk().get());
+    desc.set_texture(0, 7, env->cube_map_vk().get());
 
     struct ShadingParam {
         int32_t width;
@@ -47,7 +49,7 @@ void DeferredShading::render(CommandBuffer *cmd) {
         static_cast<int32_t>(_view->vk_scene()->point_lights.size());
     param.directional_light_count =
         static_cast<int32_t>(_view->vk_scene()->directional_lights.size());
-    param.env_radiance = glm::vec4(_view->environment_radiance(), 1.0);
+    param.env_radiance = glm::vec4(env->radiance(), 1.0);
 
     auto v_matrix = _view->view_matrix();
     auto p_matrix = _view->projection_matrix();

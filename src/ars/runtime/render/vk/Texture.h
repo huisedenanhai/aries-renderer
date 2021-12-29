@@ -68,10 +68,12 @@ class Texture {
 
     [[nodiscard]] VkImageSubresourceRange subresource_range() const;
 
-  private:
     // Transfer all subresources to the target layout and set the _layout field.
     // This method assumes all layers and levels of the image are in the same
     // layout, and public methods should maintain this invariance.
+    //
+    // This method inserts a barrier to the command buffer no matter whether the
+    // image is in the target layout.
     void transfer_layout(CommandBuffer *cmd,
                          VkImageLayout dst_layout,
                          VkShaderStageFlags src_stage_mask,
@@ -79,6 +81,7 @@ class Texture {
                          VkShaderStageFlags dst_stage_mask,
                          VkAccessFlags dst_access_mask);
 
+  private:
     Context *_context = nullptr;
     VmaAllocation _allocation = VK_NULL_HANDLE;
     VkImage _image = VK_NULL_HANDLE;

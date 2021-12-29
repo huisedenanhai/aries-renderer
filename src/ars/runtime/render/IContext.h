@@ -11,6 +11,7 @@ class IWindow;
 class ITexture;
 class IScene;
 class IMesh;
+class IEnvironment;
 
 struct TextureInfo;
 struct MeshInfo;
@@ -62,6 +63,8 @@ class IContext {
     // Return the prototype for error color material if the material type is not
     // supported
     virtual IMaterialPrototype *material_prototype(MaterialType type) = 0;
+
+    virtual std::shared_ptr<IEnvironment> create_environment() = 0;
 
     // Call this method when a frame begins. If this method returns false,
     // the backend refuse to begin a new frame and no render work should be

@@ -11,7 +11,7 @@ namespace ars::render {
 class IMesh;
 class ITexture;
 class IMaterial;
-
+class IEnvironment;
 class IScene;
 
 // Map scissor NDC region range [-1, 1]
@@ -175,12 +175,9 @@ class IView {
 
     virtual IOverlay *overlay() = 0;
 
-    virtual void set_environment_radiance(const glm::vec3 &radiance) = 0;
-    virtual glm::vec3 environment_radiance() = 0;
-
+    virtual std::shared_ptr<IEnvironment> environment() = 0;
     virtual void
-    set_environment_cube_map(const std::shared_ptr<ITexture> &cube_map) = 0;
-    virtual std::shared_ptr<ITexture> environment_cube_map() = 0;
+    set_environment(const std::shared_ptr<IEnvironment> &environment) = 0;
 
     [[nodiscard]] glm::mat4 view_matrix();
     [[nodiscard]] glm::mat4 projection_matrix();

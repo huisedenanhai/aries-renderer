@@ -5,6 +5,7 @@
 
 namespace ars::render::vk {
 class Scene;
+class Environment;
 class TextureAdapter;
 class GraphicsPipeline;
 class Renderer;
@@ -48,12 +49,11 @@ class View : public IView {
                                           uint32_t width,
                                           uint32_t height) override;
     IOverlay *overlay() override;
-    void set_environment_radiance(const glm::vec3 &radiance) override;
-    glm::vec3 environment_radiance() override;
-    void set_environment_cube_map(
-        const std::shared_ptr<ITexture> &cube_map) override;
-    std::shared_ptr<ITexture> environment_cube_map() override;
-    Handle<Texture> environment_cube_map_vk();
+
+    std::shared_ptr<IEnvironment> environment() override;
+    void
+    set_environment(const std::shared_ptr<IEnvironment> &environment) override;
+    std::shared_ptr<Environment> environment_vk();
 
     OverlayRenderer *vk_overlay() const;
 
@@ -87,7 +87,6 @@ class View : public IView {
     std::unique_ptr<Renderer> _renderer{};
     std::unique_ptr<OverlayRenderer> _overlay_renderer{};
     std::unique_ptr<Drawer> _drawer{};
-    glm::vec3 _env_radiance = glm::vec3(0.1f);
-    std::shared_ptr<ITexture> _env_cube_map{};
+    std::shared_ptr<Environment> _environment{};
 };
 } // namespace ars::render::vk

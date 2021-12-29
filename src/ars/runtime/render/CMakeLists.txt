@@ -1,5 +1,7 @@
 add_library(render
         Common.h
+        IEnvironment.cpp
+        IEnvironment.h
         IWindow.cpp
         IWindow.h
         IContext.cpp

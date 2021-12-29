@@ -6,6 +6,7 @@
 #include <ars/runtime/engine/Entity.Editor.h>
 #include <ars/runtime/engine/Entity.h>
 #include <ars/runtime/engine/components/RenderSystem.h>
+#include <ars/runtime/render/IEnvironment.h>
 #include <ars/runtime/render/IScene.h>
 #include <ars/runtime/render/ITexture.h>
 #include <ars/runtime/render/IWindow.h>
@@ -148,7 +149,13 @@ class Application : public ars::engine::IApplication {
                                1);
         }
         cube_map->generate_mipmap();
-        _view->set_environment_cube_map(cube_map);
+        //        _view->set_environment_cube_map(cube_map);
+        //        _view->set_environment_radiance({1.0f, 1.0f, 1.0f});
+
+        auto env = _view->environment();
+        env->set_cube_map_resolution(256);
+        env->set_radiance({1.0f, 1.0f, 1.0f});
+        env->update_cache();
     }
 
     void load_test_mesh() {

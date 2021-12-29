@@ -39,7 +39,8 @@ void DeferredShading::render(CommandBuffer *cmd) {
         int32_t directional_light_count;
         glm::mat4 I_P;
         glm::mat4 I_V;
-        glm::vec4 env_radiance;
+        glm::vec3 env_radiance;
+        int32_t cube_map_mip_count;
     };
 
     ShadingParam param{};
@@ -49,7 +50,9 @@ void DeferredShading::render(CommandBuffer *cmd) {
         static_cast<int32_t>(_view->vk_scene()->point_lights.size());
     param.directional_light_count =
         static_cast<int32_t>(_view->vk_scene()->directional_lights.size());
-    param.env_radiance = glm::vec4(env->radiance(), 1.0);
+    param.env_radiance = env->radiance();
+    param.cube_map_mip_count =
+        static_cast<int32_t>(env->cube_map()->mip_levels());
 
     auto v_matrix = _view->view_matrix();
     auto p_matrix = _view->projection_matrix();

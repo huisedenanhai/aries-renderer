@@ -1,5 +1,6 @@
 #include "Environment.h"
 #include "Context.h"
+#include "ars/runtime/core/Log.h"
 
 namespace ars::render::vk {
 std::shared_ptr<ITexture> Environment::hdr_texture() {
@@ -28,11 +29,7 @@ std::shared_ptr<ITexture> Environment::cube_map() {
     return _cube_map;
 }
 
-void Environment::set_cube_map_resolution(uint32_t resolution) {
-    // Already same sized
-    if (_cube_map != nullptr && _cube_map->width() == resolution) {
-        return;
-    }
+void Environment::alloc_cube_map(uint32_t resolution) {
     IContext *ctx_base = _context;
     _cube_map = ctx_base->create_texture(TextureInfo::create_cube_map(
         Format::B10G11R11_UFLOAT_PACK32, resolution));
@@ -40,11 +37,11 @@ void Environment::set_cube_map_resolution(uint32_t resolution) {
 
 Environment::Environment(Context *context) : _context(context) {}
 
-void Environment::update_cache() {
+void Environment::update_cube_map() {
     if (_cube_map == nullptr) {
-        IContext *ctx_base = _context;
-        _cube_map = ctx_base->create_texture(
-            TextureInfo::create_cube_map(Format::B10G11R11_UFLOAT_PACK32, 1));
+        ARS_LOG_ERROR("Failed to update environment cube map: Cube map not "
+                      "initialized.");
+        return;
     }
 
     auto cube_map = upcast(_cube_map.get());
@@ -65,5 +62,13 @@ Handle<Texture> Environment::cube_map_vk() {
 
 Handle<Texture> Environment::hdr_texture_vk() {
     return upcast(hdr_texture().get());
+}
+
+void Environment::set_cube_map(const std::shared_ptr<ITexture> &cube_map) {
+    if (cube_map->type() != TextureType::CubeMap) {
+        ARS_LOG_ERROR("Failed to set cube map of Environment: Not a cube map");
+        return;
+    }
+    _cube_map = cube_map;
 }
 } // namespace ars::render::vk

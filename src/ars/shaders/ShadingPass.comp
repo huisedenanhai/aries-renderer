@@ -29,6 +29,7 @@ layout(set = 1, binding = 0) uniform Param {
     mat4 I_P;
     mat4 I_V;
     vec3 env_randiance;
+    int cube_map_mip_count;
 };
 
 // Light position and direction are in view space
@@ -119,7 +120,8 @@ vec3 shade_metallic_roughness_pbr(GBuffer gbuffer, ShadingPoint shading_point) {
     vec3 n_ws = transform_vector(I_V, n_vs);
     vec3 reflect_dir_ws = reflect(-v_ws, n_ws);
     vec3 env_irradiance =
-        get_env_irradiance(reflect_dir_ws, 8.0 * brdf.perceptual_roughness) *
+        get_env_irradiance(reflect_dir_ws,
+                           cube_map_mip_count * brdf.perceptual_roughness) *
         material.occlusion;
     vec3 indirect_radiance = (fd + fe) * env_irradiance;
 

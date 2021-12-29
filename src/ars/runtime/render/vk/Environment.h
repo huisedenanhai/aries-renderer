@@ -13,19 +13,18 @@ class Environment : public IEnvironment {
     void set_radiance(const glm::vec3 &radiance) override;
 
     std::shared_ptr<ITexture> hdr_texture() override;
-    void set_hdr_texture(const std::shared_ptr<ITexture> &hdr) override;
     Handle<Texture> hdr_texture_vk();
+    void set_hdr_texture(const std::shared_ptr<ITexture> &hdr) override;
 
     std::shared_ptr<ITexture> cube_map() override;
-    void set_cube_map_resolution(uint32_t resolution) override;
     Handle<Texture> cube_map_vk();
-
-    void update_cache() override;
+    void set_cube_map(const std::shared_ptr<ITexture> &cube_map) override;
+    void alloc_cube_map(uint32_t resolution) override;
+    void update_cube_map() override;
 
   private:
     Context *_context = nullptr;
     glm::vec3 _radiance = glm::vec3(0.1f);
-    uint32_t _cube_map_size = 1;
     std::shared_ptr<ITexture> _cube_map{};
     std::shared_ptr<ITexture> _hdr_texture{};
 };

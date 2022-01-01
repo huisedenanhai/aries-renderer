@@ -112,16 +112,17 @@ class Application : public ars::engine::IApplication {
                 });
         }
 
-        auto model =
-            load_gltf(ctx, "FlightHelmetWithLight/FlightHelmetWithLight.gltf");
+        // auto model_file = "FlightHelmetWithLight/FlightHelmetWithLight.gltf";
+        auto model_file = "Balls/Balls.gltf";
+        auto model = load_gltf(ctx, model_file);
         _scene = std::make_unique<ars::engine::Scene>();
         _view = _scene->render_system()->render_scene()->create_view(
             window()->physical_size());
         auto light_bulb_icon = ars::render::load_texture(ctx, "light-bulb.png");
         _view->overlay()->set_light_gizmo(light_bulb_icon, 0.1f);
-        _fly_camera.xform.set_translation({0, 0.3f, 2.0f});
+        _fly_camera.xform.set_translation({0, 0.3f, 10.0f});
         ars::engine::load_model(_scene->root(), model);
-        load_test_mesh();
+        // load_test_mesh();
 
         // Test create cube map
         auto cube_map = ctx->create_texture(
@@ -152,9 +153,10 @@ class Application : public ars::engine::IApplication {
 
         std::shared_ptr<ITexture> hdr_tex{};
         {
+            auto hdr_file = "Environments/studio_garden_2k.hdr";
+            // auto hdr_file = "Environments/studio_small_08_2k.hdr";
             int w, h, c;
-            auto data = stbi_loadf(
-                "Environments/studio_small_08_2k.hdr", &w, &h, &c, 4);
+            auto data = stbi_loadf(hdr_file, &w, &h, &c, 4);
             ARS_DEFER([&]() { stbi_image_free(data); });
             hdr_tex = ctx->create_texture(
                 TextureInfo::create_2d(Format::R32G32B32A32_SFLOAT, w, h));
@@ -164,7 +166,7 @@ class Application : public ars::engine::IApplication {
         }
 
         auto env = _view->environment();
-        env->set_hdr_texture(tex);
+        env->set_hdr_texture(hdr_tex);
         env->alloc_cube_map(256);
         env->set_radiance({1.0f, 1.0f, 1.0f});
         env->update_cube_map();

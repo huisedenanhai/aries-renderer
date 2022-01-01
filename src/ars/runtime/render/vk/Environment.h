@@ -5,10 +5,13 @@
 
 namespace ars::render::vk {
 class Context;
+class ComputePipeline;
 
 class Environment : public IEnvironment {
   public:
     explicit Environment(Context *context);
+    ~Environment();
+
     glm::vec3 radiance() override;
     void set_radiance(const glm::vec3 &radiance) override;
 
@@ -25,6 +28,7 @@ class Environment : public IEnvironment {
   private:
     Context *_context = nullptr;
     glm::vec3 _radiance = glm::vec3(0.1f);
+    std::unique_ptr<ComputePipeline> _prefilter_env_pipeline{};
     std::shared_ptr<ITexture> _cube_map{};
     std::shared_ptr<ITexture> _hdr_texture{};
 };

@@ -16,7 +16,8 @@
     "Billboard.frag",
     "BillboardObjectId.frag",
     "VertexColor.vert",
-    "VertexColor.frag"
+    "VertexColor.frag",
+    "PrefilterCubeMap.comp"
   ],
   "includes": [
     "include"

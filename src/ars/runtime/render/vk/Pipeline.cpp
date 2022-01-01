@@ -457,7 +457,8 @@ void fill_desc_image(VkWriteDescriptorSet *write,
                      VkDescriptorSet dst_set,
                      uint32_t binding,
                      Texture *texture,
-                     VkDescriptorType type) {
+                     VkDescriptorType type,
+                     std::optional<uint32_t> level) {
     write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     write->descriptorType = type;
     write->dstSet = dst_set;
@@ -469,7 +470,11 @@ void fill_desc_image(VkWriteDescriptorSet *write,
     write->pTexelBufferView = nullptr;
 
     image_info->imageLayout = texture->layout();
-    image_info->imageView = texture->image_view();
+    if (level.has_value()) {
+        image_info->imageView = texture->image_view_of_level(level.value());
+    } else {
+        image_info->imageView = texture->image_view();
+    }
     image_info->sampler = texture->sampler();
 }
 
@@ -494,19 +499,6 @@ void fill_desc_buffer(VkWriteDescriptorSet *write,
     buffer_info->buffer = buffer;
     buffer_info->offset = offset;
     buffer_info->range = range;
-}
-
-void fill_desc_storage_image(VkWriteDescriptorSet *write,
-                             VkDescriptorImageInfo *image_info,
-                             VkDescriptorSet dst_set,
-                             uint32_t binding,
-                             Texture *texture) {
-    fill_desc_image(write,
-                    image_info,
-                    dst_set,
-                    binding,
-                    texture,
-                    VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
 }
 } // namespace
 
@@ -543,75 +535,76 @@ void DescriptorEncoder::commit(CommandBuffer *cmd, Pipeline *pipeline) {
         }
 
         auto desc_type = bind_info->descriptorType;
-        std::visit(
-            make_visitor(
-                [&](const ImageInfo &data) {
-                    auto &w = writes[write_index++];
-                    auto &img_info = image_infos[image_index++];
+        std::visit(make_visitor(
+                       [&](const ImageInfo &data) {
+                           auto &w = writes[write_index++];
+                           auto &img_info = image_infos[image_index++];
 
-                    fill_desc_image(
-                        &w, &img_info, set, b.binding, data.texture, desc_type);
-                },
-                [&](const BufferDataInfo &data) {
-                    auto &w = writes[write_index++];
-                    auto &buf_info = buffer_infos[buffer_index++];
+                           fill_desc_image(&w,
+                                           &img_info,
+                                           set,
+                                           b.binding,
+                                           data.texture,
+                                           desc_type,
+                                           data.level);
+                       },
+                       [&](const BufferDataInfo &data) {
+                           auto &w = writes[write_index++];
+                           auto &buf_info = buffer_infos[buffer_index++];
 
-                    VkBufferUsageFlags usage = 0;
-                    if (desc_type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) {
-                        usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-                    }
+                           VkBufferUsageFlags usage = 0;
+                           if (desc_type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) {
+                               usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+                           }
 
-                    if (desc_type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER) {
-                        usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-                    }
+                           if (desc_type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER) {
+                               usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+                           }
 
-                    auto buf = ctx->create_buffer(
-                        data.size, usage, VMA_MEMORY_USAGE_CPU_TO_GPU);
-                    buf->set_data_raw(data.data, 0, data.size);
+                           auto buf = ctx->create_buffer(
+                               data.size, usage, VMA_MEMORY_USAGE_CPU_TO_GPU);
+                           buf->set_data_raw(data.data, 0, data.size);
 
-                    fill_desc_buffer(&w,
-                                     &buf_info,
-                                     set,
-                                     b.binding,
-                                     buf->buffer(),
-                                     0,
-                                     data.size,
-                                     desc_type);
-                },
-                [&](const BufferInfo &data) {
-                    auto &w = writes[write_index++];
-                    auto &buf_info = buffer_infos[buffer_index++];
+                           fill_desc_buffer(&w,
+                                            &buf_info,
+                                            set,
+                                            b.binding,
+                                            buf->buffer(),
+                                            0,
+                                            data.size,
+                                            desc_type);
+                       },
+                       [&](const BufferInfo &data) {
+                           auto &w = writes[write_index++];
+                           auto &buf_info = buffer_infos[buffer_index++];
 
-                    fill_desc_buffer(&w,
-                                     &buf_info,
-                                     set,
-                                     b.binding,
-                                     data.buffer->buffer(),
-                                     data.offset,
-                                     data.size,
-                                     desc_type);
-                }),
-            b.data);
+                           fill_desc_buffer(&w,
+                                            &buf_info,
+                                            set,
+                                            b.binding,
+                                            data.buffer->buffer(),
+                                            data.offset,
+                                            data.size,
+                                            desc_type);
+                       }),
+                   b.data);
     }
 
     ctx->device()->UpdateDescriptorSets(
         static_cast<uint32_t>(std::size(writes)), writes.data(), 0, nullptr);
 
-    // Shift valid desc sets to left
-    uint32_t desc_set_count = 0;
-    for (auto &set : desc_sets) {
+    for (int i = 0; i < std::size(desc_sets); i++) {
+        auto set = desc_sets[i];
         if (set != VK_NULL_HANDLE) {
-            desc_sets[desc_set_count++] = set;
+            cmd->BindDescriptorSets(pipeline->bind_point(),
+                                    pipeline->pipeline_layout(),
+                                    i,
+                                    1,
+                                    &set,
+                                    0,
+                                    nullptr);
         }
     }
-
-    cmd->BindDescriptorSets(pipeline->bind_point(),
-                            pipeline->pipeline_layout(),
-                            0,
-                            desc_set_count,
-                            desc_sets,
-                            0,
-                            nullptr);
 }
 
 void DescriptorEncoder::set_binding(
@@ -633,14 +626,6 @@ void DescriptorEncoder::set_binding(
     info.binding = binding;
     info.data = data;
     _bindings[index] = info;
-}
-
-void DescriptorEncoder::set_texture(uint32_t set,
-                                    uint32_t binding,
-                                    Texture *texture) {
-    ImageInfo info{};
-    info.texture = texture;
-    set_binding(set, binding, info);
 }
 
 void DescriptorEncoder::set_buffer_data(uint32_t set,
@@ -673,6 +658,16 @@ void DescriptorEncoder::set_buffer(uint32_t set,
                                    uint32_t binding,
                                    Buffer *buffer) {
     set_buffer(set, binding, buffer, 0, buffer->size());
+}
+
+void DescriptorEncoder::set_texture(uint32_t set,
+                                    uint32_t binding,
+                                    Texture *texture,
+                                    std::optional<uint32_t> level) {
+    ImageInfo info{};
+    info.texture = texture;
+    info.level = level;
+    set_binding(set, binding, info);
 }
 
 void ShaderLocalSize::dispatch(CommandBuffer *cmd,

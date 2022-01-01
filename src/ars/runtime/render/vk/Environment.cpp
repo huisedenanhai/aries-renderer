@@ -1,5 +1,6 @@
 #include "Environment.h"
 #include "Context.h"
+#include "Pipeline.h"
 #include "ars/runtime/core/Log.h"
 
 namespace ars::render::vk {
@@ -31,11 +32,16 @@ std::shared_ptr<ITexture> Environment::cube_map() {
 
 void Environment::alloc_cube_map(uint32_t resolution) {
     IContext *ctx_base = _context;
+    // Max mip level 5.
+    // Using full mip map count degenerates diffuse irradiance to ambient cube.
     _cube_map = ctx_base->create_texture(TextureInfo::create_cube_map(
-        Format::B10G11R11_UFLOAT_PACK32, resolution));
+        Format::B10G11R11_UFLOAT_PACK32, resolution, 5));
 }
 
-Environment::Environment(Context *context) : _context(context) {}
+Environment::Environment(Context *context) : _context(context) {
+    _prefilter_env_pipeline =
+        ComputePipeline::create(context, "PrefilterCubeMap.comp");
+}
 
 void Environment::update_cube_map() {
     if (_cube_map == nullptr) {
@@ -53,6 +59,40 @@ void Environment::update_cube_map() {
                                   VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                                   VK_ACCESS_SHADER_WRITE_BIT |
                                       VK_ACCESS_SHADER_READ_BIT);
+
+        _prefilter_env_pipeline->bind(cmd);
+        {
+            DescriptorEncoder desc{};
+            desc.set_texture(0, 0, hdr_texture_vk().get());
+            desc.commit(cmd, _prefilter_env_pipeline.get());
+        }
+
+        uint32_t mip_count = _cube_map->mip_levels();
+        uint32_t size = _cube_map->width();
+
+        for (int i = 0; i < mip_count; i++) {
+            struct Param {
+                int32_t size;
+                float roughness;
+                int32_t mip_level;
+                ARS_PADDING_FIELD(int32_t);
+            };
+
+            Param param{};
+            param.size = static_cast<int32_t>(size);
+            param.roughness = static_cast<float>(i) /
+                              static_cast<float>(std::max(1u, mip_count - 1));
+            param.mip_level = i;
+
+            DescriptorEncoder desc{};
+            desc.set_buffer_data(1, 0, param);
+            desc.set_texture(1, 1, cube_map_vk().get(), i);
+            desc.commit(cmd, _prefilter_env_pipeline.get());
+
+            _prefilter_env_pipeline->local_size().dispatch(cmd, size, size, 6);
+
+            size = (size + 1) / 2;
+        }
     });
 }
 
@@ -71,4 +111,6 @@ void Environment::set_cube_map(const std::shared_ptr<ITexture> &cube_map) {
     }
     _cube_map = cube_map;
 }
+
+Environment::~Environment() = default;
 } // namespace ars::render::vk

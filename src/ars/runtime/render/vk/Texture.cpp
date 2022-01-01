@@ -11,7 +11,7 @@ constexpr VkImageUsageFlags IMAGE_USAGE_SAMPLED_COLOR =
 }
 
 Texture::Texture(Context *context, const TextureCreateInfo &info)
-    : _context(context), _info(info) {
+    : _context(context), _info(info), _image_view_of_levels(info.mip_levels) {
     VkImageCreateInfo image_info{VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
     image_info.arrayLayers = info.array_layers;
     image_info.imageType = info.image_type;
@@ -48,19 +48,7 @@ Texture::Texture(Context *context, const TextureCreateInfo &info)
         ARS_LOG_CRITICAL("Failed to create image");
     }
 
-    VkImageViewCreateInfo view_info{VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
-    view_info.image = _image;
-    view_info.format = info.format;
-    view_info.viewType = info.view_type;
-    view_info.subresourceRange = subresource_range();
-    view_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-    view_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-    view_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-    view_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-
-    if (context->device()->Create(&view_info, &_image_view) != VK_SUCCESS) {
-        ARS_LOG_CRITICAL("Failed to create image view");
-    }
+    _image_view = create_image_view(0, info.mip_levels);
 
     VkSamplerCreateInfo sampler_info{VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
 
@@ -90,23 +78,23 @@ Texture::~Texture() {
         _context->device()->Destroy(_sampler);
     }
 
-    if (_image != VK_NULL_HANDLE) {
-        vmaDestroyImage(_context->vma()->raw(), _image, _allocation);
+    for (auto &view : _image_view_of_levels) {
+        if (view != VK_NULL_HANDLE) {
+            _context->device()->Destroy(view);
+        }
     }
+
     if (_image_view != VK_NULL_HANDLE) {
         _context->device()->Destroy(_image_view);
+    }
+
+    if (_image != VK_NULL_HANDLE) {
+        vmaDestroyImage(_context->vma()->raw(), _image, _allocation);
     }
 }
 
 VkImageSubresourceRange Texture::subresource_range() const {
-    VkImageSubresourceRange range{};
-    range.aspectMask = _info.aspect_mask;
-    range.baseArrayLayer = 0;
-    range.layerCount = _info.array_layers;
-    range.baseMipLevel = 0;
-    range.levelCount = _info.mip_levels;
-
-    return range;
+    return subresource_range(0, _info.mip_levels);
 }
 
 void Texture::set_data(void *data,
@@ -357,6 +345,56 @@ VkImage Texture::image() const {
     return _image;
 }
 
+VkImageView Texture::image_view_of_level(uint32_t level) {
+    if (level >= _info.mip_levels) {
+        ARS_LOG_ERROR(
+            "Image level out of range: Mip level count {}, but you request {}",
+            _info.mip_levels,
+            level);
+        return VK_NULL_HANDLE;
+    }
+
+    assert(level < _image_view_of_levels.size());
+    auto &view = _image_view_of_levels[level];
+    if (view == VK_NULL_HANDLE) {
+        view = create_image_view(level, 1);
+    }
+    return view;
+}
+
+VkImageSubresourceRange Texture::subresource_range(uint32_t base_mip_level,
+                                                   uint32_t level_count) const {
+    VkImageSubresourceRange range{};
+    range.aspectMask = _info.aspect_mask;
+    range.baseArrayLayer = 0;
+    range.layerCount = _info.array_layers;
+    range.baseMipLevel = base_mip_level;
+    range.levelCount = level_count;
+
+    return range;
+}
+
+VkImageView Texture::create_image_view(uint32_t base_mip_level,
+                                       uint32_t mip_level_count) {
+    VkImageViewCreateInfo view_info{VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
+    view_info.image = _image;
+    view_info.format = _info.format;
+    view_info.viewType = _info.view_type;
+    view_info.subresourceRange =
+        subresource_range(base_mip_level, mip_level_count);
+    view_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+    view_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+    view_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+    view_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+
+    VkImageView view = VK_NULL_HANDLE;
+    if (_context->device()->Create(&view_info, &view) != VK_SUCCESS) {
+        ARS_LOG_CRITICAL("Failed to create image view");
+        return VK_NULL_HANDLE;
+    }
+    return view;
+}
+
 TextureCreateInfo
 TextureCreateInfo::sampled_2d(VkFormat format,
                               uint32_t width,
@@ -498,7 +536,7 @@ TextureCreateInfo translate(const TextureInfo &info) {
     up.extent.depth = info.depth;
     up.aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT;
     up.samples = VK_SAMPLE_COUNT_1_BIT;
-    up.usage = IMAGE_USAGE_SAMPLED_COLOR;
+    up.usage = IMAGE_USAGE_SAMPLED_COLOR | VK_IMAGE_USAGE_STORAGE_BIT;
 
     up.min_filter = translate(info.min_filter);
     up.mag_filter = translate(info.mag_filter);

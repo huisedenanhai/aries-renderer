@@ -199,7 +199,11 @@ struct DescriptorEncoder {
   public:
     DescriptorEncoder();
 
-    void set_texture(uint32_t set, uint32_t binding, Texture *texture);
+    // If level is given, only the specified level of texture will be bound
+    void set_texture(uint32_t set,
+                     uint32_t binding,
+                     Texture *texture,
+                     std::optional<uint32_t> level = std::nullopt);
 
     void set_buffer_data(uint32_t set,
                          uint32_t binding,
@@ -226,6 +230,7 @@ struct DescriptorEncoder {
   private:
     struct ImageInfo {
         Texture *texture = nullptr;
+        std::optional<uint32_t> level{};
     };
 
     struct BufferDataInfo {

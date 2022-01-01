@@ -2,6 +2,7 @@
 
 #include "../ITexture.h"
 #include "Vulkan.h"
+#include <vector>
 
 namespace ars::render::vk {
 class Context;
@@ -62,11 +63,15 @@ class Texture {
     [[nodiscard]] VkImageView image_view() const;
     [[nodiscard]] VkImage image() const;
 
+    [[nodiscard]] VkImageView image_view_of_level(uint32_t level);
+
     [[nodiscard]] const TextureCreateInfo &info() const;
 
     void assure_layout(VkImageLayout layout);
 
     [[nodiscard]] VkImageSubresourceRange subresource_range() const;
+    [[nodiscard]] VkImageSubresourceRange
+    subresource_range(uint32_t base_mip_level, uint32_t level_count) const;
 
     // Transfer all subresources to the target layout and set the _layout field.
     // This method assumes all layers and levels of the image are in the same
@@ -82,10 +87,15 @@ class Texture {
                          VkAccessFlags dst_access_mask);
 
   private:
+    // Call this method after _image and _info initialized
+    [[nodiscard]] VkImageView create_image_view(uint32_t base_mip_level,
+                                                uint32_t mip_level_count);
+
     Context *_context = nullptr;
     VmaAllocation _allocation = VK_NULL_HANDLE;
     VkImage _image = VK_NULL_HANDLE;
     VkImageView _image_view = VK_NULL_HANDLE;
+    std::vector<VkImageView> _image_view_of_levels{};
     VkSampler _sampler = VK_NULL_HANDLE;
     // Public methods should ensure all layers and levels of the image are in
     // the same layout

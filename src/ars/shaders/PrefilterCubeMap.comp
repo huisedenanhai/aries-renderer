@@ -1,0 +1,24 @@
+#version 450 core
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) uniform sampler2D env_hdr_tex;
+
+layout(set = 1, binding = 0) uniform Param {
+    int size;
+    float roughness;
+    int mip_level;
+};
+layout(set = 1, binding = 1, r11f_g11f_b10f) uniform imageCube cube_map;
+
+vec3 index_to_direction(ivec3 index) {
+    return vec3(1.0, 0, 0);
+}
+
+void main() {
+    ivec3 index = ivec3(gl_GlobalInvocationID.xyz);
+    if (index.x >= size || index.y >= size) {
+        return;
+    }
+    imageStore(cube_map, index, vec4(index_to_direction(index), 1.0));
+}

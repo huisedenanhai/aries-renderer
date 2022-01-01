@@ -138,7 +138,7 @@ class Application : public ars::engine::IApplication {
                 continue;
             }
             cube_map->set_data(data,
-                               w * h * c * sizeof(unsigned char),
+                               w * h * 4 * sizeof(unsigned char),
                                0,
                                i,
                                0,
@@ -150,11 +150,24 @@ class Application : public ars::engine::IApplication {
         }
         cube_map->generate_mipmap();
 
+        std::shared_ptr<ITexture> hdr_tex{};
+        {
+            int w, h, c;
+            auto data = stbi_loadf(
+                "Environments/studio_small_08_2k.hdr", &w, &h, &c, 4);
+            ARS_DEFER([&]() { stbi_image_free(data); });
+            hdr_tex = ctx->create_texture(
+                TextureInfo::create_2d(Format::R32G32B32A32_SFLOAT, w, h));
+            hdr_tex->set_data(
+                data, w * h * 4 * sizeof(float), 0, 0, 0, 0, 0, w, h, 1);
+            hdr_tex->generate_mipmap();
+        }
+
         auto env = _view->environment();
+        env->set_hdr_texture(tex);
         env->alloc_cube_map(256);
         env->set_radiance({1.0f, 1.0f, 1.0f});
         env->update_cube_map();
-        env->set_cube_map(cube_map);
     }
 
     void load_test_mesh() {

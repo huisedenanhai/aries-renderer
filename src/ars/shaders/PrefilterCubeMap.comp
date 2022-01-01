@@ -12,7 +12,18 @@ layout(set = 1, binding = 0) uniform Param {
 layout(set = 1, binding = 1, r11f_g11f_b10f) uniform imageCube cube_map;
 
 vec3 index_to_direction(ivec3 index) {
-    return vec3(1.0, 0, 0);
+    float half_size = size * 0.5;
+    vec2 local_coord = index.xy - half_size + 0.5;
+    vec3 dirs[6] = {
+        vec3(half_size, -local_coord.y, -local_coord.x),
+        vec3(-half_size, -local_coord.y, local_coord.x),
+        vec3(local_coord.x, half_size, local_coord.y),
+        vec3(local_coord.x, -half_size, -local_coord.y),
+        vec3(local_coord.x, -local_coord.y, half_size),
+        vec3(-local_coord.x, -local_coord.y, -half_size),
+    };
+
+    return normalize(dirs[index.z]);
 }
 
 void main() {

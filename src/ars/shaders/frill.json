@@ -17,6 +17,7 @@
     "BillboardObjectId.frag",
     "VertexColor.vert",
     "VertexColor.frag",
+    "CaptureHDRToCubeMap.comp",
     "PrefilterCubeMap.comp"
   ],
   "includes": [

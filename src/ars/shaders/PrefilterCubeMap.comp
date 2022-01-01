@@ -6,54 +6,24 @@
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
-layout(set = 0, binding = 0) uniform sampler2D env_hdr_tex;
+layout(set = 0, binding = 0) uniform samplerCube radiance_cube_map;
 
 layout(set = 1, binding = 0) uniform Param {
     int size;
     float perceptual_roughness;
     int mip_level;
+    int radiance_base_resolution;
 };
 layout(set = 1, binding = 1, r11f_g11f_b10f) uniform imageCube cube_map;
-
-vec3 cube_map_index_to_direction(ivec3 index) {
-    float half_size = size * 0.5;
-    vec2 local_coord = index.xy - half_size + 0.5;
-    vec3 dirs[6] = {
-        vec3(half_size, -local_coord.y, -local_coord.x),
-        vec3(-half_size, -local_coord.y, local_coord.x),
-        vec3(local_coord.x, half_size, local_coord.y),
-        vec3(local_coord.x, -half_size, -local_coord.y),
-        vec3(local_coord.x, -local_coord.y, half_size),
-        vec3(-local_coord.x, -local_coord.y, -half_size),
-    };
-
-    return normalize(dirs[index.z]);
-}
-
-vec2 hdr_direction_to_uv(vec3 dir) {
-    vec2 angle = vec2(atan(dir.z, dir.x), -asin(dir.y));
-    return vec2(0.5, 1.0) / PI * angle + 0.5;
-}
-
-vec3 get_env_radiance(vec3 dir) {
-    vec2 uv = hdr_direction_to_uv(dir);
-    return texture(env_hdr_tex, uv).rgb;
-}
-
-void construct_TBN(vec3 n, out vec3 t, out vec3 b) {
-    vec3 v = n.y < 0.96 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
-    t = normalize(cross(n, v));
-    b = normalize(cross(n, t));
-}
 
 void main() {
     ivec3 index = ivec3(gl_GlobalInvocationID.xyz);
     if (index.x >= size || index.y >= size) {
         return;
     }
-    vec3 n = cube_map_index_to_direction(index);
+    vec3 n = cube_map_index_to_direction(index, size);
     vec3 t, b;
-    construct_TBN(n, t, b);
+    construct_TBN_with_normal(n, t, b);
 
     vec3 acc = vec3(0.0);
     float weight = 0.0;
@@ -67,7 +37,21 @@ void main() {
         vec3 r = reflect(vec3(0, -1, 0), h);
         if (r.y > 0) {
             vec3 dir = r.y * n + r.x * t + r.z * b;
-            acc += get_env_radiance(dir) * r.y;
+
+            // Access mipmap based on sample density
+            // https://chetanjags.wordpress.com/2015/08/26/image-based-lighting/
+            float D = D_GGX(h.y, roughness);
+            float pdf = (D * h.y / (4 * h.y)) + 0.0001;
+
+            float sa_texel =
+                4.0 * PI /
+                (6.0 * radiance_base_resolution * radiance_base_resolution);
+            float sa_sample = 1.0 / (sample_count * pdf + 0.00001);
+
+            float env_mip_level =
+                roughness == 0.0 ? 0.0 : 0.5 * log2(sa_sample / sa_texel);
+
+            acc += textureLod(radiance_cube_map, dir, env_mip_level).rgb * r.y;
             weight += r.y;
         }
     }

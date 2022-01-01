@@ -30,7 +30,7 @@ void DeferredShading::render(CommandBuffer *cmd) {
     desc.set_texture(0, 4, _view->render_target(NamedRT_GBuffer3).get());
     desc.set_texture(0, 5, _view->render_target(NamedRT_Depth).get());
     desc.set_texture(0, 6, _view->context()->lut()->brdf_lut().get());
-    desc.set_texture(0, 7, env->cube_map_vk().get());
+    desc.set_texture(0, 7, env->irradiance_cube_map_vk().get());
 
     struct ShadingParam {
         int32_t width;
@@ -52,7 +52,7 @@ void DeferredShading::render(CommandBuffer *cmd) {
         static_cast<int32_t>(_view->vk_scene()->directional_lights.size());
     param.env_radiance = env->radiance();
     param.cube_map_mip_count =
-        static_cast<int32_t>(env->cube_map()->mip_levels());
+        static_cast<int32_t>(env->irradiance_cube_map()->mip_levels());
 
     auto v_matrix = _view->view_matrix();
     auto p_matrix = _view->projection_matrix();

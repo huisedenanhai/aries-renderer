@@ -143,7 +143,11 @@ void Texture::set_data(void *data,
     });
 }
 
-void Texture::generate_mipmap() {
+void Texture::generate_mipmap(CommandBuffer *cmd,
+                              VkPipelineStageFlags src_stage_mask,
+                              VkAccessFlags src_access_mask,
+                              VkPipelineStageFlags dst_stage_mask,
+                              VkAccessFlags dst_access_mask) {
     VkFormatProperties format_properties;
     _context->instance()->GetPhysicalDeviceFormatProperties(
         _context->device()->physical_device(),
@@ -189,18 +193,47 @@ void Texture::generate_mipmap() {
         return barrier;
     };
 
-    _context->queue()->submit_once([&](CommandBuffer *cmd) {
-        auto mip_levels = static_cast<int>(_info.mip_levels);
-        assert(mip_levels > 1);
-        // transfer all levels to TRANSFER_DST_OPTIMAL
+    auto mip_levels = static_cast<int>(_info.mip_levels);
+    assert(mip_levels > 1);
+    // transfer all levels to TRANSFER_DST_OPTIMAL
+    {
+        auto barrier = get_barrier(0,
+                                   mip_levels,
+                                   _layout,
+                                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                   src_access_mask,
+                                   VK_ACCESS_TRANSFER_WRITE_BIT);
+        cmd->PipelineBarrier(src_stage_mask,
+                             VK_PIPELINE_STAGE_TRANSFER_BIT,
+                             0,
+                             0,
+                             nullptr,
+                             0,
+                             nullptr,
+                             1,
+                             &barrier);
+    }
+
+    auto mip_width = static_cast<int32_t>(_info.extent.width);
+    auto mip_height = static_cast<int32_t>(_info.extent.height);
+    auto mip_depth = static_cast<int32_t>(_info.extent.depth);
+    for (int i = 1; i < mip_levels; i++) {
+        auto calc_next_mip_size = [](int32_t size) {
+            return size > 1 ? size / 2 : 1;
+        };
+        auto next_mip_width = calc_next_mip_size(mip_width);
+        auto next_mip_height = calc_next_mip_size(mip_height);
+        auto next_mip_depth = calc_next_mip_size(mip_depth);
+
+        // Transfer src level to TRANSFER_SRC_OPTIMAL
         {
-            auto barrier = get_barrier(0,
-                                       mip_levels,
-                                       _layout,
+            auto barrier = get_barrier(i - 1,
+                                       1,
                                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                                       0,
-                                       VK_ACCESS_TRANSFER_WRITE_BIT);
-            cmd->PipelineBarrier(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                                       VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                                       VK_ACCESS_TRANSFER_WRITE_BIT,
+                                       VK_ACCESS_TRANSFER_READ_BIT);
+            cmd->PipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT,
                                  VK_PIPELINE_STAGE_TRANSFER_BIT,
                                  0,
                                  0,
@@ -211,90 +244,59 @@ void Texture::generate_mipmap() {
                                  &barrier);
         }
 
-        auto mip_width = static_cast<int32_t>(_info.extent.width);
-        auto mip_height = static_cast<int32_t>(_info.extent.height);
-        auto mip_depth = static_cast<int32_t>(_info.extent.depth);
-        for (int i = 1; i < mip_levels; i++) {
-            auto calc_next_mip_size = [](int32_t size) {
-                return size > 1 ? size / 2 : 1;
-            };
-            auto next_mip_width = calc_next_mip_size(mip_width);
-            auto next_mip_height = calc_next_mip_size(mip_height);
-            auto next_mip_depth = calc_next_mip_size(mip_depth);
+        VkImageSubresourceLayers res{};
+        res.aspectMask = subresource_range().aspectMask;
+        res.baseArrayLayer = 0;
+        res.layerCount = _info.array_layers;
 
-            // Transfer src level to TRANSFER_SRC_OPTIMAL
-            {
-                auto barrier = get_barrier(i - 1,
-                                           1,
-                                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                                           VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                                           VK_ACCESS_TRANSFER_WRITE_BIT,
-                                           VK_ACCESS_TRANSFER_READ_BIT);
-                cmd->PipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT,
-                                     VK_PIPELINE_STAGE_TRANSFER_BIT,
-                                     0,
-                                     0,
-                                     nullptr,
-                                     0,
-                                     nullptr,
-                                     1,
-                                     &barrier);
-            }
+        VkImageBlit region{};
+        region.srcSubresource = res;
+        region.srcSubresource.mipLevel = i - 1;
+        region.srcOffsets[0] = {0, 0, 0};
+        region.srcOffsets[1] = {mip_width, mip_height, mip_depth};
+        region.dstSubresource = res;
+        region.dstSubresource.mipLevel = i;
+        region.dstOffsets[0] = {0, 0, 0};
+        region.dstOffsets[1] = {
+            next_mip_width, next_mip_height, next_mip_depth};
 
-            VkImageSubresourceLayers res{};
-            res.aspectMask = subresource_range().aspectMask;
-            res.baseArrayLayer = 0;
-            res.layerCount = _info.array_layers;
+        cmd->BlitImage(_image,
+                       VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                       _image,
+                       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                       1,
+                       &region,
+                       VK_FILTER_LINEAR);
 
-            VkImageBlit region{};
-            region.srcSubresource = res;
-            region.srcSubresource.mipLevel = i - 1;
-            region.srcOffsets[0] = {0, 0, 0};
-            region.srcOffsets[1] = {mip_width, mip_height, mip_depth};
-            region.dstSubresource = res;
-            region.dstSubresource.mipLevel = i;
-            region.dstOffsets[0] = {0, 0, 0};
-            region.dstOffsets[1] = {
-                next_mip_width, next_mip_height, next_mip_depth};
-
-            cmd->BlitImage(_image,
-                           VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                           _image,
-                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                           1,
-                           &region,
-                           VK_FILTER_LINEAR);
-
-            mip_width = next_mip_width;
-            mip_height = next_mip_height;
-            mip_depth = next_mip_depth;
-        }
-        // Now all except the last layer are in the TRANSFER_SRC_OPTIMAL layout.
-        // The last layer is in TRANSFER_DST_OPTIMAL layout.
-        // Restore the original layout with two barriers
-        VkImageMemoryBarrier barriers[2] = {
-            get_barrier(0,
-                        mip_levels - 1,
-                        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                        _layout,
-                        VK_ACCESS_TRANSFER_READ_BIT,
-                        0),
-            get_barrier(mip_levels - 1,
-                        1,
-                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                        _layout,
-                        VK_ACCESS_TRANSFER_WRITE_BIT,
-                        0)};
-        cmd->PipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT,
-                             VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                             0,
-                             0,
-                             nullptr,
-                             0,
-                             nullptr,
-                             2,
-                             barriers);
-    });
+        mip_width = next_mip_width;
+        mip_height = next_mip_height;
+        mip_depth = next_mip_depth;
+    }
+    // Now all except the last layer are in the TRANSFER_SRC_OPTIMAL layout.
+    // The last layer is in TRANSFER_DST_OPTIMAL layout.
+    // Restore the original layout with two barriers
+    VkImageMemoryBarrier barriers[2] = {
+        get_barrier(0,
+                    mip_levels - 1,
+                    VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                    _layout,
+                    VK_ACCESS_TRANSFER_READ_BIT,
+                    dst_access_mask),
+        get_barrier(mip_levels - 1,
+                    1,
+                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                    _layout,
+                    VK_ACCESS_TRANSFER_WRITE_BIT,
+                    dst_access_mask)};
+    cmd->PipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT,
+                         dst_stage_mask,
+                         0,
+                         0,
+                         nullptr,
+                         0,
+                         nullptr,
+                         2,
+                         barriers);
 }
 
 void Texture::transfer_layout(CommandBuffer *cmd,
@@ -395,6 +397,10 @@ VkImageView Texture::create_image_view(uint32_t base_mip_level,
     return view;
 }
 
+Context *Texture::context() const {
+    return _context;
+}
+
 TextureCreateInfo
 TextureCreateInfo::sampled_2d(VkFormat format,
                               uint32_t width,
@@ -444,7 +450,13 @@ void TextureAdapter::set_data(void *data,
 }
 
 void TextureAdapter::generate_mipmap() {
-    _texture->generate_mipmap();
+    _texture->context()->queue()->submit_once([&](CommandBuffer *cmd) {
+        _texture->generate_mipmap(cmd,
+                                  VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                                  0,
+                                  VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                                  0);
+    });
 }
 
 Handle<Texture> TextureAdapter::texture() const {

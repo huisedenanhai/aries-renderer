@@ -153,8 +153,8 @@ class Application : public ars::engine::IApplication {
 
         std::shared_ptr<ITexture> hdr_tex{};
         {
-            auto hdr_file = "Environments/studio_garden_2k.hdr";
-            // auto hdr_file = "Environments/studio_small_08_2k.hdr";
+            // auto hdr_file = "Environments/studio_garden_2k.hdr";
+            auto hdr_file = "Environments/studio_small_08_2k.hdr";
             int w, h, c;
             auto data = stbi_loadf(hdr_file, &w, &h, &c, 4);
             ARS_DEFER([&]() { stbi_image_free(data); });
@@ -167,9 +167,9 @@ class Application : public ars::engine::IApplication {
 
         auto env = _view->environment();
         env->set_hdr_texture(hdr_tex);
-        env->alloc_cube_map(256);
+        env->alloc_irradiance_cube_map(256);
         env->set_radiance({1.0f, 1.0f, 1.0f});
-        env->update_cube_map();
+        env->update_irradiance_cube_map();
     }
 
     void load_test_mesh() {

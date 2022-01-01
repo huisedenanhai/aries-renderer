@@ -56,7 +56,13 @@ class Texture {
                   uint32_t y_size,
                   uint32_t z_size);
 
-    void generate_mipmap();
+    void generate_mipmap(CommandBuffer *cmd,
+                         VkPipelineStageFlags src_stage_mask,
+                         VkAccessFlags src_access_mask,
+                         VkPipelineStageFlags dst_stage_mask,
+                         VkAccessFlags dst_access_mask);
+
+    [[nodiscard]] Context *context() const;
 
     [[nodiscard]] VkSampler sampler() const;
     [[nodiscard]] VkImageLayout layout() const;

@@ -119,11 +119,14 @@ vec3 shade_metallic_roughness_pbr(GBuffer gbuffer, ShadingPoint shading_point) {
     // Sample env irradiance
     vec3 n_ws = transform_vector(I_V, n_vs);
     vec3 reflect_dir_ws = reflect(-v_ws, n_ws);
-    vec3 env_irradiance = get_env_irradiance(reflect_dir_ws,
-                                             (cube_map_mip_count - 1) *
-                                                 brdf.perceptual_roughness) *
-                          material.occlusion;
-    vec3 indirect_radiance = (fd + fe) * env_irradiance;
+    vec3 specular_env_irradiance =
+        material.occlusion * get_env_irradiance(reflect_dir_ws,
+                                                (cube_map_mip_count - 1) *
+                                                    brdf.perceptual_roughness);
+    vec3 diffuse_env_irradiance =
+        material.occlusion * get_env_irradiance(n_ws, cube_map_mip_count - 1);
+    vec3 indirect_radiance =
+        fd * diffuse_env_irradiance + fe * specular_env_irradiance;
 
     return direct_radiance + indirect_radiance + gbuffer.emission;
 }

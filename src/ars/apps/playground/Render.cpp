@@ -158,8 +158,9 @@ class Application : public ars::engine::IApplication {
             int w, h, c;
             auto data = stbi_loadf(hdr_file, &w, &h, &c, 4);
             ARS_DEFER([&]() { stbi_image_free(data); });
-            hdr_tex = ctx->create_texture(
-                TextureInfo::create_2d(Format::R32G32B32A32_SFLOAT, w, h));
+            auto info =
+                TextureInfo::create_2d(Format::R32G32B32A32_SFLOAT, w, h);
+            hdr_tex = ctx->create_texture(info);
             hdr_tex->set_data(
                 data, w * h * 4 * sizeof(float), 0, 0, 0, 0, 0, w, h, 1);
             hdr_tex->generate_mipmap();

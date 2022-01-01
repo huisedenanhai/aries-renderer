@@ -11,9 +11,9 @@ layout(set = 0, binding = 2) uniform Param {
     int size;
 };
 
-vec3 get_env_radiance(vec3 dir) {
-    vec2 uv = hdr_direction_to_uv(dir);
-    return texture(env_hdr_tex, uv).rgb;
+vec2 cube_index_to_env_uv(ivec3 index) {
+    vec3 d = cube_map_index_to_direction(index, size);
+    return hdr_direction_to_uv(d);
 }
 
 void main() {
@@ -21,6 +21,6 @@ void main() {
     if (index.x >= size || index.y >= size) {
         return;
     }
-    vec3 n = cube_map_index_to_direction(index, size);
-    imageStore(cube_map, index, vec4(get_env_radiance(n), 1.0));
+    vec2 uv = cube_index_to_env_uv(index);
+    imageStore(cube_map, index, vec4(texture(env_hdr_tex, uv).rgb, 1.0));
 }

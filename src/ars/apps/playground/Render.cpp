@@ -154,7 +154,8 @@ class Application : public ars::engine::IApplication {
         std::shared_ptr<ITexture> hdr_tex{};
         {
             auto hdr_file = "Environments/studio_garden_2k.hdr";
-            // auto hdr_file = "Environments/studio_small_08_2k.hdr";
+            // auto hdr_file = "Environments/skybox_room.hdr";
+            //  auto hdr_file = "Environments/studio_small_08_2k.hdr";
             int w, h, c;
             auto data = stbi_loadf(hdr_file, &w, &h, &c, 4);
             ARS_DEFER([&]() { stbi_image_free(data); });

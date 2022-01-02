@@ -22,8 +22,41 @@ float radical_inverse_2(uint i) {
     return float(i) * 2.3283064365386963e-10; // / 0x100000000
 }
 
+// see the paper 'Golden Ratio Sequences for Low-Discrepancy Sampling'
+float gloden_ratio_sequence(float seed, uint i) {
+    float gloden_ratio = 1.618033988749895;
+    return fract(seed + i * gloden_ratio);
+}
+
 vec2 hammersly(uint i, uint count) {
     return vec2(float(i) / float(count), radical_inverse_2(i));
+}
+
+uint tea(uint N, uint val0, uint val1) {
+    uint v0 = val0;
+    uint v1 = val1;
+    uint s0 = 0;
+
+    for (uint n = 0; n < N; n++) {
+        s0 += 0x9e3779b9;
+        v0 += ((v1 << 4) + 0xa341316c) ^ (v1 + s0) ^ ((v1 >> 5) + 0xc8013ea4);
+        v1 += ((v0 << 4) + 0xad90777d) ^ (v0 + s0) ^ ((v0 >> 5) + 0x7e95761e);
+    }
+
+    return v0;
+}
+
+// Generate random unsigned int in [0, 2^24)
+uint lcg(inout uint seed) {
+    uint LCG_A = 1664525u;
+    uint LCG_C = 1013904223u;
+    seed = (LCG_A * seed + LCG_C);
+    return seed & 0x00FFFFFF;
+}
+
+// Generate random float in [0, 1)
+float rnd(inout uint seed) {
+    return float(lcg(seed)) / float(0x01000000);
 }
 
 #endif

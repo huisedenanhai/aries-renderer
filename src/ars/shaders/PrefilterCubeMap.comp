@@ -49,6 +49,8 @@ void main() {
             // Access mipmap based on sample density
             // similar to
             // https://chetanjags.wordpress.com/2015/08/26/image-based-lighting/
+            // and
+            // https://developer.nvidia.com/gpugems/gpugems3/part-iii-rendering/chapter-20-gpu-based-importance-sampling
             //
             // TODO There are still some issues in current implementation.
             // Adjust sample count may results in worse image. I guess the
@@ -57,9 +59,10 @@ void main() {
             // pdf in dl
             float pdf = D * h.y * calculate_dldh(vec3(0, 1, 0), r, h);
             float env_mip_level =
-                roughness == 0.0 ? 0.0
-                                 : log2(6.0 * square(radiance_base_resolution) /
-                                        (4.0 * PI * sample_count * pdf));
+                roughness == 0.0
+                    ? 0.0
+                    : 1.1 * log2(6.0 * square(radiance_base_resolution) /
+                                 (4.0 * PI * sample_count * pdf));
             env_mip_level = max(env_mip_level, 0.0);
 
             acc += textureLod(radiance_cube_map, dir, env_mip_level).rgb * r.y;

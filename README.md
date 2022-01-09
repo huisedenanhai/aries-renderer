@@ -12,11 +12,3 @@ with `-DARS_FRILL_EXECUTABLE=<path-to-frill-exe>`
 3. Run `aries_editor` with cwd set to the project folder.
 
 > Executables in playground may not always runnable. They are there for quick and dirty test of work in progress features, and will be removed as soon as those features are easily reachable from editor or launcher.
-
-## TODO
-
-1. Import scenes from gltf as `aspawn`s.
-2. Import `aspawn`. (Currently the editor opens the `aspawn` in the project folder directly)
-3. Prefab
-4. On demand asset import server.
-5. Packing

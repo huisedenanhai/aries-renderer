@@ -8,6 +8,9 @@ add_subdirectory(tinygltf)
 add_subdirectory(spdlog)
 add_subdirectory(json)
 
+set(SHADERC_SKIP_TESTS ON)
+add_subdirectory(shaderc)
+
 set_target_properties(
         glfw rttr_core_lib
         PROPERTIES

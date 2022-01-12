@@ -6,6 +6,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <variant>
 #include <vector>
 
@@ -166,4 +167,33 @@ class IMaterial : public IRes {
   protected:
     IMaterialPrototype *_prototype = nullptr;
 };
+
+enum class ShaderKind {
+    Vertex,
+    Fragment,
+    TessControl,
+    TessEvaluation,
+    Geometry,
+    Compute,
+    RayGen,
+    AnyHit,
+    ClosestHit,
+    Miss,
+    Intersection,
+    Callable,
+    Task,
+    Mesh
+};
+
+enum class ShaderOptimizationLevel { Zero, Size, Performance };
+
+struct ShaderCompileOptions {
+    std::unordered_map<std::string, std::string> macro_defs;
+    ShaderOptimizationLevel optimization = ShaderOptimizationLevel::Zero;
+};
+
+std::vector<uint8_t> glsl_to_spirv(const std::string &glsl,
+                                   ShaderKind default_kind,
+                                   const char *name,
+                                   const ShaderCompileOptions &options = {});
 } // namespace ars::render

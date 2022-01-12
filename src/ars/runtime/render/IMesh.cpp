@@ -1,5 +1,4 @@
 #include "IMesh.h"
-#include "res/Mesh.h"
 
 namespace ars::render {
 IMesh::IMesh(const MeshInfo &info) : _info(info) {}

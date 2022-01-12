@@ -5,15 +5,25 @@ A very coarse plan for development.
 ## Rendering
 
 1. Surface Shading
-    + [ ] Visibility Rendering
+    + Material Model
+        + [x] Metallic Roughness PBR
+        + [ ] Sheen
+        + [ ] Subsurface Scattering
+        + [ ] Clear Coat
+        + [ ] Hair
+        + [ ] Eye
     + [ ] Shader Graph
-    + [ ] SDF GI
-2. Effect
+    + [ ] Shadow
+    + [ ] Dynamic GI
+3. Effect
     + [ ] Dynamic Sky
     + [ ] Volumetric Cloud
-3. System
+    + [ ] TAA
+    + [ ] DOF
+4. System
    > Build on top of existing rendering features
     + [ ] Terrain
+    + [ ] Skeleton Animation
 
 ## Editing
 

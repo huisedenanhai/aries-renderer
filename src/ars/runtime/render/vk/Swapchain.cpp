@@ -834,8 +834,8 @@ void Swapchain::init_pipeline() {
         return;
     }
 
-    auto vert_shader = std::make_unique<Shader>(_context, "Blit.vert");
-    auto frag_shader = std::make_unique<Shader>(_context, "Blit.frag");
+    auto vert_shader = Shader::find_precompiled(_context, "Blit.vert");
+    auto frag_shader = Shader::find_precompiled(_context, "Blit.frag");
 
     GraphicsPipelineInfo info{};
     info.shaders.push_back(vert_shader.get());

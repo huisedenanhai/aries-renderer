@@ -76,8 +76,8 @@ void Drawer::init_render_pass() {
 
 void Drawer::init_draw_id_pipeline() {
     auto ctx = _view->context();
-    auto vert_shader = std::make_unique<Shader>(ctx, "ObjectId.vert");
-    auto frag_shader = std::make_unique<Shader>(ctx, "ObjectId.frag");
+    auto vert_shader = Shader::find_precompiled(ctx, "ObjectId.vert");
+    auto frag_shader = Shader::find_precompiled(ctx, "ObjectId.frag");
 
     VkPipelineVertexInputStateCreateInfo vertex_input{
         VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
@@ -173,8 +173,8 @@ RenderPass *Drawer::draw_id_render_pass() const {
 
 void Drawer::init_draw_id_billboard_alpha_clip() {
     auto ctx = _view->context();
-    auto vert_shader = std::make_unique<Shader>(ctx, "Billboard.vert");
-    auto frag_shader = std::make_unique<Shader>(ctx, "BillboardObjectId.frag");
+    auto vert_shader = Shader::find_precompiled(ctx, "Billboard.vert");
+    auto frag_shader = Shader::find_precompiled(ctx, "BillboardObjectId.frag");
 
     auto depth_stencil = enabled_depth_stencil_state();
 

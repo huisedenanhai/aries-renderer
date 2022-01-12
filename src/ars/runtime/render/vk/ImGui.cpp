@@ -129,8 +129,8 @@ class ImGuiViewportData {
 
     void init_pipeline() {
         auto ctx = _swapchain->context();
-        auto vert_shader = std::make_unique<Shader>(ctx, "ImGui.vert");
-        auto frag_shader = std::make_unique<Shader>(ctx, "ImGui.frag");
+        auto vert_shader = Shader::find_precompiled(ctx, "ImGui.vert");
+        auto frag_shader = Shader::find_precompiled(ctx, "ImGui.frag");
 
         VkPipelineVertexInputStateCreateInfo vertex_input{
             VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};

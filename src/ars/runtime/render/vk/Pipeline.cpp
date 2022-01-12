@@ -6,14 +6,16 @@
 #include <vulkan/spirv_reflect.h>
 
 namespace ars::render::vk {
-Shader::Shader(Context *context, const char *name) : _context(context) {
-    auto code = load_spirv_code(name, nullptr, 0);
-
-    load_reflection_info(code.size, code.data);
+Shader::Shader(Context *context,
+               const char *name,
+               const uint8_t *spirv_code,
+               size_t code_size)
+    : _context(context) {
+    load_reflection_info(code_size, spirv_code);
 
     VkShaderModuleCreateInfo info{VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
-    info.pCode = reinterpret_cast<const uint32_t *>(code.data);
-    info.codeSize = code.size;
+    info.pCode = reinterpret_cast<const uint32_t *>(spirv_code);
+    info.codeSize = code_size;
 
     if (_context->device()->Create(&info, &_module) != VK_SUCCESS) {
         ARS_LOG_CRITICAL("Failed to load shader module ", name);
@@ -83,6 +85,25 @@ const char *Shader::entry() const {
 
 ShaderLocalSize Shader::local_size() const {
     return _local_size;
+}
+
+std::unique_ptr<Shader> Shader::find_precompiled(Context *context,
+                                             const char *name) {
+    auto code = load_spirv_code(name, nullptr, 0);
+    return from_spirv(context, name, code.data, code.size);
+}
+
+std::unique_ptr<Shader> Shader::from_spirv(Context *context,
+                                           const char *name,
+                                           const uint8_t *spirv_code,
+                                           size_t code_size) {
+    return std::make_unique<Shader>(context, name, spirv_code, code_size);
+}
+
+std::unique_ptr<Shader> Shader::from_spirv(Context *context,
+                                           const char *name,
+                                           const std::vector<uint8_t> &code) {
+    return from_spirv(context, name, code.data(), code.size());
 }
 
 VkDescriptorSetLayout
@@ -436,7 +457,7 @@ ShaderLocalSize ComputePipeline::local_size() const {
 
 std::unique_ptr<ComputePipeline>
 ComputePipeline::create(Context *context, const char *shader_name) {
-    auto shader = std::make_unique<Shader>(context, shader_name);
+    auto shader = Shader::find_precompiled(context, shader_name);
     ComputePipelineInfo info{};
     info.shader = shader.get();
     return std::make_unique<ComputePipeline>(context, info);

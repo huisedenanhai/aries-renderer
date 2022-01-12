@@ -46,7 +46,22 @@ struct ShaderLocalSize {
 
 class Shader {
   public:
-    Shader(Context *context, const char *name);
+    static std::unique_ptr<Shader> find_precompiled(Context *context,
+                                                    const char *name);
+
+    static std::unique_ptr<Shader> from_spirv(Context *context,
+                                              const char *name,
+                                              const uint8_t *spirv_code,
+                                              size_t code_size);
+
+    static std::unique_ptr<Shader> from_spirv(Context *context,
+                                              const char *name,
+                                              const std::vector<uint8_t> &code);
+
+    Shader(Context *context,
+           const char *name,
+           const uint8_t *spirv_code,
+           size_t code_size);
 
     ARS_NO_COPY_MOVE(Shader);
 

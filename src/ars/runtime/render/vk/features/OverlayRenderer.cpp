@@ -149,8 +149,8 @@ void OverlayRenderer::init_forward_render_pass() {
 
 void OverlayRenderer::init_billboard_pipeline() {
     auto ctx = _view->context();
-    auto vert_shader = std::make_unique<Shader>(ctx, "Billboard.vert");
-    auto frag_shader = std::make_unique<Shader>(ctx, "Billboard.frag");
+    auto vert_shader = Shader::find_precompiled(ctx, "Billboard.vert");
+    auto frag_shader = Shader::find_precompiled(ctx, "Billboard.frag");
 
     VkPipelineColorBlendAttachmentState attachment_blend =
         create_attachment_blend_state(VK_BLEND_FACTOR_SRC_ALPHA,
@@ -326,8 +326,8 @@ void OverlayRenderer::draw_line(const glm::vec3 &from,
 
 void OverlayRenderer::init_line_pipeline() {
     auto ctx = _view->context();
-    auto vert_shader = std::make_unique<Shader>(ctx, "VertexColor.vert");
-    auto frag_shader = std::make_unique<Shader>(ctx, "VertexColor.frag");
+    auto vert_shader = Shader::find_precompiled(ctx, "VertexColor.vert");
+    auto frag_shader = Shader::find_precompiled(ctx, "VertexColor.frag");
 
     VkPipelineColorBlendAttachmentState attachment_blend =
         create_attachment_blend_state(VK_BLEND_FACTOR_SRC_ALPHA,

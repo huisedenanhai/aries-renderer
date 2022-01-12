@@ -123,8 +123,8 @@ void OpaqueGeometry::init_render_pass() {
 
 void OpaqueGeometry::init_pipeline() {
     auto ctx = _view->context();
-    auto vert_shader = std::make_unique<Shader>(ctx, "GeometryPass.vert");
-    auto frag_shader = std::make_unique<Shader>(ctx, "GeometryPass.frag");
+    auto vert_shader = Shader::find_precompiled(ctx, "GeometryPass.vert");
+    auto frag_shader = Shader::find_precompiled(ctx, "GeometryPass.frag");
 
     VkPipelineVertexInputStateCreateInfo vertex_input{
         VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};

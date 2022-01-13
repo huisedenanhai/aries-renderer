@@ -267,6 +267,18 @@ void Scene::update() {
     render_system()->update();
 }
 
+std::vector<Entity *> Scene::entities() const {
+    std::vector<Entity *> res{};
+    auto count = _entities.size();
+    res.reserve(count);
+
+    auto entities_arr = _entities.get_array<std::unique_ptr<Entity>>();
+    for (size_t i = 0; i < count; i++) {
+        res.push_back(entities_arr[i].get());
+    }
+    return res;
+}
+
 void IComponent::on_inspector() {
     gui::input_instance(*this);
 }

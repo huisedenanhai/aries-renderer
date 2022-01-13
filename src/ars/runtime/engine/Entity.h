@@ -60,6 +60,8 @@ class Scene {
     void destroy_entity(Entity *entity);
 
     [[nodiscard]] Entity *root() const;
+    // Get all entities in the scene, including those not in the scene tree
+    [[nodiscard]] std::vector<Entity *> entities() const;
 
     void update_cached_world_xform();
 

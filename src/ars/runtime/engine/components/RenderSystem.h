@@ -101,6 +101,19 @@ class DirectionalLight : public IComponent {
     RenderSystem::DirectionalLights::Id _id{};
 };
 
+class Camera : public IComponent {
+    RTTR_DERIVE(IComponent);
+
+  public:
+    static void register_component();
+
+    void set_data(render::CameraData data);
+    [[nodiscard]] render::CameraData data() const;
+
+  private:
+    render::CameraData _data{};
+};
+
 // Load model as children of the parent entity
 void load_model(Entity *parent, const render::Model &model);
 } // namespace ars::engine

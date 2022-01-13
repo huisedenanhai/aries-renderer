@@ -113,15 +113,33 @@ class Application : public ars::engine::IApplication {
         }
 
         // auto model_file = "FlightHelmetWithLight/FlightHelmetWithLight.gltf";
-        auto model_file = "Balls/Balls.gltf";
+        // auto model_file = "Balls/Balls.gltf";
+        auto model_file = "Hexagon/Hexagon.gltf";
         auto model = load_gltf(ctx, model_file);
         _scene = std::make_unique<ars::engine::Scene>();
         _view = _scene->render_system()->render_scene()->create_view(
             window()->physical_size());
         auto light_bulb_icon = ars::render::load_texture(ctx, "light-bulb.png");
         _view->overlay()->set_light_gizmo(light_bulb_icon, 0.1f);
-        _fly_camera.xform.set_translation({0, 0.3f, 10.0f});
         ars::engine::load_model(_scene->root(), model);
+
+        _fly_camera.xform.set_translation({0, 0.3f, 10.0f});
+        for (auto e : _scene->entities()) {
+            auto camera = e->component<ars::engine::Camera>();
+            if (camera != nullptr) {
+                auto xform = e->world_xform();
+                _fly_camera.xform = xform;
+                _view->set_camera(camera->data());
+                break;
+            }
+        }
+
+        for (auto &node : model.nodes) {
+            if (node.camera.has_value()) {
+                _view->set_camera(model.cameras[node.camera.value()].data);
+            }
+        }
+
         // load_test_mesh();
 
         // Test create cube map
@@ -153,10 +171,10 @@ class Application : public ars::engine::IApplication {
 
         std::shared_ptr<ITexture> hdr_tex{};
         {
-            // auto hdr_file = "Environments/studio_garden_2k.hdr";
+            auto hdr_file = "Environments/studio_garden_2k.hdr";
             // auto hdr_file = "Environments/skybox_room.hdr";
             // auto hdr_file = "Environments/studio_small_08_2k.hdr";
-            auto hdr_file = "Environments/dreifaltigkeitsberg_2k.hdr";
+            // auto hdr_file = "Environments/dreifaltigkeitsberg_2k.hdr";
             int w, h, c;
             auto data = stbi_loadf(hdr_file, &w, &h, &c, 4);
             ARS_DEFER([&]() { stbi_image_free(data); });

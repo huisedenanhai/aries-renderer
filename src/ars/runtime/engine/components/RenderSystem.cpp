@@ -274,6 +274,12 @@ void load_node(Entity *parent,
         }
     }
 
+    if (n.camera.has_value()) {
+        auto c = model.cameras[n.camera.value()];
+        auto comp = entity->add_component<Camera>();
+        comp->set_data(c.data);
+    }
+
     for (auto child : n.children) {
         load_node(entity, model, child);
     }
@@ -294,4 +300,17 @@ void load_model(Entity *parent, const render::Model &model) {
         load_node(parent, model, n);
     }
 }
+
+void Camera::register_component() {
+    engine::register_component<Camera>("ars::engine::Camera");
+}
+
+void Camera::set_data(render::CameraData data) {
+    _data = data;
+}
+
+render::CameraData Camera::data() const {
+    return _data;
+}
+
 } // namespace ars::engine

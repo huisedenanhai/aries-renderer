@@ -8,15 +8,15 @@ namespace ars::render::vk {
 class Context;
 
 struct TextureCreateInfo {
-    VkImageType image_type;
-    VkImageViewType view_type;
-    VkFormat format;
-    VkExtent3D extent;
-    uint32_t mip_levels;
-    uint32_t array_layers;
-    VkSampleCountFlagBits samples;
-    VkImageUsageFlags usage;
-    VkImageAspectFlags aspect_mask;
+    VkImageType image_type{};
+    VkImageViewType view_type{};
+    VkFormat format{};
+    VkExtent3D extent{};
+    uint32_t mip_levels{};
+    uint32_t array_layers{};
+    VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT;
+    VkImageUsageFlags usage{};
+    VkImageAspectFlags aspect_mask{};
 
     VkFilter min_filter = VK_FILTER_LINEAR;
     VkFilter mag_filter = VK_FILTER_LINEAR;
@@ -37,13 +37,13 @@ VkFormat translate(render::Format format);
 
 TextureCreateInfo translate(const render::TextureInfo &info);
 
-class Texture {
+class Texture : public ITextureHandle {
   public:
     Texture(Context *context, const TextureCreateInfo &info);
 
     ARS_NO_COPY_MOVE(Texture);
 
-    ~Texture();
+    ~Texture() override;
 
     void set_data(void *data,
                   size_t size,
@@ -130,10 +130,12 @@ class TextureAdapter : public ITexture {
     void generate_mipmap() override;
 
     [[nodiscard]] Handle<Texture> texture() const;
+    ITextureHandle *handle() override;
 
   private:
     Handle<Texture> _texture{};
 };
 
 Handle<Texture> upcast(ITexture *texture);
+Texture *upcast(ITextureHandle *handle);
 } // namespace ars::render::vk

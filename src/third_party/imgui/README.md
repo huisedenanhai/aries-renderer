@@ -10,10 +10,10 @@ Add following codes to imconfig.h
 
 ```c++
 namespace ars::render {
-class ITexture;
+class ITextureHandle;
 }
 
-#define ImTextureID ars::render::ITexture*
+#define ImTextureID ars::render::ITextureHandle*
 ```
 
 # ImGuizmo

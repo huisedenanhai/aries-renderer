@@ -1,5 +1,6 @@
 #include "View.h"
 #include "Context.h"
+#include "Effect.h"
 #include "Environment.h"
 #include "Material.h"
 #include "Mesh.h"
@@ -46,6 +47,7 @@ View::View(Scene *scene, const Extent2D &size) : _scene(scene), _size(size) {
     _renderer = std::make_unique<Renderer>(this);
     _overlay_renderer = std::make_unique<OverlayRenderer>(this);
     _drawer = std::make_unique<Drawer>(this);
+    _effect = std::make_unique<Effect>();
 }
 
 math::XformTRS<float> View::xform() {
@@ -238,5 +240,9 @@ std::shared_ptr<Environment> View::environment_vk() {
         set_environment(_scene->context()->create_environment());
     }
     return _environment;
+}
+
+IEffect *View::effect() {
+    return _effect.get();
 }
 } // namespace ars::render::vk

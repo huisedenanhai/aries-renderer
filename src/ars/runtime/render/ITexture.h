@@ -49,6 +49,11 @@ uint32_t calculate_mip_levels(uint32_t width, uint32_t height, uint32_t depth);
 
 constexpr const char *RES_TYPE_NAME_TEXTURE = "ars::render::ITexture";
 
+class ITextureHandle {
+  public:
+    virtual ~ITextureHandle() = default;
+};
+
 class ITexture : public IRes {
   public:
     explicit ITexture(const TextureInfo &info);
@@ -68,6 +73,11 @@ class ITexture : public IRes {
     [[nodiscard]] WrapMode wrap_u() const;
     [[nodiscard]] WrapMode wrap_v() const;
     [[nodiscard]] WrapMode wrap_w() const;
+
+    // ITexture might only be a wrapper of the actual graphics resources.
+    // Resources are delayed destructed. Handles will be valid until the end of
+    // the frame.
+    [[nodiscard]] virtual ITextureHandle *handle() = 0;
 
     virtual void set_data(void *data,
                           size_t size,

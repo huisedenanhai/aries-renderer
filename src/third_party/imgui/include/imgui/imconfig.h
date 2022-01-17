@@ -115,10 +115,10 @@
 //#define IMGUI_DEBUG_PARANOID
 
 namespace ars::render {
-class ITexture;
+class ITextureHandle;
 }
 
-#define ImTextureID ars::render::ITexture*
+#define ImTextureID ars::render::ITextureHandle*
 
 //---- Tip: You can add extra functions within the ImGui:: namespace, here or in your own headers files.
 /*

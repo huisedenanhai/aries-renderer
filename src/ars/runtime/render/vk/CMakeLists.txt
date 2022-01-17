@@ -1,4 +1,6 @@
 aries_target_sources(render PRIVATE
+        Effect.cpp
+        Effect.h
         Environment.cpp
         Environment.h
         Lut.cpp

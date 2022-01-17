@@ -8,6 +8,7 @@
 // Aries uses right-hand coordinates, with Y points up, the same as the
 // convention of GLTF
 namespace ars::render {
+class IEffect;
 class IMesh;
 class ITexture;
 class IMaterial;
@@ -178,6 +179,9 @@ class IView {
     virtual std::shared_ptr<IEnvironment> environment() = 0;
     virtual void
     set_environment(const std::shared_ptr<IEnvironment> &environment) = 0;
+
+    // Not null
+    virtual IEffect *effect() = 0;
 
     [[nodiscard]] glm::mat4 view_matrix();
     [[nodiscard]] glm::mat4 projection_matrix();

@@ -463,6 +463,10 @@ Handle<Texture> TextureAdapter::texture() const {
     return _texture;
 }
 
+ITextureHandle *TextureAdapter::handle() {
+    return _texture.get();
+}
+
 VkFormat translate(render::Format format) {
     switch (format) {
     case Format::R8_SRGB:
@@ -565,5 +569,9 @@ Handle<Texture> upcast(ITexture *texture) {
     }
 
     return dynamic_cast<TextureAdapter *>(texture)->texture();
+}
+
+Texture *upcast(ITextureHandle *handle) {
+    return dynamic_cast<Texture *>(handle);
 }
 } // namespace ars::render::vk

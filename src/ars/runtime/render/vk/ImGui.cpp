@@ -14,25 +14,13 @@ class ImGuiRendererData {
   public:
     explicit ImGuiRendererData(Context *context, ImGuiIO &io, ImGuiPass *imgui)
         : _context(context), _imgui(imgui) {
-        _reserved_space = std::make_unique<uint8_t[]>(16);
         init_font_texture(io);
     }
 
     ARS_NO_COPY_MOVE(ImGuiRendererData);
 
     [[nodiscard]] ImTextureID font_atlas_id() const {
-        return reinterpret_cast<ImTextureID>(_reserved_space.get());
-    }
-
-    [[nodiscard]] Texture *as_texture(ImTextureID tex_id) const {
-        if (tex_id == font_atlas_id()) {
-            return font_atlas();
-        }
-        if (tex_id == nullptr) {
-            return nullptr;
-        }
-
-        return upcast(reinterpret_cast<ITexture *>(tex_id)).get();
+        return _font_atlas.get();
     }
 
     [[nodiscard]] Texture *font_atlas() const {
@@ -65,10 +53,6 @@ class ImGuiRendererData {
     }
 
     Context *_context{};
-    // Allocate a small slice of memory addresses as reserved ImTextureID
-    // By default ImTextureID should be ITexture *, but some built in textures
-    // should have type Texture *.
-    std::unique_ptr<uint8_t[]> _reserved_space{};
     Handle<Texture> _font_atlas{};
     ImGuiPass *_imgui = nullptr;
 };
@@ -379,7 +363,7 @@ void ImGuiPass::draw(CommandBuffer *cmd, ImGuiViewport *viewport) {
     auto try_bind_texture = [&](ImTextureID tex_id) {
         auto bd = reinterpret_cast<ImGuiRendererData *>(
             ImGui::GetIO().BackendRendererUserData);
-        auto tex = bd->as_texture(tex_id);
+        auto tex = upcast(tex_id);
         if (tex != nullptr && tex != current_texture) {
             force_bind_texture(tex);
         }

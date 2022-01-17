@@ -4,6 +4,7 @@
 #include "RenderTarget.h"
 
 namespace ars::render::vk {
+class Effect;
 class Scene;
 class Environment;
 class TextureAdapter;
@@ -55,6 +56,8 @@ class View : public IView {
     set_environment(const std::shared_ptr<IEnvironment> &environment) override;
     std::shared_ptr<Environment> environment_vk();
 
+    IEffect *effect() override;
+
     OverlayRenderer *vk_overlay() const;
 
     [[nodiscard]] Context *context() const;
@@ -88,5 +91,6 @@ class View : public IView {
     std::unique_ptr<OverlayRenderer> _overlay_renderer{};
     std::unique_ptr<Drawer> _drawer{};
     std::shared_ptr<Environment> _environment{};
+    std::unique_ptr<Effect> _effect{};
 };
 } // namespace ars::render::vk

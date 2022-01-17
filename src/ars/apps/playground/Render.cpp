@@ -263,7 +263,7 @@ class Application : public ars::engine::IApplication {
         ImGui::End();
 
         ImGui::Begin("Image");
-        ImGui::Image(_view->get_color_texture(),
+        ImGui::Image(_view->get_color_texture()->handle(),
                      {
                          _view->size().width * 0.2f,
                          _view->size().height * 0.2f,

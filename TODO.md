@@ -12,18 +12,20 @@ A very coarse plan for development.
         + [ ] Clear Coat
         + [ ] Hair
         + [ ] Eye
-    + [ ] Shader Graph
     + [ ] Shadow
+    + [ ] Shader Graph
     + [ ] Dynamic GI
 3. Effect
-    + [ ] Dynamic Sky
-    + [ ] Volumetric Cloud
+    + [ ] SSR
     + [ ] TAA
     + [ ] DOF
+    + [ ] Dynamic Sky
+    + [ ] Volumetric Cloud
 4. System
    > Build on top of existing rendering features
-    + [ ] Terrain
+    + [ ] Particle
     + [ ] Skeleton Animation
+    + [ ] Terrain
 
 ## Editing
 

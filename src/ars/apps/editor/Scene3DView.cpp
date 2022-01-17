@@ -344,7 +344,7 @@ void scene_3d_view(Scene3DViewState &state,
     view->set_size(framebuffer_size);
     view->render();
 
-    ImGui::Image(view->get_color_texture(), size);
+    ImGui::Image(view->get_color_texture()->handle(), size);
 
     transform_gizmo(state, view, current_selected);
     if (!ImGuizmo::IsUsing() && !ImGuizmo::IsOver()) {

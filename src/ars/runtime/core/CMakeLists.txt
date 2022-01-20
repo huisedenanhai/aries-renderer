@@ -1,4 +1,6 @@
 add_library(core
+        Profiler.cpp
+        Profiler.h
         Reflect.h
         Serde.cpp
         Serde.h
@@ -11,6 +13,7 @@ add_library(core
 aries_setup_common_target(core)
 
 target_link_libraries(core PUBLIC
+        imgui
         glm
         RTTR::Core_Lib
         spdlog

@@ -19,10 +19,6 @@ class ImGuiRendererData {
 
     ARS_NO_COPY_MOVE(ImGuiRendererData);
 
-    [[nodiscard]] ImTextureID font_atlas_id() const {
-        return _font_atlas.get();
-    }
-
     [[nodiscard]] Texture *font_atlas() const {
         return _font_atlas.get();
     }
@@ -49,7 +45,7 @@ class ImGuiRendererData {
         _font_atlas->set_data(
             pixels, data_size, 0, 0, 0, 0, 0, width, height, 1);
 
-        io.Fonts->SetTexID(font_atlas_id());
+        io.Fonts->SetTexID(font_atlas());
     }
 
     Context *_context{};

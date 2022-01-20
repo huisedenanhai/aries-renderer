@@ -15,17 +15,19 @@ A very coarse plan for development.
     + [ ] Shadow
     + [ ] Shader Graph
     + [ ] Dynamic GI
-3. Effect
+2. Effect
     + [ ] SSR
     + [ ] TAA
     + [ ] DOF
     + [ ] Dynamic Sky
     + [ ] Volumetric Cloud
-4. System
+3. System
    > Build on top of existing rendering features
     + [ ] Particle
     + [ ] Skeleton Animation
     + [ ] Terrain
+4. Utilities
+    + [ ] Profiler
 
 ## Editing
 

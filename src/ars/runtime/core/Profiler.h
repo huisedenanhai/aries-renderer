@@ -36,6 +36,8 @@ void profiler_end_sample(size_t group_id, float end_time_ms);
 
 struct ProfilerGuiState {
     float bar_scale = 30.0f;
+    float max_horizontal_scroll = 5000.0f;
+    float horizontal_scroll_ratio = 1.0f;
 };
 
 void profiler_on_gui(const std::string &window_name, ProfilerGuiState &state);

@@ -200,6 +200,8 @@ struct Profiler {
         on_gui_controls(state);
 
         auto cur_time_ms = pause ? pause_start_time_ms : get_time_ms();
+        cur_time_ms -= state.max_horizontal_scroll *
+                       (1.0f - state.horizontal_scroll_ratio) / state.bar_scale;
         for (int i = 0; i < MAX_PROFILER_GROUP_NUM; i++) {
             if (group_enabled[i]) {
                 groups[i].on_gui(cur_time_ms, state);
@@ -226,6 +228,8 @@ struct Profiler {
         if (ImGui::Button("-")) {
             state.bar_scale /= scale_button_strength;
         }
+        ImGui::SliderFloat(
+            "Horizontal Scroll", &state.horizontal_scroll_ratio, 0.0f, 1.0f);
     }
 };
 

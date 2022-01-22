@@ -19,20 +19,6 @@ Profiler::Profiler(Context *context)
     }
 
     _context->queue()->submit_once([&](CommandBuffer *cmd) {
-        cmd->ResetQueryPool(_query_pool, 0, 1);
-        cmd->WriteTimestamp(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, _query_pool, 0);
-    });
-
-    device->GetQueryPoolResults(_query_pool,
-                                0,
-                                1,
-                                sizeof(uint64_t),
-                                &_start_time_stamp,
-                                0,
-                                VK_QUERY_RESULT_64_BIT |
-                                    VK_QUERY_RESULT_WAIT_BIT);
-
-    _context->queue()->submit_once([&](CommandBuffer *cmd) {
         cmd->ResetQueryPool(_query_pool, 0, MAX_PROFILER_QUERY_COUNT_VK);
     });
 }
@@ -46,35 +32,20 @@ Profiler::~Profiler() {
 void Profiler::begin_sample(CommandBuffer *cmd,
                             const std::string &name,
                             uint32_t color) {
-    if (_commands.size() > MAX_PROFILER_QUERY_COUNT_VK) {
-        ARS_LOG_ERROR(
-            "Profiler sample count exceeds MAX_PROFILER_QUERY_COUNT_VK = {}",
-            MAX_PROFILER_QUERY_COUNT_VK);
-        return;
+    auto query_cmd = add_query_command(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+    if (query_cmd != nullptr) {
+        query_cmd->type = QueryCommandType::BeginSample;
+        query_cmd->name = name;
+        query_cmd->color = color;
     }
-
-    cmd->WriteTimestamp(
-        VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, _query_pool, _commands.size());
-    QueryCommand query_cmd{};
-    query_cmd.type = QueryCommandType::BeginSample;
-    query_cmd.name = name;
-    query_cmd.color = color;
-    _commands.push_back(query_cmd);
 }
 
 void Profiler::end_sample(CommandBuffer *cmd) {
-    if (_commands.size() > MAX_PROFILER_QUERY_COUNT_VK) {
-        ARS_LOG_ERROR(
-            "Profiler sample count exceeds MAX_PROFILER_QUERY_COUNT_VK = {}",
-            MAX_PROFILER_QUERY_COUNT_VK);
-        return;
+    auto query_cmd =
+        add_query_command(cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+    if (query_cmd != nullptr) {
+        query_cmd->type = QueryCommandType::EndSample;
     }
-
-    cmd->WriteTimestamp(
-        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, _query_pool, _commands.size());
-    QueryCommand query_cmd{};
-    query_cmd.type = QueryCommandType::EndSample;
-    _commands.push_back(query_cmd);
 }
 
 void Profiler::flush() {
@@ -102,32 +73,71 @@ void Profiler::flush() {
     });
 
     int pending_count = 0;
+    float frame_start_time_ms = 0.0f;
+    uint64_t frame_start_ts = 0;
+
+    auto get_time_ms = [&](uint64_t ts) {
+        return delta_time_ms(frame_start_ts, ts) + frame_start_time_ms;
+    };
     for (int i = 0; i < _commands.size(); i++) {
         auto &cmd = _commands[i];
         auto ts = time_stamps[i];
+        auto time_ms = get_time_ms(ts);
         switch (cmd.type) {
+        case QueryCommandType::BeginFrame:
+            // Correct time stamp on every frame begin.
+            // When there is no workload on GPU the time stamp may not change,
+            // thus the global time can not be inferred from timestamp.
+            frame_start_time_ms = cmd.frame_start_time_ms;
+            frame_start_ts = ts;
+            break;
         case QueryCommandType::BeginSample:
             ars::profiler_begin_sample(
-                PROFILER_GROUP_GPU, cmd.name, cmd.color, time_ms(ts));
+                PROFILER_GROUP_GPU, cmd.name, cmd.color, time_ms);
             pending_count++;
             break;
         case QueryCommandType::EndSample:
-            ars::profiler_end_sample(PROFILER_GROUP_GPU, time_ms(ts));
+            ars::profiler_end_sample(PROFILER_GROUP_GPU, time_ms);
             pending_count--;
             break;
         }
     }
 
     // Fix unpaired samples due to fixed query pool size
+    auto end_time_ms = get_time_ms(time_stamps.back());
     for (int i = 0; i < pending_count; i++) {
-        ars::profiler_end_sample(PROFILER_GROUP_GPU,
-                                 time_ms(time_stamps.back()));
+        ars::profiler_end_sample(PROFILER_GROUP_GPU, end_time_ms);
     }
 }
 
-float Profiler::time_ms(uint64_t time_stamp) const {
-    return static_cast<float>((double(time_stamp) - double(_start_time_stamp)) *
+void Profiler::begin_frame() {
+    _context->queue()->submit_once([&](CommandBuffer *cmd) {
+        auto query_cmd =
+            add_query_command(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+        if (query_cmd != nullptr) {
+            query_cmd->type = QueryCommandType::BeginFrame;
+            query_cmd->frame_start_time_ms =
+                ars::profiler_time_ms_from_inited();
+        }
+    });
+}
+
+float Profiler::delta_time_ms(uint64_t ts_from, uint64_t ts_to) const {
+    return static_cast<float>((double(ts_to) - double(ts_from)) *
                               _time_stamp_period_ns * 1e-6);
 }
 
+Profiler::QueryCommand *
+Profiler::add_query_command(CommandBuffer *cmd, VkPipelineStageFlagBits stage) {
+    if (_commands.size() > MAX_PROFILER_QUERY_COUNT_VK) {
+        ARS_LOG_ERROR(
+            "Profiler sample count exceeds MAX_PROFILER_QUERY_COUNT_VK = {}",
+            MAX_PROFILER_QUERY_COUNT_VK);
+        return nullptr;
+    }
+
+    cmd->WriteTimestamp(stage, _query_pool, _commands.size());
+    _commands.emplace_back();
+    return &_commands.back();
+}
 } // namespace ars::render::vk

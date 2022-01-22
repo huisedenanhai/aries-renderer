@@ -13,30 +13,36 @@ class Profiler {
     void
     begin_sample(CommandBuffer *cmd, const std::string &name, uint32_t color);
     void end_sample(CommandBuffer *cmd);
+    void begin_frame();
 
     void flush();
 
   private:
-    float time_ms(uint64_t time_stamp) const;
+    float delta_time_ms(uint64_t ts_from, uint64_t ts_to) const;
 
     Context *_context = nullptr;
     VkQueryPool _query_pool = VK_NULL_HANDLE;
     float _time_stamp_period_ns = 0.0f;
-    uint64_t _start_time_stamp{};
 
     enum class QueryCommandType {
+        BeginFrame,
         BeginSample,
         EndSample,
     };
 
     struct QueryCommand {
-        QueryCommandType type;
-        // name and color are only valid when query command type if BeginSample
-        std::string name;
-        uint32_t color;
+        QueryCommandType type{};
+        // name and color are only valid when query command type is BeginSample
+        std::string name{};
+        uint32_t color{};
+        // frame_start_time_ms only valid when query command type is BeginFrame
+        float frame_start_time_ms{};
     };
 
     std::vector<QueryCommand> _commands{};
+
+    QueryCommand *add_query_command(CommandBuffer *cmd,
+                                    VkPipelineStageFlagBits stage);
 };
 } // namespace ars::render::vk
 

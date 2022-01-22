@@ -24,6 +24,7 @@ void init_profiler();
 void destroy_profiler();
 
 bool profiler_inited();
+float profiler_time_ms_from_inited();
 
 void profiler_enable_group(size_t group_id, bool enable);
 bool profiler_group_enabled(size_t group_id);

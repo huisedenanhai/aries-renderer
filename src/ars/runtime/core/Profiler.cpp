@@ -318,4 +318,11 @@ void profiler_set_group_name(size_t group_id, const std::string &name) {
 bool profiler_inited() {
     return s_profiler != nullptr;
 }
+
+float profiler_time_ms_from_inited() {
+    if (s_profiler != nullptr) {
+        return s_profiler->get_time_ms();
+    }
+    return 0.0f;
+}
 } // namespace ars

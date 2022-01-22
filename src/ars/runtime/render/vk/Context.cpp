@@ -549,6 +549,14 @@ void Context::init_device_and_queues(Instance *instance,
     _properties.time_stamp_compute_graphics =
         device_properties.limits.timestampComputeAndGraphics;
     _properties.time_stamp_period_ns = device_properties.limits.timestampPeriod;
+    ARS_LOG_INFO("Time Period {}", _properties.time_stamp_period_ns);
+
+#ifdef __APPLE__
+    // Dirty fix for moltenVK, which returns incorrect 41.66 on M1 chips
+    // https://giters.com/KhronosGroup/MoltenVK/issues/1438
+    // Remove this after update moltenVK
+    _properties.time_stamp_period_ns = 1.0f;
+#endif
 }
 
 Context::Context(const WindowInfo *info,
@@ -632,6 +640,10 @@ bool Context::begin_frame() {
     _device->ResetCommandPool(_command_pool, 0);
     _descriptor_arena->reset();
     gc();
+
+    if (_profiler != nullptr) {
+        _profiler->begin_frame();
+    }
     return true;
 }
 

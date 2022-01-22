@@ -5,6 +5,7 @@
 #include "Material.h"
 #include "Mesh.h"
 #include "Pipeline.h"
+#include "Profiler.h"
 #include "Scene.h"
 #include "features/Drawer.h"
 #include "features/OverlayRenderer.h"
@@ -19,14 +20,18 @@ VkExtent2D translate(const Extent2D &size) {
 } // namespace
 
 void View::render() {
+    ARS_PROFILER_SAMPLE("Render View", 0xFFAA6611);
     auto ctx = context();
     _rt_manager->update(translate(_size));
 
-    auto final_rt = ctx->queue()->submit_once(
-        [&](CommandBuffer *cmd) { return _renderer->render(cmd); });
+    auto final_rt = ctx->queue()->submit_once([&](CommandBuffer *cmd) {
+        ARS_PROFILER_SAMPLE_VK(cmd, "Render Scene", 0xFF772183);
+        return _renderer->render(cmd);
+    });
 
     if (_overlay_renderer->need_render()) {
         ctx->queue()->submit_once([&](CommandBuffer *cmd) {
+            ARS_PROFILER_SAMPLE_VK(cmd, "Render Overlay", 0xFF152439);
             _overlay_renderer->render(cmd, final_rt);
         });
     }

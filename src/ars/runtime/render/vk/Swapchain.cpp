@@ -2,6 +2,7 @@
 #include "Context.h"
 #include "ImGui.h"
 #include "Pipeline.h"
+#include "Profiler.h"
 #include <GLFW/glfw3.h>
 #include <algorithm>
 #include <ars/runtime/core/Log.h>
@@ -637,6 +638,7 @@ void Swapchain::cleanup_swapchain() {
 }
 
 void Swapchain::present(ITexture *texture) {
+    ARS_PROFILER_SAMPLE("Present", 0xFF816341);
     auto device = _context->device();
     auto queue = _context->queue();
 
@@ -662,6 +664,7 @@ void Swapchain::present(ITexture *texture) {
 
     queue->submit_once(
         [&](CommandBuffer *cmd) {
+            ARS_PROFILER_SAMPLE("Draw Swapchain", 0xFF816341);
             VkRenderPassBeginInfo rp_info{
                 VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
             rp_info.renderPass = _render_pass->render_pass();
@@ -701,6 +704,7 @@ void Swapchain::present(ITexture *texture) {
 
             // ImGui
             if (_imgui != nullptr && _imgui_callback.has_value()) {
+                ARS_PROFILER_SAMPLE_VK(cmd, "ImGui", 0xFF163451);
                 _imgui->new_frame();
                 _imgui_callback.value()();
                 _imgui->end_frame();
@@ -716,28 +720,34 @@ void Swapchain::present(ITexture *texture) {
         1,
         &_image_ready_semaphore);
 
-    auto blit_finish_sem = queue->get_semaphore();
+    {
+        ARS_PROFILER_SAMPLE("Submit", 0xFF715391);
+        auto blit_finish_sem = queue->get_semaphore();
 
-    VkPresentInfoKHR present_info{VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
-    present_info.waitSemaphoreCount = 1;
-    present_info.pWaitSemaphores = &blit_finish_sem;
-    present_info.swapchainCount = 1;
-    present_info.pSwapchains = &_swapchain;
-    present_info.pImageIndices = &image_index;
-    VkResult present_result =
-        _context->device()->QueuePresentKHR(queue->queue(), &present_info);
+        VkPresentInfoKHR present_info{VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
+        present_info.waitSemaphoreCount = 1;
+        present_info.pWaitSemaphores = &blit_finish_sem;
+        present_info.swapchainCount = 1;
+        present_info.pSwapchains = &_swapchain;
+        present_info.pImageIndices = &image_index;
+        VkResult present_result =
+            _context->device()->QueuePresentKHR(queue->queue(), &present_info);
 
-    if (present_result != VK_SUCCESS &&
-        present_result != VK_ERROR_OUT_OF_DATE_KHR &&
-        present_result != VK_SUBOPTIMAL_KHR) {
-        ARS_LOG_CRITICAL("Failed to present to swapchain");
+        if (present_result != VK_SUCCESS &&
+            present_result != VK_ERROR_OUT_OF_DATE_KHR &&
+            present_result != VK_SUBOPTIMAL_KHR) {
+            ARS_LOG_CRITICAL("Failed to present to swapchain");
+        }
     }
 
 #ifdef __APPLE__
-    // Dirty Fix: It crashes on macOS when multiple swapchains want to present
-    // in the same frame.
-    // Just flush the queue. Synchronization overhead is better than nothing.
-    _context->queue()->flush();
+    {
+        ARS_PROFILER_SAMPLE("Queue Flush", 0xFF715391);
+        // Dirty Fix: It crashes on macOS when multiple swapchains want to
+        // present in the same frame. Just flush the queue. Synchronization
+        // overhead is better than nothing.
+        _context->queue()->flush();
+    }
 #endif
 }
 

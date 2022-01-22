@@ -90,15 +90,15 @@ struct ProfilerGroup {
         }
     }
 
-    void display_bar_graph(ProfilerGuiState &state) {
-        float sample_min_time_ms, sample_max_time_ms;
-        sample_time_ms_min_max(sample_min_time_ms, sample_max_time_ms);
+    void display_bar_graph(float display_min_time_ms,
+                           float display_max_time_ms,
+                           ProfilerGuiState &state) {
 
         auto bar_scale = state.bar_scale;
         float bar_height = ImGui::GetTextLineHeightWithSpacing();
 
         float scroll_rect_width =
-            (sample_max_time_ms - sample_min_time_ms) * bar_scale;
+            (display_max_time_ms - display_min_time_ms) * bar_scale;
 
         auto offset = ImGui::GetCursorScreenPos();
         auto draw = ImGui::GetWindowDrawList();
@@ -118,9 +118,9 @@ struct ProfilerGroup {
 
             for (auto s : buf) {
                 auto bar_min_x =
-                    (s->start_time_ms - sample_min_time_ms) * bar_scale;
+                    (s->start_time_ms - display_min_time_ms) * bar_scale;
                 auto bar_max_x =
-                    (s->end_time_ms - sample_min_time_ms) * bar_scale;
+                    (s->end_time_ms - display_min_time_ms) * bar_scale;
                 auto bar_min = offset + ImVec2(bar_min_x, height_offset);
                 auto bar_max =
                     offset + ImVec2(bar_max_x, height_offset + bar_height);
@@ -153,14 +153,16 @@ struct ProfilerGroup {
         ImGui::SetScrollHereX(state.scroll_x);
     }
 
-    void on_gui(ProfilerGuiState &state) {
+    void on_gui(float display_min_time_ms,
+                float display_max_time_ms,
+                ProfilerGuiState &state) {
         ImGui::Text("%s", name.c_str());
         ImGui::BeginChild(name.c_str(),
                           ImVec2(0, 100),
                           true,
                           ImGuiWindowFlags_HorizontalScrollbar);
 
-        display_bar_graph(state);
+        display_bar_graph(display_min_time_ms, display_max_time_ms, state);
 
         ImGui::EndChild();
     }
@@ -217,9 +219,19 @@ struct Profiler {
     void on_gui(ProfilerGuiState &state) {
         on_gui_controls(state);
 
+        float display_min_time_ms, display_max_time_ms;
         for (int i = 0; i < MAX_PROFILER_GROUP_NUM; i++) {
             if (group_enabled[i]) {
-                groups[i].on_gui(state);
+                groups[i].sample_time_ms_min_max(display_min_time_ms,
+                                                 display_max_time_ms);
+                break;
+            }
+        }
+
+        for (int i = 0; i < MAX_PROFILER_GROUP_NUM; i++) {
+            if (group_enabled[i]) {
+                groups[i].on_gui(
+                    display_min_time_ms, display_max_time_ms, state);
             }
         }
     }
@@ -296,6 +308,7 @@ void profiler_end_sample(size_t group_id) {
 }
 
 void profiler_on_gui(const std::string &window_name, ProfilerGuiState &state) {
+    ARS_PROFILER_SAMPLE("Profiler Window", 0xFF125932);
     ImGui::Begin(window_name.c_str());
     if (s_profiler == nullptr) {
         ImGui::Text("Profiler Not Enabled");

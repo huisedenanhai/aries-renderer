@@ -98,6 +98,7 @@ class Engine {
         auto current_time = start_time;
 
         while (!_application->want_to_quit() && !_main_window->should_close()) {
+            ARS_PROFILER_SAMPLE("Main Loop", 0xFFAA1639);
             check_secondary_windows_should_close();
 
             if (_render_context->begin_frame()) {
@@ -107,7 +108,10 @@ class Engine {
                     std::chrono::duration<double>(current_time - last_time)
                         .count();
 
-                _application->update(delta_time);
+                {
+                    ARS_PROFILER_SAMPLE("Application Update", 0xFF533421);
+                    _application->update(delta_time);
+                }
 
                 for (auto &w : _secondary_windows) {
                     w->update(delta_time);

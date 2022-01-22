@@ -175,7 +175,6 @@ struct Profiler {
     bool group_enabled[MAX_PROFILER_GROUP_NUM]{};
     TimePoint start_time{};
     bool pause = false;
-    float pause_start_time_ms = 0.0f;
 
     Profiler() {
         start_time = Clock::now();
@@ -185,9 +184,6 @@ struct Profiler {
         pause = p;
         for (auto &g : groups) {
             g.pause = p;
-        }
-        if (p) {
-            pause_start_time_ms = get_time_ms();
         }
     }
 

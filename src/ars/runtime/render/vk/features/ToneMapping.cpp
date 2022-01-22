@@ -1,4 +1,5 @@
 #include "ToneMapping.h"
+#include "../Profiler.h"
 
 namespace ars::render::vk {
 ToneMapping::ToneMapping(View *view, NamedRT src_rt, NamedRT dst_rt)
@@ -31,6 +32,8 @@ std::vector<PassDependency> ToneMapping::src_dependencies() {
 }
 
 void ToneMapping::render(CommandBuffer *cmd) {
+    ARS_PROFILER_SAMPLE_VK(cmd, "Tone Mapping", 0xFF81EFA2);
+
     _pipeline->bind(cmd);
 
     auto src_rt = _view->render_target(_src_rt_name);

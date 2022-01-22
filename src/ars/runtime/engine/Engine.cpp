@@ -1,4 +1,5 @@
 #include "Engine.h"
+#include "ars/runtime/core/Profiler.h"
 #include "ars/runtime/render/res/Material.h"
 #include "ars/runtime/render/res/Mesh.h"
 #include "ars/runtime/render/res/Texture.h"
@@ -83,6 +84,9 @@ class Engine {
     }
 
     void run() {
+        // Init profiler before renderer. The renderer decides whether to init
+        // backend specific profiler
+        init_profiler();
         init_render();
         init_resources();
         register_components();
@@ -152,6 +156,7 @@ class Engine {
         render::ApplicationInfo app_info{};
         app_info.app_name = info.name;
         app_info.enable_validation = true;
+        app_info.enable_profiler = profiler_inited();
 
         init_render_backend(app_info);
 

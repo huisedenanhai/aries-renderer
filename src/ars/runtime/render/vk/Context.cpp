@@ -3,6 +3,7 @@
 #include "Lut.h"
 #include "Material.h"
 #include "Mesh.h"
+#include "Profiler.h"
 #include "Scene.h"
 #include "Swapchain.h"
 #include <GLFW/glfw3.h>
@@ -161,7 +162,6 @@ bool check_validation_layers() {
 std::unique_ptr<Instance>
 create_vulkan_instance(const ApplicationInfo &app_info,
                        bool enable_validation) {
-
     auto api_version = VK_API_VERSION_1_2;
     VkApplicationInfo vk_app_info{VK_STRUCTURE_TYPE_APPLICATION_INFO};
     vk_app_info.apiVersion = api_version;
@@ -210,10 +210,13 @@ create_vulkan_instance(const ApplicationInfo &app_info,
 struct VulkanEnvironment {
     std::unique_ptr<Instance> instance = nullptr;
     VkDebugUtilsMessengerEXT debug_messenger = VK_NULL_HANDLE;
+    bool profiler_enabled = false;
 
     VulkanEnvironment(std::unique_ptr<Instance> ins,
-                      VkDebugUtilsMessengerEXT debug)
-        : instance(std::move(ins)), debug_messenger(debug) {}
+                      VkDebugUtilsMessengerEXT debug,
+                      bool profiler_enabled)
+        : instance(std::move(ins)), debug_messenger(debug),
+          profiler_enabled(profiler_enabled) {}
 
     [[nodiscard]] bool validation_enabled() const {
         return debug_messenger != VK_NULL_HANDLE;
@@ -264,8 +267,8 @@ void init_vulkan_backend(const ApplicationInfo &app_info) {
     if (enable_validation) {
         debug_messenger = create_debug_messenger(instance.get());
     }
-    s_vulkan = std::make_unique<VulkanEnvironment>(std::move(instance),
-                                                   debug_messenger);
+    s_vulkan = std::make_unique<VulkanEnvironment>(
+        std::move(instance), debug_messenger, app_info.enable_profiler);
 }
 
 void destroy_vulkan_backend() {
@@ -543,6 +546,9 @@ void Context::init_device_and_queues(Instance *instance,
         _properties.max_sampler_anisotropy =
             device_properties.limits.maxSamplerAnisotropy;
     }
+    _properties.time_stamp_compute_graphics =
+        device_properties.limits.timestampComputeAndGraphics;
+    _properties.time_stamp_period_ns = device_properties.limits.timestampPeriod;
 }
 
 Context::Context(const WindowInfo *info,
@@ -562,6 +568,7 @@ Context::Context(const WindowInfo *info,
     init_default_textures();
     _material_prototypes = std::make_unique<MaterialPrototypeRegistry>(this);
     _lut = std::make_unique<Lut>(this);
+    Context::init_profiler();
 }
 
 Instance *Context::instance() const {
@@ -618,6 +625,9 @@ Context::create_texture_impl(const TextureInfo &info) {
 
 bool Context::begin_frame() {
     glfwPollEvents();
+    if (_profiler != nullptr) {
+        _profiler->flush();
+    }
     _queue->flush();
     _device->ResetCommandPool(_command_pool, 0);
     _descriptor_arena->reset();
@@ -741,7 +751,7 @@ Handle<T> Context::create_handle(std::vector<std::shared_ptr<T>> &pool,
 
 Handle<CommandBuffer>
 Context::create_command_buffer(VkCommandBufferLevel level) {
-    return create_handle(_command_buffers, _device.get(), _command_pool, level);
+    return create_handle(_command_buffers, this, _command_pool, level);
 }
 
 Handle<Texture> Context::create_texture(const TextureCreateInfo &info) {
@@ -938,5 +948,16 @@ Context::create_single_color_cube_map(glm::vec4 color) {
 
 std::shared_ptr<IEnvironment> Context::create_environment() {
     return std::make_shared<Environment>(this);
+}
+
+Profiler *Context::profiler() const {
+    return _profiler.get();
+}
+
+void Context::init_profiler() {
+    if (s_vulkan->profiler_enabled &&
+        properties().time_stamp_compute_graphics) {
+        _profiler = std::make_unique<Profiler>(this);
+    }
 }
 } // namespace ars::render::vk

@@ -33,6 +33,7 @@ struct ApplicationInfo {
 
     bool enable_presentation = true;
     bool enable_validation = false;
+    bool enable_profiler = false;
 };
 
 void init_render_backend(const ApplicationInfo &info);

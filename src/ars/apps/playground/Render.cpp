@@ -1,7 +1,8 @@
-#include "ars/runtime/core/misc/Defer.h"
 #include <ars/runtime/core/Log.h>
+#include <ars/runtime/core/Profiler.h>
 #include <ars/runtime/core/input/Keyboard.h>
 #include <ars/runtime/core/input/Mouse.h>
+#include <ars/runtime/core/misc/Defer.h>
 #include <ars/runtime/engine/Engine.h>
 #include <ars/runtime/engine/Entity.Editor.h>
 #include <ars/runtime/engine/Entity.h>
@@ -270,6 +271,8 @@ class Application : public ars::engine::IApplication {
                      });
         ImGui::End();
 
+        ars::profiler_on_gui("Profiler", _profiler_gui_state);
+
         if (ImGui::GetIO().WantCaptureMouse) {
             return;
         }
@@ -300,6 +303,7 @@ class Application : public ars::engine::IApplication {
     std::unique_ptr<IView> _view{};
     std::unique_ptr<ars::engine::Scene> _scene{};
     ars::engine::Entity *_current_selected = nullptr;
+    ars::ProfilerGuiState _profiler_gui_state{};
 };
 
 int main() {

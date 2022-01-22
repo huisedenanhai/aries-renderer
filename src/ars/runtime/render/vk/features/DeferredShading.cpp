@@ -2,6 +2,7 @@
 #include "../Context.h"
 #include "../Environment.h"
 #include "../Lut.h"
+#include "../Profiler.h"
 #include "../Scene.h"
 
 namespace ars::render::vk {
@@ -15,6 +16,8 @@ DeferredShading::DeferredShading(View *view, NamedRT final_color_rt)
 }
 
 void DeferredShading::render(CommandBuffer *cmd) {
+    ARS_PROFILER_SAMPLE_VK(cmd, "Deferred Shading", 0xFF771233);
+
     auto final_color = _view->render_target(_final_color_rt);
     auto final_color_extent = final_color->info().extent;
     auto env = _view->environment_vk();

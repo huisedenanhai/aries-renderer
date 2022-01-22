@@ -1,4 +1,6 @@
 aries_target_sources(render PRIVATE
+        Profiler.cpp
+        Profiler.h
         Effect.cpp
         Effect.h
         Environment.cpp

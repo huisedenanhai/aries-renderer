@@ -3,10 +3,16 @@
 #include "misc/Defer.h"
 #include <string>
 
+// If ARS_PROFILER_ENABLED if not defined, all profiler related macros should be
+// no op, and profiler related methods should take as less runtime overhead as
+// possible.
+#define ARS_PROFILER_ENABLED
+
 namespace ars {
 constexpr size_t MAX_PROFILER_GROUP_NUM = 64;
 constexpr size_t MAX_PROFILER_SAMPLE_NUM = 512;
 
+// These groups are enabled by default
 constexpr size_t PROFILER_GROUP_CPU_MAIN_THREAD = 0;
 constexpr size_t PROFILER_GROUP_GPU = 1;
 
@@ -16,6 +22,8 @@ constexpr const char *PROFILER_GROUP_GPU_NAME = "GPU";
 
 void init_profiler();
 void destroy_profiler();
+
+bool profiler_inited();
 
 void profiler_enable_group(size_t group_id, bool enable);
 bool profiler_group_enabled(size_t group_id);
@@ -44,8 +52,13 @@ void profiler_on_gui(const std::string &window_name, ProfilerGuiState &state);
 
 } // namespace ars
 
-#define ARS_PROFILE_SAMPLE(name, color)                                        \
+#ifdef ARS_PROFILER_ENABLED
+#define ARS_PROFILER_SAMPLE(name, color)                                       \
     ars::profiler_begin_sample(                                                \
         PROFILER_GROUP_CPU_MAIN_THREAD, (name), (color));                      \
-    ARS_DEFER(                                                                 \
-        [&]() { ars::profiler_end_sample(PROFILER_GROUP_CPU_MAIN_THREAD); })
+    ARS_DEFER_TAGGED(profiler_sample, [&]() {                                  \
+        ars::profiler_end_sample(PROFILER_GROUP_CPU_MAIN_THREAD);              \
+    })
+#else
+#define ARS_PROFILER_SAMPLE(name, color)
+#endif

@@ -21,6 +21,9 @@ template <typename Func> auto make_defer(Func &&func) {
         std::forward<Func>(func));
 }
 
-#define ARS_DEFER(func)                                                        \
-    auto ARS_NAME_WITH_LINENO(defer_handle_) = ars::make_defer(func)
+#define ARS_DEFER_TAGGED(tag, func)                                            \
+    auto ARS_NAME_WITH_LINENO(defer_handle_##tag) = ars::make_defer(func)
+
+#define ARS_DEFER(func) ARS_DEFER_TAGGED(, func)
+
 } // namespace ars

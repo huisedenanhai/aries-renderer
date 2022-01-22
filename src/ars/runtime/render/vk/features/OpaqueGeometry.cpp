@@ -3,6 +3,7 @@
 #include "../Lut.h"
 #include "../Material.h"
 #include "../Mesh.h"
+#include "../Profiler.h"
 #include "../Scene.h"
 
 namespace ars::render::vk {
@@ -12,6 +13,8 @@ OpaqueGeometry::OpaqueGeometry(View *view) : _view(view) {
 }
 
 void OpaqueGeometry::render(CommandBuffer *cmd) {
+    ARS_PROFILER_SAMPLE_VK(cmd, "Opaque Geometry", 0xFF12AA34);
+
     auto ctx = _view->context();
 
     Framebuffer *fb = nullptr;

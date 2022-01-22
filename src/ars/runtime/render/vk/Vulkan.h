@@ -88,9 +88,11 @@ struct MemoryView {
 MemoryView
 load_spirv_code(const char *path, const char **flags, uint32_t flag_count);
 
+class Context;
+
 class CommandBuffer : public volk::CommandBuffer {
   public:
-    CommandBuffer(Device *device,
+    CommandBuffer(Context *context,
                   VkCommandPool pool,
                   VkCommandBufferLevel level);
 
@@ -102,11 +104,15 @@ class CommandBuffer : public volk::CommandBuffer {
 
     void end();
 
+    void begin_sample(const std::string &name, uint32_t color);
+    void end_sample();
+
+    Context *context() const;
+
   private:
+    Context *_context = nullptr;
     VkCommandPool _pool = VK_NULL_HANDLE;
 };
-
-class Context;
 
 // A reference counted handle for resources.
 // The context uses the handle for resource usage tracking and delayed resource

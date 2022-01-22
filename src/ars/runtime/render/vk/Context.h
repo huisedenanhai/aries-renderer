@@ -19,6 +19,7 @@ class DescriptorArena;
 class Swapchain;
 class Context;
 class MaterialPrototypeRegistry;
+class Profiler;
 
 void init_vulkan_backend(const ApplicationInfo &app_info);
 void destroy_vulkan_backend();
@@ -65,6 +66,8 @@ enum class DefaultTexture : uint32_t { White, Normal, WhiteCubeMap, Count };
 struct ContextProperties {
     bool anisotropic_sampler_enabled = false;
     float max_sampler_anisotropy = 1.0f;
+    bool time_stamp_compute_graphics = false;
+    float time_stamp_period_ns = 1.0f;
 };
 
 class Context : public IContext {
@@ -135,6 +138,8 @@ class Context : public IContext {
 
     [[nodiscard]] Lut *lut() const;
 
+    [[nodiscard]] Profiler *profiler() const;
+
   private:
     // This method init device if not
     std::tuple<GLFWwindow *, VkSurfaceKHR>
@@ -149,6 +154,7 @@ class Context : public IContext {
     void init_pipeline_cache();
     void init_descriptor_arena();
     void init_default_textures();
+    void init_profiler();
 
     // Clear unused resources
     void gc();
@@ -185,6 +191,7 @@ class Context : public IContext {
         _default_textures{};
 
     std::unique_ptr<Lut> _lut{};
+    std::unique_ptr<Profiler> _profiler{};
 };
 
 template <typename Func>

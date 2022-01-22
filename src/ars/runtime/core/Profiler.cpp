@@ -154,9 +154,6 @@ struct Profiler {
 
     Profiler() {
         start_time = Clock::now();
-        groups[PROFILER_GROUP_CPU_MAIN_THREAD].name =
-            PROFILER_GROUP_CPU_MAIN_THREAD_NAME;
-        groups[PROFILER_GROUP_GPU].name = PROFILER_GROUP_GPU_NAME;
     }
 
     void set_pause(bool p) {
@@ -237,7 +234,15 @@ std::unique_ptr<Profiler> s_profiler{};
 } // namespace
 
 void init_profiler() {
+#ifdef ARS_PROFILER_ENABLED
     s_profiler = std::make_unique<Profiler>();
+    profiler_enable_group(PROFILER_GROUP_CPU_MAIN_THREAD, true);
+    profiler_enable_group(PROFILER_GROUP_GPU, true);
+
+    profiler_set_group_name(PROFILER_GROUP_CPU_MAIN_THREAD,
+                            PROFILER_GROUP_CPU_MAIN_THREAD_NAME);
+    profiler_set_group_name(PROFILER_GROUP_GPU, PROFILER_GROUP_GPU_NAME);
+#endif
 }
 
 void destroy_profiler() {
@@ -310,4 +315,7 @@ void profiler_set_group_name(size_t group_id, const std::string &name) {
     s_profiler->groups[group_id].name = name;
 }
 
+bool profiler_inited() {
+    return s_profiler != nullptr;
+}
 } // namespace ars

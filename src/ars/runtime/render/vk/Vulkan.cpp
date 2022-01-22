@@ -1,5 +1,6 @@
 #include "Vulkan.h"
 #include "Context.h"
+#include "Profiler.h"
 #include <ars/runtime/core/Log.h>
 #include <frill_shaders.hpp>
 #include <stdexcept>
@@ -89,16 +90,17 @@ load_spirv_code(const char *path, const char **flags, uint32_t flag_count) {
     return MemoryView{code.code, code.size};
 }
 
-CommandBuffer::CommandBuffer(Device *device,
+CommandBuffer::CommandBuffer(Context *context,
                              VkCommandPool pool,
                              VkCommandBufferLevel level)
-    : volk::CommandBuffer(device, VK_NULL_HANDLE), _pool(pool) {
+    : volk::CommandBuffer(context->device(), VK_NULL_HANDLE), _context(context),
+      _pool(pool) {
     VkCommandBufferAllocateInfo info{
         VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
     info.commandBufferCount = 1;
     info.commandPool = pool;
     info.level = level;
-    if (device->Allocate(&info, &_command_buffer) != VK_SUCCESS) {
+    if (_device->Allocate(&info, &_command_buffer) != VK_SUCCESS) {
         ARS_LOG_CRITICAL("Failed to alloc command buffer");
     }
 }
@@ -120,6 +122,24 @@ void CommandBuffer::begin(VkCommandBufferUsageFlags usage) {
     info.flags = usage;
     if (_device->BeginCommandBuffer(_command_buffer, &info) != VK_SUCCESS) {
         ARS_LOG_CRITICAL("Failed to begin command buffer");
+    }
+}
+
+Context *CommandBuffer::context() const {
+    return _context;
+}
+
+void CommandBuffer::begin_sample(const std::string &name, uint32_t color) {
+    auto profiler = _context->profiler();
+    if (profiler != nullptr) {
+        profiler->begin_sample(this, name, color);
+    }
+}
+
+void CommandBuffer::end_sample() {
+    auto profiler = _context->profiler();
+    if (profiler != nullptr) {
+        profiler->end_sample(this);
     }
 }
 

@@ -90,29 +90,9 @@ struct ProfilerGroup {
         }
     }
 
-    static int get_sample_depth(Sample *s) {
-        if (s == nullptr) {
-            return 0;
-        }
-        int d = 0;
-        for (auto &child : s->children) {
-            d = std::max(d, get_sample_depth(child.get()));
-        }
-        return d + 1;
-    }
-
-    int get_sample_max_depth() {
-        int depth = 0;
-        for (auto &s : samples) {
-            depth = std::max(depth, get_sample_depth(s.get()));
-        }
-        return depth;
-    }
-
     void display_bar_graph(ProfilerGuiState &state) {
         float sample_min_time_ms, sample_max_time_ms;
         sample_time_ms_min_max(sample_min_time_ms, sample_max_time_ms);
-        auto sample_depth = get_sample_max_depth();
 
         auto bar_scale = state.bar_scale;
         float bar_height = ImGui::GetTextLineHeightWithSpacing();

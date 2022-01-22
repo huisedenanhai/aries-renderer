@@ -45,7 +45,6 @@ void profiler_end_sample(size_t group_id, float end_time_ms);
 
 struct ProfilerGuiState {
     float bar_scale = 30.0f;
-    float max_horizontal_scroll = 5000.0f;
     float scroll_x = 1.0f;
 };
 

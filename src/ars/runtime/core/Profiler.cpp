@@ -79,36 +79,58 @@ struct ProfilerGroup {
             nullptr, 0.0, pos, 0xFFFFFFFF, text, nullptr, 0.0f, &rect);
     }
 
-    void on_gui(float cur_time_ms, ProfilerGuiState &state) {
-        ImGui::Text("%s", name.c_str());
-        auto offset = ImGui::GetCursorScreenPos();
-        auto width = ImGui::GetContentRegionAvailWidth();
-        auto draw = ImGui::GetWindowDrawList();
-
-        float height_offset = 0.0f;
-        float bar_height = ImGui::GetTextLineHeightWithSpacing();
-        auto bar_scale = state.bar_scale;
-
-        float display_start_time_ms = cur_time_ms - width / bar_scale;
-        float display_end_time_ms = cur_time_ms;
-
-        auto sample_is_visible = [&](Sample *s) {
-            if (s->end_time_ms < display_start_time_ms ||
-                s->start_time_ms > display_end_time_ms) {
-                return false;
-            }
-            return true;
-        };
-
-        std::vector<Sample *> sample_to_draw[2]{};
-        uint32_t cur_index = 0;
+    void sample_time_ms_min_max(float &sample_min_time_ms,
+                                float &sample_max_time_ms) {
+        sample_min_time_ms = std::numeric_limits<float>::max();
+        sample_max_time_ms = std::numeric_limits<float>::min();
 
         for (auto &s : samples) {
-            if (sample_is_visible(s.get())) {
-                sample_to_draw[cur_index].push_back(s.get());
-            }
+            sample_min_time_ms = std::min(s->start_time_ms, sample_min_time_ms);
+            sample_max_time_ms = std::max(s->end_time_ms, sample_min_time_ms);
+        }
+    }
+
+    static int get_sample_depth(Sample *s) {
+        if (s == nullptr) {
+            return 0;
+        }
+        int d = 0;
+        for (auto &child : s->children) {
+            d = std::max(d, get_sample_depth(child.get()));
+        }
+        return d + 1;
+    }
+
+    int get_sample_max_depth() {
+        int depth = 0;
+        for (auto &s : samples) {
+            depth = std::max(depth, get_sample_depth(s.get()));
+        }
+        return depth;
+    }
+
+    void display_bar_graph(ProfilerGuiState &state) {
+        float sample_min_time_ms, sample_max_time_ms;
+        sample_time_ms_min_max(sample_min_time_ms, sample_max_time_ms);
+        auto sample_depth = get_sample_max_depth();
+
+        auto bar_scale = state.bar_scale;
+        float bar_height = ImGui::GetTextLineHeightWithSpacing();
+
+        float scroll_rect_width =
+            (sample_max_time_ms - sample_min_time_ms) * bar_scale;
+
+        auto offset = ImGui::GetCursorScreenPos();
+        auto draw = ImGui::GetWindowDrawList();
+
+        std::vector<Sample *> sample_to_draw[2]{};
+
+        uint32_t cur_index = 0;
+        for (auto &s : samples) {
+            sample_to_draw[cur_index].push_back(s.get());
         }
 
+        float height_offset = 0.0f;
         for (; !sample_to_draw[cur_index].empty(); cur_index = 1 - cur_index) {
             auto &buf = sample_to_draw[cur_index];
             auto &next_buf = sample_to_draw[1 - cur_index];
@@ -116,9 +138,9 @@ struct ProfilerGroup {
 
             for (auto s : buf) {
                 auto bar_min_x =
-                    (s->start_time_ms - display_start_time_ms) * bar_scale;
+                    (s->start_time_ms - sample_min_time_ms) * bar_scale;
                 auto bar_max_x =
-                    (s->end_time_ms - display_start_time_ms) * bar_scale;
+                    (s->end_time_ms - sample_min_time_ms) * bar_scale;
                 auto bar_min = offset + ImVec2(bar_min_x, height_offset);
                 auto bar_max =
                     offset + ImVec2(bar_max_x, height_offset + bar_height);
@@ -137,7 +159,30 @@ struct ProfilerGroup {
 
             height_offset += bar_height;
         }
-        ImGui::Dummy(ImVec2(width, height_offset));
+
+        ImGui::InvisibleButton(
+            "Background",
+            ImVec2(scroll_rect_width,
+                   std::max(height_offset, ImGui::GetContentRegionAvail().y)));
+        if (ImGui::IsItemActive() &&
+            ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
+            state.scroll_x -= ImGui::GetIO().MouseDelta.x / scroll_rect_width;
+            state.scroll_x = std::clamp(state.scroll_x, 0.0f, 1.0f);
+        }
+
+        ImGui::SetScrollHereX(state.scroll_x);
+    }
+
+    void on_gui(ProfilerGuiState &state) {
+        ImGui::Text("%s", name.c_str());
+        ImGui::BeginChild(name.c_str(),
+                          ImVec2(0, 100),
+                          true,
+                          ImGuiWindowFlags_HorizontalScrollbar);
+
+        display_bar_graph(state);
+
+        ImGui::EndChild();
     }
 
     void clear() {
@@ -196,12 +241,9 @@ struct Profiler {
     void on_gui(ProfilerGuiState &state) {
         on_gui_controls(state);
 
-        auto cur_time_ms = pause ? pause_start_time_ms : get_time_ms();
-        cur_time_ms -= state.max_horizontal_scroll *
-                       (1.0f - state.horizontal_scroll_ratio) / state.bar_scale;
         for (int i = 0; i < MAX_PROFILER_GROUP_NUM; i++) {
             if (group_enabled[i]) {
-                groups[i].on_gui(cur_time_ms, state);
+                groups[i].on_gui(state);
             }
         }
     }
@@ -225,8 +267,7 @@ struct Profiler {
         if (ImGui::Button("-")) {
             state.bar_scale /= scale_button_strength;
         }
-        ImGui::SliderFloat(
-            "Horizontal Scroll", &state.horizontal_scroll_ratio, 0.0f, 1.0f);
+        ImGui::SliderFloat("Horizontal Scroll", &state.scroll_x, 0.0f, 1.0f);
     }
 };
 

@@ -22,8 +22,8 @@ Profiler::Profiler(Context *context)
         cmd->ResetQueryPool(_query_pool, 0, MAX_PROFILER_QUERY_COUNT_VK);
     });
 
-    _time_stamp_mask >>=
-        (64 - context->queue()->family_properties().timestampValidBits);
+    _time_stamp_mask >>= std::max(
+        0u, (64 - context->queue()->family_properties().timestampValidBits));
 }
 
 Profiler::~Profiler() {

@@ -53,12 +53,15 @@ class Queue {
     // wait the queue idle
     void flush();
 
+    [[nodiscard]] VkQueueFamilyProperties family_properties() const;
+
   private:
     // A queue for synchronizing each command buffer submissions
     std::vector<VkSemaphore> _semaphores;
     Context *_context = nullptr;
     uint32_t _family_index = 0;
     VkQueue _queue = VK_NULL_HANDLE;
+    VkQueueFamilyProperties _family_properties{};
 };
 
 enum class DefaultTexture : uint32_t { White, Normal, WhiteCubeMap, Count };

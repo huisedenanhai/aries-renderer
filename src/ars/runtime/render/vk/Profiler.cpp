@@ -21,6 +21,9 @@ Profiler::Profiler(Context *context)
     _context->queue()->submit_once([&](CommandBuffer *cmd) {
         cmd->ResetQueryPool(_query_pool, 0, MAX_PROFILER_QUERY_COUNT_VK);
     });
+
+    _time_stamp_mask >>=
+        (64 - context->queue()->family_properties().timestampValidBits);
 }
 
 Profiler::~Profiler() {
@@ -123,7 +126,8 @@ void Profiler::begin_frame() {
 }
 
 float Profiler::delta_time_ms(uint64_t ts_from, uint64_t ts_to) const {
-    return static_cast<float>((double(ts_to) - double(ts_from)) *
+    return static_cast<float>((double(ts_to & _time_stamp_mask) -
+                               double(ts_from & _time_stamp_mask)) *
                               _time_stamp_period_ns * 1e-6);
 }
 

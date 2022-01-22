@@ -553,7 +553,7 @@ void Context::init_device_and_queues(Instance *instance,
 
 #ifdef __APPLE__
     // Dirty fix for moltenVK, which returns incorrect 41.66 on M1 chips
-    // https://giters.com/KhronosGroup/MoltenVK/issues/1438
+    // https://github.com/KhronosGroup/MoltenVK/issues/1438
     // Remove this after update moltenVK
     _properties.time_stamp_period_ns = 1.0f;
 #endif
@@ -668,7 +668,21 @@ Context::~Context() {
 
 Queue::Queue(Context *context, uint32_t family_index)
     : _context(context), _family_index(family_index) {
-    _context->device()->GetDeviceQueue(family_index, 0, &_queue);
+    auto instance = _context->instance();
+    auto device = _context->device();
+    device->GetDeviceQueue(family_index, 0, &_queue);
+
+    uint32_t property_count = 0;
+    instance->GetPhysicalDeviceQueueFamilyProperties(
+        device->physical_device(), &property_count, nullptr);
+
+    std::vector<VkQueueFamilyProperties> properties{};
+    properties.resize(property_count);
+    instance->GetPhysicalDeviceQueueFamilyProperties(
+        device->physical_device(), &property_count, properties.data());
+
+    assert(family_index < property_count);
+    _family_properties = properties[family_index];
 }
 
 uint32_t Queue::family_index() const {
@@ -743,6 +757,10 @@ VkSemaphore Queue::get_semaphore() const {
         return _semaphores.back();
     }
     return VK_NULL_HANDLE;
+}
+
+VkQueueFamilyProperties Queue::family_properties() const {
+    return _family_properties;
 }
 
 void Context::init_command_pool() {

@@ -23,6 +23,7 @@ class Profiler {
     Context *_context = nullptr;
     VkQueryPool _query_pool = VK_NULL_HANDLE;
     float _time_stamp_period_ns = 0.0f;
+    uint64_t _time_stamp_mask = ~0;
 
     enum class QueryCommandType {
         BeginFrame,

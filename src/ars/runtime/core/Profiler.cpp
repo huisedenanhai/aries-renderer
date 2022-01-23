@@ -155,10 +155,13 @@ struct ProfilerGroup {
                 frame_ms > visible_max_time_ms) {
                 continue;
             }
-            auto x = (frame_ms - display_min_time_ms) * bar_scale;
+            float line_width = 1.0f;
+            auto x = (frame_ms - display_min_time_ms) * bar_scale -
+                     0.5f * line_width;
             draw->AddLine(offset + ImVec2(x, -1000.0f),
                           offset + ImVec2(x, 1000.0f),
-                          0xAAAAAAAA);
+                          0xAAAAAAAA,
+                          line_width);
         }
     }
 

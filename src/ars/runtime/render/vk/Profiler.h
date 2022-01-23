@@ -10,8 +10,12 @@ class Profiler {
     explicit Profiler(Context *context);
     ~Profiler();
 
-    void
-    begin_sample(CommandBuffer *cmd, const std::string &name, uint32_t color);
+    void begin_sample(CommandBuffer *cmd,
+                      const std::string &name,
+                      uint32_t color,
+                      const char *file_name,
+                      uint32_t line,
+                      const char *function_name);
     void end_sample(CommandBuffer *cmd);
     void begin_frame();
 
@@ -36,6 +40,9 @@ class Profiler {
         // name and color are only valid when query command type is BeginSample
         std::string name{};
         uint32_t color{};
+        const char *file_name = nullptr;
+        uint32_t line = 0;
+        const char *function_name = nullptr;
         // frame_start_time_ms only valid when query command type is BeginFrame
         float frame_start_time_ms{};
     };
@@ -49,7 +56,7 @@ class Profiler {
 
 #ifdef ARS_PROFILER_ENABLED
 #define ARS_PROFILER_SAMPLE_VK_ONLY(cmd, name, color)                          \
-    (cmd)->begin_sample(name, color);                                          \
+    (cmd)->begin_sample(name, color, __FILE__, __LINE__, __PRETTY_FUNCTION__); \
     ARS_DEFER_TAGGED(vk_sample, [&]() { (cmd)->end_sample(); })
 #else
 #define ARS_PROFILER_SAMPLE_VK_ONLY(cmd, name, color)

@@ -27,7 +27,7 @@ A very coarse plan for development.
     + [ ] Skeleton Animation
     + [ ] Terrain
 4. Utilities
-    + [ ] Profiler
+    + [x] Profiler
 
 ## Editing
 

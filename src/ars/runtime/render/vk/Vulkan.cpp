@@ -129,10 +129,15 @@ Context *CommandBuffer::context() const {
     return _context;
 }
 
-void CommandBuffer::begin_sample(const std::string &name, uint32_t color) {
+void CommandBuffer::begin_sample(const std::string &name,
+                                 uint32_t color,
+                                 const char *file_name,
+                                 uint32_t line,
+                                 const char *function_name) {
     auto profiler = _context->profiler();
     if (profiler != nullptr) {
-        profiler->begin_sample(this, name, color);
+        profiler->begin_sample(
+            this, name, color, file_name, line, function_name);
     }
 }
 

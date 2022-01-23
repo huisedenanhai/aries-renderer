@@ -36,14 +36,22 @@ void profiler_set_group_name(size_t group_id, const std::string &name);
 
 void profiler_new_frame();
 
+// file_name, function_name should have static lifetime, we do not copy its
+// content
 void profiler_begin_sample(size_t group_id,
                            const std::string &name,
-                           uint32_t color);
+                           uint32_t color,
+                           const char *file_name,
+                           uint32_t line,
+                           const char *function_name);
 void profiler_end_sample(size_t group_id);
 
 void profiler_begin_sample(size_t group_id,
                            const std::string &name,
                            uint32_t color,
+                           const char *file_name,
+                           uint32_t line,
+                           const char *function_name,
                            float start_time_ms);
 void profiler_end_sample(size_t group_id, float end_time_ms);
 
@@ -61,8 +69,12 @@ void profiler_on_gui(const std::string &window_name, ProfilerGuiState &state);
 
 #ifdef ARS_PROFILER_ENABLED
 #define ARS_PROFILER_SAMPLE(name, color)                                       \
-    ars::profiler_begin_sample(                                                \
-        PROFILER_GROUP_CPU_MAIN_THREAD, (name), (color));                      \
+    ars::profiler_begin_sample(PROFILER_GROUP_CPU_MAIN_THREAD,                 \
+                               (name),                                         \
+                               (color),                                        \
+                               __FILE__,                                       \
+                               __LINE__,                                       \
+                               __PRETTY_FUNCTION__);                           \
     ARS_DEFER_TAGGED(profiler_sample, [&]() {                                  \
         ars::profiler_end_sample(PROFILER_GROUP_CPU_MAIN_THREAD);              \
     })

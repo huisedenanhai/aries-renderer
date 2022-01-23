@@ -104,7 +104,11 @@ class CommandBuffer : public volk::CommandBuffer {
 
     void end();
 
-    void begin_sample(const std::string &name, uint32_t color);
+    void begin_sample(const std::string &name,
+                      uint32_t color,
+                      const char *file_name,
+                      uint32_t line,
+                      const char *function_name);
     void end_sample();
 
     Context *context() const;

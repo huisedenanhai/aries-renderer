@@ -34,12 +34,18 @@ Profiler::~Profiler() {
 
 void Profiler::begin_sample(CommandBuffer *cmd,
                             const std::string &name,
-                            uint32_t color) {
+                            uint32_t color,
+                            const char *file_name,
+                            uint32_t line,
+                            const char *function_name) {
     auto query_cmd = add_query_command(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
     if (query_cmd != nullptr) {
         query_cmd->type = QueryCommandType::BeginSample;
         query_cmd->name = name;
         query_cmd->color = color;
+        query_cmd->file_name = file_name;
+        query_cmd->line = line;
+        query_cmd->function_name = function_name;
     }
 }
 
@@ -95,8 +101,13 @@ void Profiler::flush() {
             frame_start_ts = ts;
             break;
         case QueryCommandType::BeginSample:
-            ars::profiler_begin_sample(
-                PROFILER_GROUP_GPU, cmd.name, cmd.color, time_ms);
+            ars::profiler_begin_sample(PROFILER_GROUP_GPU,
+                                       cmd.name,
+                                       cmd.color,
+                                       cmd.file_name,
+                                       cmd.line,
+                                       cmd.function_name,
+                                       time_ms);
             pending_count++;
             break;
         case QueryCommandType::EndSample:

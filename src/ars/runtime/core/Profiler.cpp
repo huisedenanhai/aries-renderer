@@ -21,6 +21,9 @@ struct Sample {
     float start_time_ms{};
     float end_time_ms{};
     std::vector<std::unique_ptr<Sample>> children{};
+    const char *file_name = nullptr;
+    uint32_t line = 0;
+    const char *function_name = nullptr;
 };
 
 struct ProfilerGroup {
@@ -32,11 +35,17 @@ struct ProfilerGroup {
 
     void begin_sample(const std::string &sample_name,
                       uint32_t color,
-                      float start_time_ms) {
+                      float start_time_ms,
+                      const char *file_name,
+                      uint32_t line,
+                      const char *function_name) {
         auto s = std::make_unique<Sample>();
         s->name = sample_name;
         s->color = color;
         s->start_time_ms = start_time_ms;
+        s->file_name = file_name;
+        s->line = line;
+        s->function_name = function_name;
 
         working_stack.emplace(std::move(s));
     }
@@ -217,7 +226,12 @@ struct ProfilerGroup {
                 draw_clipped_text(draw, bar_rect, info_label.c_str());
 
                 if (is_bar_hovered) {
-                    ImGui::SetTooltip("%s", info_label.c_str());
+                    ImGui::SetTooltip("%s\nFile: %s\nLine: %d\nFunction: %s",
+                                      info_label.c_str(),
+                                      s->file_name ? s->file_name : "<null>",
+                                      s->line,
+                                      s->function_name ? s->function_name
+                                                       : "<null>");
                     draw->AddRect(bar_min, bar_max, 0xFF0000FF);
                 }
 
@@ -282,9 +296,13 @@ struct Profiler {
     void begin_sample(size_t group_id,
                       const std::string &name,
                       uint32_t color,
-                      float start_time_ms) {
+                      float start_time_ms,
+                      const char *file_name,
+                      uint32_t line,
+                      const char *function_name) {
         if (group_id < MAX_PROFILER_GROUP_NUM && group_enabled[group_id]) {
-            groups[group_id].begin_sample(name, color, start_time_ms);
+            groups[group_id].begin_sample(
+                name, color, start_time_ms, file_name, line, function_name);
         }
     }
 
@@ -412,9 +430,18 @@ void destroy_profiler() {
 void profiler_begin_sample(size_t group_id,
                            const std::string &name,
                            uint32_t color,
+                           const char *file_name,
+                           uint32_t line,
+                           const char *function_name,
                            float start_time_ms) {
     if (s_profiler != nullptr) {
-        s_profiler->begin_sample(group_id, name, color, start_time_ms);
+        s_profiler->begin_sample(group_id,
+                                 name,
+                                 color,
+                                 start_time_ms,
+                                 file_name,
+                                 line,
+                                 function_name);
     }
 }
 
@@ -426,9 +453,18 @@ void profiler_end_sample(size_t group_id, float end_time_ms) {
 
 void profiler_begin_sample(size_t group_id,
                            const std::string &name,
-                           uint32_t color) {
+                           uint32_t color,
+                           const char *file_name,
+                           uint32_t line,
+                           const char *function_name) {
     if (s_profiler != nullptr) {
-        profiler_begin_sample(group_id, name, color, s_profiler->get_time_ms());
+        profiler_begin_sample(group_id,
+                              name,
+                              color,
+                              file_name,
+                              line,
+                              function_name,
+                              s_profiler->get_time_ms());
     }
 }
 

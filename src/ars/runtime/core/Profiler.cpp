@@ -28,6 +28,7 @@ struct ProfilerGroup {
     std::deque<std::unique_ptr<Sample>> samples{};
     std::stack<std::unique_ptr<Sample>> working_stack{};
     bool pause = false;
+    uint32_t index = 0;
 
     void begin_sample(const std::string &sample_name,
                       uint32_t color,
@@ -158,7 +159,7 @@ struct ProfilerGroup {
                 ProfilerGuiState &state) {
         ImGui::Text("%s", name.c_str());
         ImGui::BeginChild(name.c_str(),
-                          ImVec2(0, 100),
+                          ImVec2(0, state.window_heights[index]),
                           true,
                           ImGuiWindowFlags_HorizontalScrollbar);
 
@@ -181,6 +182,9 @@ struct Profiler {
 
     Profiler() {
         start_time = Clock::now();
+        for (int i = 0; i < MAX_PROFILER_GROUP_NUM; i++) {
+            groups[i].index = i;
+        }
     }
 
     void set_pause(bool p) {
@@ -229,10 +233,22 @@ struct Profiler {
             }
         }
 
+        int id = 0;
         for (int i = 0; i < MAX_PROFILER_GROUP_NUM; i++) {
             if (group_enabled[i]) {
+                ImGui::PushID(id++);
                 groups[i].on_gui(
                     display_min_time_ms, display_max_time_ms, state);
+                ImGui::Button(
+                    "##Resize",
+                    ImVec2(ImGui::GetContentRegionAvailWidth(), 10.0));
+                if (ImGui::IsItemActive()) {
+                    auto delta = ImGui::GetIO().MouseDelta.y;
+                    auto &height = state.window_heights[i];
+                    height += delta;
+                    height = std::max(30.0f, height);
+                }
+                ImGui::PopID();
             }
         }
     }
@@ -386,6 +402,12 @@ float profiler_time_ms_from_inited() {
 void profiler_new_frame() {
     if (s_profiler != nullptr) {
         s_profiler->new_frame();
+    }
+}
+
+ProfilerGuiState::ProfilerGuiState() {
+    for (auto &h : window_heights) {
+        h = 100.0f;
     }
 }
 } // namespace ars

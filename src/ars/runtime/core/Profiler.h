@@ -50,6 +50,9 @@ void profiler_end_sample(size_t group_id, float end_time_ms);
 struct ProfilerGuiState {
     float bar_scale = 30.0f;
     float scroll_x = 1.0f;
+    float window_heights[MAX_PROFILER_GROUP_NUM]{};
+
+    ProfilerGuiState();
 };
 
 void profiler_on_gui(const std::string &window_name, ProfilerGuiState &state);

@@ -177,6 +177,7 @@ struct Profiler {
     bool group_enabled[MAX_PROFILER_GROUP_NUM]{};
     TimePoint start_time{};
     bool pause = false;
+    std::deque<float> frame_times_ms{};
 
     Profiler() {
         start_time = Clock::now();
@@ -236,6 +237,19 @@ struct Profiler {
         }
     }
 
+    float average_frame_time_ms() {
+        if (frame_times_ms.size() <= 1) {
+            return 0.0f;
+        }
+        auto gather_frame =
+            std::min(PROFILER_AVERAGE_FPS_GATHER_FRAMES, frame_times_ms.size());
+        auto start_time_ms =
+            frame_times_ms[frame_times_ms.size() - gather_frame];
+        auto end_time_ms = frame_times_ms.back();
+        return (end_time_ms - start_time_ms) /
+               static_cast<float>(gather_frame - 1);
+    }
+
     void on_gui_controls(ProfilerGuiState &state) {
         if (ImGui::Checkbox("Pause", &pause)) {
             set_pause(pause);
@@ -255,7 +269,20 @@ struct Profiler {
         if (ImGui::Button("-")) {
             state.bar_scale /= scale_button_strength;
         }
+        ImGui::SameLine();
+        auto ave_frame_time_ms = average_frame_time_ms();
+        ImGui::Text("Average %.3f ms/frame (%.2f FPS)",
+                    ave_frame_time_ms,
+                    1000.0f / ave_frame_time_ms);
+
         ImGui::SliderFloat("Horizontal Scroll", &state.scroll_x, 0.0f, 1.0f);
+    }
+
+    void new_frame() {
+        frame_times_ms.push_back(get_time_ms());
+        if (frame_times_ms.size() > PROFILER_AVERAGE_FPS_GATHER_FRAMES) {
+            frame_times_ms.pop_front();
+        }
     }
 };
 
@@ -354,5 +381,11 @@ float profiler_time_ms_from_inited() {
         return s_profiler->get_time_ms();
     }
     return 0.0f;
+}
+
+void profiler_new_frame() {
+    if (s_profiler != nullptr) {
+        s_profiler->new_frame();
+    }
 }
 } // namespace ars

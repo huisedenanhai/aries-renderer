@@ -98,6 +98,7 @@ class Engine {
         auto current_time = start_time;
 
         while (!_application->want_to_quit() && !_main_window->should_close()) {
+            ARS_PROFILER_NEW_FRAME();
             ARS_PROFILER_SAMPLE("Main Loop", 0xFFAA1639);
             check_secondary_windows_should_close();
 

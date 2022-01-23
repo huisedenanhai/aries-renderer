@@ -12,6 +12,8 @@ namespace ars {
 constexpr size_t MAX_PROFILER_GROUP_NUM = 64;
 constexpr size_t MAX_PROFILER_SAMPLE_NUM = 512;
 
+constexpr size_t PROFILER_AVERAGE_FPS_GATHER_FRAMES = 64;
+
 // These groups are enabled by default
 constexpr size_t PROFILER_GROUP_CPU_MAIN_THREAD = 0;
 constexpr size_t PROFILER_GROUP_GPU = 1;
@@ -31,6 +33,8 @@ bool profiler_group_enabled(size_t group_id);
 
 std::string profiler_group_name(size_t group_id);
 void profiler_set_group_name(size_t group_id, const std::string &name);
+
+void profiler_new_frame();
 
 void profiler_begin_sample(size_t group_id,
                            const std::string &name,
@@ -59,6 +63,9 @@ void profiler_on_gui(const std::string &window_name, ProfilerGuiState &state);
     ARS_DEFER_TAGGED(profiler_sample, [&]() {                                  \
         ars::profiler_end_sample(PROFILER_GROUP_CPU_MAIN_THREAD);              \
     })
+
+#define ARS_PROFILER_NEW_FRAME() ars::profiler_new_frame()
 #else
 #define ARS_PROFILER_SAMPLE(name, color)
+#define ARS_PROFILER_NEW_FRAME()
 #endif

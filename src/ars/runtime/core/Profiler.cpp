@@ -94,7 +94,6 @@ struct ProfilerGroup {
     void display_bar_graph(float display_min_time_ms,
                            float display_max_time_ms,
                            ProfilerGuiState &state) {
-
         auto bar_scale = state.bar_scale;
         float bar_height = ImGui::GetTextLineHeightWithSpacing();
 
@@ -106,9 +105,27 @@ struct ProfilerGroup {
 
         std::vector<Sample *> sample_to_draw[2]{};
 
+        auto visible_time_range_ms =
+            ImGui::GetContentRegionAvailWidth() / bar_scale;
+        auto visible_min_time_ms =
+            display_min_time_ms +
+            state.scroll_x * (display_max_time_ms - display_min_time_ms -
+                              visible_time_range_ms);
+        auto visible_max_time_ms = visible_min_time_ms + visible_time_range_ms;
+
+        auto is_visible = [&](Sample *s) {
+            if (s->end_time_ms < visible_min_time_ms ||
+                s->start_time_ms > visible_max_time_ms) {
+                return false;
+            }
+            return true;
+        };
+
         uint32_t cur_index = 0;
         for (auto &s : samples) {
-            sample_to_draw[cur_index].push_back(s.get());
+            if (is_visible(s.get())) {
+                sample_to_draw[cur_index].push_back(s.get());
+            }
         }
 
         float height_offset = 0.0f;
@@ -225,11 +242,14 @@ struct Profiler {
         on_gui_controls(state);
 
         float display_min_time_ms, display_max_time_ms;
-        for (int i = 0; i < MAX_PROFILER_GROUP_NUM; i++) {
-            if (group_enabled[i]) {
-                groups[i].sample_time_ms_min_max(display_min_time_ms,
-                                                 display_max_time_ms);
-                break;
+        {
+            ARS_PROFILER_SAMPLE("Calculate Min Max", 0xFF131111);
+            for (int i = 0; i < MAX_PROFILER_GROUP_NUM; i++) {
+                if (group_enabled[i]) {
+                    groups[i].sample_time_ms_min_max(display_min_time_ms,
+                                                     display_max_time_ms);
+                    break;
+                }
             }
         }
 

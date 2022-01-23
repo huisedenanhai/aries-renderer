@@ -91,7 +91,8 @@ struct ProfilerGroup {
         }
     }
 
-    void display_bar_graph(float display_min_time_ms,
+    void display_bar_graph(const std::deque<float> &frame_times_ms,
+                           float display_min_time_ms,
                            float display_max_time_ms,
                            ProfilerGuiState &state) {
         auto bar_scale = state.bar_scale;
@@ -99,11 +100,6 @@ struct ProfilerGroup {
 
         float scroll_rect_width =
             (display_max_time_ms - display_min_time_ms) * bar_scale;
-
-        auto offset = ImGui::GetCursorScreenPos();
-        auto draw = ImGui::GetWindowDrawList();
-
-        std::vector<Sample *> sample_to_draw[2]{};
 
         auto visible_time_range_ms =
             ImGui::GetContentRegionAvailWidth() / bar_scale;
@@ -113,6 +109,55 @@ struct ProfilerGroup {
                               visible_time_range_ms);
         auto visible_max_time_ms = visible_min_time_ms + visible_time_range_ms;
 
+        draw_frame_seperator(frame_times_ms,
+                             display_min_time_ms,
+                             bar_scale,
+                             visible_min_time_ms,
+                             visible_max_time_ms);
+
+        float height_offset = draw_bars(display_min_time_ms,
+                                        bar_scale,
+                                        bar_height,
+                                        visible_min_time_ms,
+                                        visible_max_time_ms);
+
+        ImGui::InvisibleButton(
+            "Background",
+            ImVec2(scroll_rect_width,
+                   std::max(height_offset, ImGui::GetContentRegionAvail().y)));
+        if (ImGui::IsItemActive() &&
+            ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
+            state.scroll_x -= ImGui::GetIO().MouseDelta.x / scroll_rect_width;
+            state.scroll_x = std::clamp(state.scroll_x, 0.0f, 1.0f);
+        }
+
+        ImGui::SetScrollHereX(state.scroll_x);
+    }
+
+    static void draw_frame_seperator(const std::deque<float> &frame_times_ms,
+                                     float display_min_time_ms,
+                                     float bar_scale,
+                                     float visible_min_time_ms,
+                                     float visible_max_time_ms) {
+        auto draw = ImGui::GetWindowDrawList();
+        auto offset = ImGui::GetCursorScreenPos();
+        for (auto &frame_ms : frame_times_ms) {
+            if (frame_ms < visible_min_time_ms ||
+                frame_ms > visible_max_time_ms) {
+                continue;
+            }
+            auto x = (frame_ms - display_min_time_ms) * bar_scale;
+            draw->AddLine(offset + ImVec2(x, -1000.0f),
+                          offset + ImVec2(x, 1000.0f),
+                          0xAAAAAAAA);
+        }
+    }
+
+    float draw_bars(float display_min_time_ms,
+                    float bar_scale,
+                    float bar_height,
+                    float visible_min_time_ms,
+                    float visible_max_time_ms) {
         auto is_visible = [&](Sample *s) {
             if (s->end_time_ms < visible_min_time_ms ||
                 s->start_time_ms > visible_max_time_ms) {
@@ -121,6 +166,7 @@ struct ProfilerGroup {
             return true;
         };
 
+        std::vector<Sample *> sample_to_draw[2]{};
         uint32_t cur_index = 0;
         for (auto &s : samples) {
             if (is_visible(s.get())) {
@@ -128,6 +174,8 @@ struct ProfilerGroup {
             }
         }
 
+        auto offset = ImGui::GetCursorScreenPos();
+        auto draw = ImGui::GetWindowDrawList();
         float height_offset = 0.0f;
         for (; !sample_to_draw[cur_index].empty(); cur_index = 1 - cur_index) {
             auto &buf = sample_to_draw[cur_index];
@@ -157,21 +205,11 @@ struct ProfilerGroup {
 
             height_offset += bar_height;
         }
-
-        ImGui::InvisibleButton(
-            "Background",
-            ImVec2(scroll_rect_width,
-                   std::max(height_offset, ImGui::GetContentRegionAvail().y)));
-        if (ImGui::IsItemActive() &&
-            ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
-            state.scroll_x -= ImGui::GetIO().MouseDelta.x / scroll_rect_width;
-            state.scroll_x = std::clamp(state.scroll_x, 0.0f, 1.0f);
-        }
-
-        ImGui::SetScrollHereX(state.scroll_x);
+        return height_offset;
     }
 
-    void on_gui(float display_min_time_ms,
+    void on_gui(const std::deque<float> &frame_times_ms,
+                float display_min_time_ms,
                 float display_max_time_ms,
                 ProfilerGuiState &state) {
         ImGui::Text("%s", name.c_str());
@@ -180,7 +218,8 @@ struct ProfilerGroup {
                           true,
                           ImGuiWindowFlags_HorizontalScrollbar);
 
-        display_bar_graph(display_min_time_ms, display_max_time_ms, state);
+        display_bar_graph(
+            frame_times_ms, display_min_time_ms, display_max_time_ms, state);
 
         ImGui::EndChild();
     }
@@ -233,6 +272,7 @@ struct Profiler {
     }
 
     void clear() {
+        frame_times_ms.clear();
         for (auto &g : groups) {
             g.clear();
         }
@@ -257,8 +297,10 @@ struct Profiler {
         for (int i = 0; i < MAX_PROFILER_GROUP_NUM; i++) {
             if (group_enabled[i]) {
                 ImGui::PushID(id++);
-                groups[i].on_gui(
-                    display_min_time_ms, display_max_time_ms, state);
+                groups[i].on_gui(frame_times_ms,
+                                 display_min_time_ms,
+                                 display_max_time_ms,
+                                 state);
                 ImGui::Button(
                     "##Resize",
                     ImVec2(ImGui::GetContentRegionAvailWidth(), 10.0));
@@ -315,8 +357,11 @@ struct Profiler {
     }
 
     void new_frame() {
+        if (pause) {
+            return;
+        }
         frame_times_ms.push_back(get_time_ms());
-        if (frame_times_ms.size() > PROFILER_AVERAGE_FPS_GATHER_FRAMES) {
+        if (frame_times_ms.size() > MAX_PROFILER_SAMPLE_NUM) {
             frame_times_ms.pop_front();
         }
     }

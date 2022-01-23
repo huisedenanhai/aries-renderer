@@ -664,7 +664,7 @@ void Swapchain::present(ITexture *texture) {
 
     queue->submit_once(
         [&](CommandBuffer *cmd) {
-            ARS_PROFILER_SAMPLE("Draw Swapchain", 0xFF816341);
+            ARS_PROFILER_SAMPLE("Draw Swapchain", 0xFF713611);
             VkRenderPassBeginInfo rp_info{
                 VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
             rp_info.renderPass = _render_pass->render_pass();

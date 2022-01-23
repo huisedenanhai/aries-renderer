@@ -177,6 +177,8 @@ struct ProfilerGroup {
         auto offset = ImGui::GetCursorScreenPos();
         auto draw = ImGui::GetWindowDrawList();
         float height_offset = 0.0f;
+        auto is_window_hovered = ImGui::IsWindowHovered();
+        auto mouse_pos = ImGui::GetMousePos();
         for (; !sample_to_draw[cur_index].empty(); cur_index = 1 - cur_index) {
             auto &buf = sample_to_draw[cur_index];
             auto &next_buf = sample_to_draw[1 - cur_index];
@@ -193,10 +195,31 @@ struct ProfilerGroup {
                 auto bar_rect =
                     ImVec4(bar_min.x, bar_min.y, bar_max.x, bar_max.y);
 
-                draw->AddRectFilled(bar_min, bar_max, s->color, 0);
+                auto is_bar_hovered =
+                    is_window_hovered && mouse_pos.x >= bar_min.x &&
+                    mouse_pos.y >= bar_min.y && mouse_pos.x <= bar_max.x &&
+                    mouse_pos.y <= bar_max.y;
+
+                auto bar_color = s->color;
+                // Tint color on hover
+                if (is_bar_hovered) {
+                    auto color_v = ImGui::ColorConvertU32ToFloat4(bar_color);
+                    float tint = 0.2f;
+                    color_v.x = color_v.x * (1.0f - tint) + tint;
+                    color_v.y = color_v.y * (1.0f - tint) + tint;
+                    color_v.z = color_v.z * (1.0f - tint) + tint;
+                    bar_color = ImGui::GetColorU32(color_v);
+                }
+
+                draw->AddRectFilled(bar_min, bar_max, bar_color, 0);
                 auto info_label = fmt::format(
                     "{}({:.3f}ms)", s->name, s->end_time_ms - s->start_time_ms);
                 draw_clipped_text(draw, bar_rect, info_label.c_str());
+
+                if (is_bar_hovered) {
+                    ImGui::SetTooltip("%s", info_label.c_str());
+                    draw->AddRect(bar_min, bar_max, 0xFF0000FF);
+                }
 
                 for (auto &child : s->children) {
                     next_buf.push_back(child.get());

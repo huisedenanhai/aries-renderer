@@ -132,6 +132,7 @@ class Engine {
         _application.reset();
 
         destroy_render();
+        destroy_profiler();
     }
 
     [[nodiscard]] render::IContext *render_context() const {

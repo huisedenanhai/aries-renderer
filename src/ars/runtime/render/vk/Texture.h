@@ -12,6 +12,7 @@ struct TextureCreateInfo {
     VkImageViewType view_type{};
     VkFormat format{};
     VkExtent3D extent{};
+    // If mip_level will be clamped in range
     uint32_t mip_levels{};
     uint32_t array_layers{};
     VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT;
@@ -29,7 +30,7 @@ struct TextureCreateInfo {
         VkFormat format,
         uint32_t width,
         uint32_t height,
-        uint32_t mip_levels,
+        uint32_t mip_levels = MAX_MIP_LEVELS,
         VkSamplerAddressMode address_mode = VK_SAMPLER_ADDRESS_MODE_REPEAT);
 };
 
@@ -93,6 +94,8 @@ class Texture : public ITextureHandle {
                          VkAccessFlags dst_access_mask);
 
   private:
+    void init();
+
     // Call this method after _image and _info initialized
     [[nodiscard]] VkImageView create_image_view(uint32_t base_mip_level,
                                                 uint32_t mip_level_count);

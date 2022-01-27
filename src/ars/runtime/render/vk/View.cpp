@@ -182,8 +182,8 @@ RenderTargetInfo View::rt_info(NamedRT name) const {
         break;
     }
     case NamedRT_HiZBuffer: {
-        auto &tex = info.texture =
-            TextureCreateInfo::sampled_2d(VK_FORMAT_R32G32_SFLOAT, 1, 1, 1);
+        auto &tex = info.texture = TextureCreateInfo::sampled_2d(
+            VK_FORMAT_R32G32_SFLOAT, 1, 1, MAX_MIP_LEVELS);
         tex.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
         break;
     }

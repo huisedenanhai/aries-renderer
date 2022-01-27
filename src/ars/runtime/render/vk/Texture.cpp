@@ -11,66 +11,15 @@ constexpr VkImageUsageFlags IMAGE_USAGE_SAMPLED_COLOR =
 }
 
 Texture::Texture(Context *context, const TextureCreateInfo &info)
-    : _context(context), _info(info), _image_view_of_levels(info.mip_levels) {
-    VkImageCreateInfo image_info{VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
-    image_info.arrayLayers = info.array_layers;
-    image_info.imageType = info.image_type;
-    image_info.mipLevels = info.mip_levels;
-    image_info.samples = info.samples;
-    image_info.extent = info.extent;
-    image_info.format = info.format;
-    image_info.usage = info.usage;
+    : _context(context), _info(info) {
+    _info.mip_levels = std::clamp(calculate_mip_levels(_info.extent.width,
+                                                       _info.extent.height,
+                                                       _info.extent.depth),
+                                  1u,
+                                  _info.mip_levels);
+    _image_view_of_levels.resize(_info.mip_levels);
 
-    image_info.initialLayout = _layout = VK_IMAGE_LAYOUT_UNDEFINED;
-    image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-
-    if (info.view_type == VK_IMAGE_VIEW_TYPE_CUBE ||
-        info.view_type == VK_IMAGE_VIEW_TYPE_CUBE_ARRAY) {
-        image_info.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
-    }
-
-    // All textures are used exclusively.
-    // Concurrent access disables some potential optimizations from driver.
-    // (Like Delta Color Compression(DCC) from AMD drivers, see
-    // https://www.khronos.org/assets/uploads/developers/presentations/06-Optimising-aaa-vulkan-title-on-desktop-May19.pdf)
-    image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-    VmaAllocationCreateInfo alloc_info{};
-    alloc_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-
-    auto vma = context->vma();
-    if (vmaCreateImage(vma->raw(),
-                       &image_info,
-                       &alloc_info,
-                       &_image,
-                       &_allocation,
-                       nullptr) != VK_SUCCESS) {
-        ARS_LOG_CRITICAL("Failed to create image");
-    }
-
-    _image_view = create_image_view(0, info.mip_levels);
-
-    VkSamplerCreateInfo sampler_info{VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
-
-    sampler_info.addressModeU = info.address_mode_u;
-    sampler_info.addressModeV = info.address_mode_v;
-    sampler_info.addressModeW = info.address_mode_w;
-    sampler_info.magFilter = info.mag_filter;
-    sampler_info.minFilter = info.min_filter;
-    sampler_info.mipmapMode = info.mipmap_mode;
-    sampler_info.mipLodBias = 0.0f;
-    sampler_info.minLod = 0.0f;
-    sampler_info.maxLod = static_cast<float>(info.mip_levels);
-
-    auto &context_properties = _context->properties();
-    if (context_properties.anisotropic_sampler_enabled) {
-        sampler_info.anisotropyEnable = VK_TRUE;
-        sampler_info.maxAnisotropy = context_properties.max_sampler_anisotropy;
-    }
-
-    if (context->device()->Create(&sampler_info, &_sampler)) {
-        ARS_LOG_CRITICAL("Failed to create sampler");
-    }
+    init();
 }
 
 Texture::~Texture() {
@@ -399,6 +348,68 @@ VkImageView Texture::create_image_view(uint32_t base_mip_level,
 
 Context *Texture::context() const {
     return _context;
+}
+
+void Texture::init() {
+    VkImageCreateInfo image_info{VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
+    image_info.arrayLayers = _info.array_layers;
+    image_info.imageType = _info.image_type;
+    image_info.mipLevels = _info.mip_levels;
+    image_info.samples = _info.samples;
+    image_info.extent = _info.extent;
+    image_info.format = _info.format;
+    image_info.usage = _info.usage;
+
+    image_info.initialLayout = _layout = VK_IMAGE_LAYOUT_UNDEFINED;
+    image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+
+    if (_info.view_type == VK_IMAGE_VIEW_TYPE_CUBE ||
+        _info.view_type == VK_IMAGE_VIEW_TYPE_CUBE_ARRAY) {
+        image_info.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+    }
+
+    // All textures are used exclusively.
+    // Concurrent access disables some potential optimizations from driver.
+    // (Like Delta Color Compression(DCC) from AMD drivers, see
+    // https://www.khronos.org/assets/uploads/developers/presentations/06-Optimising-aaa-vulkan-title-on-desktop-May19.pdf)
+    image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    VmaAllocationCreateInfo alloc_info{};
+    alloc_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+
+    auto vma = _context->vma();
+    if (vmaCreateImage(vma->raw(),
+                       &image_info,
+                       &alloc_info,
+                       &_image,
+                       &_allocation,
+                       nullptr) != VK_SUCCESS) {
+        ARS_LOG_CRITICAL("Failed to create image");
+    }
+
+    _image_view = create_image_view(0, _info.mip_levels);
+
+    VkSamplerCreateInfo sampler_info{VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
+
+    sampler_info.addressModeU = _info.address_mode_u;
+    sampler_info.addressModeV = _info.address_mode_v;
+    sampler_info.addressModeW = _info.address_mode_w;
+    sampler_info.magFilter = _info.mag_filter;
+    sampler_info.minFilter = _info.min_filter;
+    sampler_info.mipmapMode = _info.mipmap_mode;
+    sampler_info.mipLodBias = 0.0f;
+    sampler_info.minLod = 0.0f;
+    sampler_info.maxLod = static_cast<float>(_info.mip_levels);
+
+    auto &context_properties = _context->properties();
+    if (context_properties.anisotropic_sampler_enabled) {
+        sampler_info.anisotropyEnable = VK_TRUE;
+        sampler_info.maxAnisotropy = context_properties.max_sampler_anisotropy;
+    }
+
+    if (_context->device()->Create(&sampler_info, &_sampler)) {
+        ARS_LOG_CRITICAL("Failed to create sampler");
+    }
 }
 
 TextureCreateInfo

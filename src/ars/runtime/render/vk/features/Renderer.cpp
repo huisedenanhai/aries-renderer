@@ -15,15 +15,16 @@ NamedRT Renderer::render(CommandBuffer *cmd) {
         }
         _passes[i]->render(cmd);
     }
-    return NamedRT_FinalColor1;
+    return NamedRT_FinalColor0;
 }
 
 Renderer::Renderer(View *view) : _view(view) {
     add_pass<OpaqueGeometry>(_view);
     add_pass<DeferredShading>(_view, NamedRT_FinalColor0);
     add_pass<GenerateHierarchyZ>(_view);
-    add_pass<ScreenSpaceReflection>(_view);
-    add_pass<ToneMapping>(_view, NamedRT_FinalColor0, NamedRT_FinalColor1);
+    add_pass<ScreenSpaceReflection>(
+        _view, NamedRT_FinalColor0, NamedRT_FinalColor1);
+    add_pass<ToneMapping>(_view, NamedRT_FinalColor1, NamedRT_FinalColor0);
 
     _query_selection = std::make_unique<QuerySelection>(_view);
 }

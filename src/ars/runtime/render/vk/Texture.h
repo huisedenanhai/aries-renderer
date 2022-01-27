@@ -12,7 +12,7 @@ struct TextureCreateInfo {
     VkImageViewType view_type{};
     VkFormat format{};
     VkExtent3D extent{};
-    // If mip_level will be clamped in range
+    // mip_level will be clamped in range when create texture.
     uint32_t mip_levels{};
     uint32_t array_layers{};
     VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT;

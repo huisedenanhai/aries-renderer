@@ -42,6 +42,8 @@ struct ShaderLocalSize {
                   uint32_t thread_x,
                   uint32_t thread_y,
                   uint32_t thread_z) const;
+
+    void dispatch(CommandBuffer *cmd, const VkExtent3D &thread_extent) const;
 };
 
 class Shader {

@@ -24,7 +24,7 @@ class GenerateHierarchyZ : public IRenderGraphPass {
 
 class ScreenSpaceReflection : public IRenderGraphPass {
   public:
-    explicit ScreenSpaceReflection(View *view);
+    ScreenSpaceReflection(View *view, NamedRT src_rt, NamedRT dst_rt);
 
     std::vector<PassDependency> src_dependencies() override;
     std::vector<PassDependency> dst_dependencies() override;
@@ -32,5 +32,9 @@ class ScreenSpaceReflection : public IRenderGraphPass {
 
   private:
     View *_view = nullptr;
+    NamedRT _src_rt_name{};
+    NamedRT _dst_rt_name{};
+
+    std::unique_ptr<ComputePipeline> _ssr_pipeline;
 };
 } // namespace ars::render::vk

@@ -88,7 +88,7 @@ ShaderLocalSize Shader::local_size() const {
 }
 
 std::unique_ptr<Shader> Shader::find_precompiled(Context *context,
-                                             const char *name) {
+                                                 const char *name) {
     auto code = load_spirv_code(name, nullptr, 0);
     return from_spirv(context, name, code.data, code.size);
 }
@@ -700,6 +700,12 @@ void ShaderLocalSize::dispatch(CommandBuffer *cmd,
     auto group_z = (thread_z + z - 1) / z;
 
     cmd->Dispatch(group_x, group_y, group_z);
+}
+
+void ShaderLocalSize::dispatch(CommandBuffer *cmd,
+                               const VkExtent3D &thread_extent) const {
+    dispatch(
+        cmd, thread_extent.width, thread_extent.height, thread_extent.depth);
 }
 
 std::optional<VkDescriptorSetLayoutBinding>

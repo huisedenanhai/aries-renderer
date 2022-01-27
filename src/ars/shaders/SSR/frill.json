@@ -1,6 +1,7 @@
 {
     "sources": [
         "InitHiZ.comp",
-        "PropagateHiZ.comp"
+        "PropagateHiZ.comp",
+        "ScreenSpaceReflection.comp"
     ]
 }

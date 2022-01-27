@@ -185,6 +185,9 @@ RenderTargetInfo View::rt_info(NamedRT name) const {
         auto &tex = info.texture = TextureCreateInfo::sampled_2d(
             VK_FORMAT_R32G32_SFLOAT, 1, 1, MAX_MIP_LEVELS);
         tex.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+        tex.min_filter = VK_FILTER_NEAREST;
+        tex.mag_filter = VK_FILTER_NEAREST;
+        tex.mipmap_mode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
         break;
     }
     case NamedRT_Count:

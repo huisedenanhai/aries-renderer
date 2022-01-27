@@ -27,4 +27,9 @@ vec3 reconstruct_position_from_ss(mat4 inverse_p, vec2 uv, float depth01) {
     return pos.xyz / pos.w;
 }
 
+vec3 transform_position_hclip_to_ss(vec4 p) {
+    p.xyz /= p.w;
+    return vec3(p.xy * 0.5 + 0.5, p.z);
+}
+
 #endif

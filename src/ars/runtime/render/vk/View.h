@@ -23,6 +23,9 @@ enum NamedRT {
     NamedRT_FinalColor0,
     NamedRT_FinalColor1,
 
+    // stores (max, min) value in mip levels
+    NamedRT_HiZBuffer,
+
     NamedRT_Count
 };
 

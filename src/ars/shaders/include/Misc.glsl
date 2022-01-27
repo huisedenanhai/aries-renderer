@@ -51,4 +51,12 @@ void construct_TBN_with_normal(vec3 n, out vec3 t, out vec3 b) {
     b = normalize(cross(n, t));
 }
 
+float min_comp_value(vec4 v) {
+    return min(min(v.x, v.y), min(v.z, v.w));
+}
+
+float max_comp_value(vec4 v) {
+    return max(max(v.x, v.y), max(v.z, v.w));
+}
+
 #endif

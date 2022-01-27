@@ -181,6 +181,12 @@ RenderTargetInfo View::rt_info(NamedRT name) const {
             VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
         break;
     }
+    case NamedRT_HiZBuffer: {
+        auto &tex = info.texture =
+            TextureCreateInfo::sampled_2d(VK_FORMAT_R32G32_SFLOAT, 1, 1, 1);
+        tex.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+        break;
+    }
     case NamedRT_Count:
         break;
     }

@@ -8,13 +8,12 @@
 #include <array>
 
 namespace ars::render::vk {
-class OpaqueGeometry {
+class OpaqueGeometry : public IRenderGraphPass {
   public:
     explicit OpaqueGeometry(View *view);
-    ~OpaqueGeometry() = default;
 
-    void render(CommandBuffer *cmd);
-    [[nodiscard]] std::vector<PassDependency> dst_dependencies();
+    void render(CommandBuffer *cmd) override;
+    [[nodiscard]] std::vector<PassDependency> dst_dependencies() override;
 
   private:
     void init_render_pass();

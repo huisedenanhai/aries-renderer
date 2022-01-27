@@ -214,16 +214,13 @@ void Texture::generate_mipmap(CommandBuffer *cmd,
                              &barrier);
     }
 
-    auto mip_width = static_cast<int32_t>(_info.extent.width);
-    auto mip_height = static_cast<int32_t>(_info.extent.height);
-    auto mip_depth = static_cast<int32_t>(_info.extent.depth);
+    auto mip_width = _info.extent.width;
+    auto mip_height = _info.extent.height;
+    auto mip_depth = _info.extent.depth;
     for (int i = 1; i < mip_levels; i++) {
-        auto calc_next_mip_size = [](int32_t size) {
-            return size > 1 ? size / 2 : 1;
-        };
-        auto next_mip_width = calc_next_mip_size(mip_width);
-        auto next_mip_height = calc_next_mip_size(mip_height);
-        auto next_mip_depth = calc_next_mip_size(mip_depth);
+        auto next_mip_width = calculate_next_mip_size(mip_width);
+        auto next_mip_height = calculate_next_mip_size(mip_height);
+        auto next_mip_depth = calculate_next_mip_size(mip_depth);
 
         // Transfer src level to TRANSFER_SRC_OPTIMAL
         {
@@ -253,12 +250,15 @@ void Texture::generate_mipmap(CommandBuffer *cmd,
         region.srcSubresource = res;
         region.srcSubresource.mipLevel = i - 1;
         region.srcOffsets[0] = {0, 0, 0};
-        region.srcOffsets[1] = {mip_width, mip_height, mip_depth};
+        region.srcOffsets[1] = {static_cast<int32_t>(mip_width),
+                                static_cast<int32_t>(mip_height),
+                                static_cast<int32_t>(mip_depth)};
         region.dstSubresource = res;
         region.dstSubresource.mipLevel = i;
         region.dstOffsets[0] = {0, 0, 0};
-        region.dstOffsets[1] = {
-            next_mip_width, next_mip_height, next_mip_depth};
+        region.dstOffsets[1] = {static_cast<int32_t>(next_mip_width),
+                                static_cast<int32_t>(next_mip_height),
+                                static_cast<int32_t>(next_mip_depth)};
 
         cmd->BlitImage(_image,
                        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,

@@ -5,13 +5,13 @@
 #include "../View.h"
 
 namespace ars::render::vk {
-class ToneMapping {
+class ToneMapping : public IRenderGraphPass {
   public:
     ToneMapping(View *view, NamedRT src_rt, NamedRT dst_rt);
 
-    void render(CommandBuffer *cmd);
+    void render(CommandBuffer *cmd) override;
 
-    [[nodiscard]] std::vector<PassDependency> src_dependencies();
+    std::vector<PassDependency> src_dependencies() override;
 
   private:
     void init_pipeline();

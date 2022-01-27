@@ -1,14 +1,14 @@
 #include "RenderGraph.h"
 
 namespace ars::render::vk {
-void barrier(CommandBuffer *cmd,
-             const std::vector<PassDependency> &src_deps,
-             const std::vector<PassDependency> &dst_deps) {
+void PassDependency::barrier(CommandBuffer *cmd,
+                             const std::vector<PassDependency> &src_deps,
+                             const std::vector<PassDependency> &dst_deps) {
     std::vector<VkImageMemoryBarrier> barriers{};
     barriers.reserve(src_deps.size() + dst_deps.size());
 
-    VkPipelineStageFlags src_stage_mask = 0;
-    VkPipelineStageFlags dst_stage_mask = 0;
+    VkPipelineStageFlags src_stage_mask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    VkPipelineStageFlags dst_stage_mask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
 
     for (auto &dep : src_deps) {
         assert(dep.texture.get() != nullptr);

@@ -1,13 +1,11 @@
 #pragma once
 
+#include "../RenderGraph.h"
 #include "../View.h"
 #include "../Vulkan.h"
 #include <memory>
 
 namespace ars::render::vk {
-class OpaqueGeometry;
-class DeferredShading;
-class ToneMapping;
 class QuerySelection;
 
 class Renderer {
@@ -20,10 +18,13 @@ class Renderer {
     query_selection(uint32_t x, uint32_t y, uint32_t width, uint32_t height);
 
   private:
+    template <typename Pass, typename... Args> void add_pass(Args &&...args) {
+        _passes.template emplace_back(
+            std::make_unique<Pass>(std::forward<Args>(args)...));
+    }
+
     View *_view = nullptr;
-    std::unique_ptr<OpaqueGeometry> _opaque_geometry{};
-    std::unique_ptr<DeferredShading> _deferred_shading{};
-    std::unique_ptr<ToneMapping> _tone_mapping{};
+    std::vector<std::unique_ptr<IRenderGraphPass>> _passes{};
     std::unique_ptr<QuerySelection> _query_selection{};
 };
 } // namespace ars::render::vk

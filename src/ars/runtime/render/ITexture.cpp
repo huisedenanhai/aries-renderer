@@ -67,6 +67,10 @@ uint32_t calculate_mip_levels(uint32_t width, uint32_t height, uint32_t depth) {
            1;
 }
 
+uint32_t calculate_next_mip_size(uint32_t size) {
+    return size > 1 ? size / 2 : 1;
+}
+
 TextureInfo TextureInfo::create(TextureType type,
                                 Format format,
                                 uint32_t width,

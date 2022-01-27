@@ -46,6 +46,7 @@ struct TextureInfo {
 };
 
 uint32_t calculate_mip_levels(uint32_t width, uint32_t height, uint32_t depth);
+uint32_t calculate_next_mip_size(uint32_t size);
 
 constexpr const char *RES_TYPE_NAME_TEXTURE = "ars::render::ITexture";
 

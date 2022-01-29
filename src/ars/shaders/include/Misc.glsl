@@ -59,4 +59,8 @@ float max_comp_value(vec4 v) {
     return max(max(v.x, v.y), max(v.z, v.w));
 }
 
+bool point_inside_unit_rect(vec2 p) {
+    return p.x >= 0 && p.y >= 0 && p.x <= 1.0 && p.y <= 1.0;
+}
+
 #endif

@@ -192,6 +192,20 @@ void ScreenSpaceReflection::render(CommandBuffer *cmd) {
 
     desc.set_buffer_data(1, 0, param);
 
+    std::vector<glm::vec2> mip_sizes{};
+    mip_sizes.reserve(param.hiz_mip_count);
+
+    uint32_t mip_width = hiz_buffer->info().extent.width;
+    uint32_t mip_height = hiz_buffer->info().extent.height;
+    for (int i = 0; i < param.hiz_mip_count; i++) {
+        mip_sizes.emplace_back(mip_width, mip_height);
+        mip_width = calculate_next_mip_size(mip_width);
+        mip_height = calculate_next_mip_size(mip_height);
+    }
+
+    desc.set_buffer_data(
+        1, 1, mip_sizes.data(), mip_sizes.size() * sizeof(glm::vec2));
+
     desc.commit(cmd, _ssr_pipeline.get());
 
     _ssr_pipeline->local_size().dispatch(cmd, dst_extent);

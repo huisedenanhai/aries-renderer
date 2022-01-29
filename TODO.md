@@ -21,12 +21,7 @@ A very coarse plan for development.
     + [ ] DOF
     + [ ] Dynamic Sky
     + [ ] Volumetric Cloud
-3. Architecture
-    + [ ] Render Graph
-    + Backends
-        + [x] Vulkan
-        + [ ] Metal
-4. System
+3. System
    > Build on top of existing rendering features
     + [ ] Particle
     + [ ] Skeleton Animation

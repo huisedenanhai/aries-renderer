@@ -188,6 +188,9 @@ RenderTargetInfo View::rt_info(NamedRT name) const {
         tex.min_filter = VK_FILTER_NEAREST;
         tex.mag_filter = VK_FILTER_NEAREST;
         tex.mipmap_mode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+        tex.address_mode_u = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+        tex.address_mode_v = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+        tex.address_mode_w = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
         break;
     }
     case NamedRT_Count:

@@ -80,4 +80,10 @@ bool point_inside_unit_cube(vec3 p) {
     return x1 && y1 && z1 && x2 && y2 && z2;
 }
 
+bool value_in_01(float v) {
+    bool v1 = v >= 0.0;
+    bool v2 = v <= 1.0;
+    return v1 && v2;
+}
+
 #endif

@@ -31,7 +31,7 @@ layout(set = 1, binding = 1, std430) buffer MipLevels {
 // Aries uses reverse Z, near plane maps to 1 and far plane maps to 0 in screen
 // space.
 // Given a ray in grid's local coordinate, calculate the hit distance t.
-// The origin should be inside the grid.
+// The origin MUST be inside the grid.
 bool trace_ray_hit_grid(vec3 origin,
                         vec3 dir,
                         vec2 grid_size,
@@ -51,7 +51,8 @@ bool trace_ray_hit_grid(vec3 origin,
     // float point precision issue.
     vec2 b = vec2(bx, by) + border_offset;
     vec2 tb = (b - origin.xy) / dir.xy;
-    float t1 = max(min(tb.x, tb.y), 0.0);
+    // t1 >= 0.0 if the origin is inside the grid.
+    float t1 = min(tb.x, tb.y);
 
     t = min(t0, t1);
     // t0 < 0 means no hit happens with height plane
@@ -91,20 +92,25 @@ bool trace_ray_hiz(vec3 origin_ss,
     // The max iter count only works as a safety guard from the kernel stalling
     // the GPU. Decrease it will results in missing ray tracing hits.
     const int MAX_ITER_COUNT = 400;
+
+    // Only check if the ray hits near/far plane, rather than do a full check if
+    // hit point is inside screen. As full check takes too much time according
+    // to the profiler.
     while (iter < MAX_ITER_COUNT && level >= start_mip_level &&
-           level <= root_level && point_inside_unit_cube(hit_ss)) {
+           level <= root_level && value_in_01(hit_ss.z)) {
         vec2 mip_res = mip_resolutions[level];
         vec2 grid_size = 1.0 / mip_res;
         vec2 grid_index = floor(hit_ss.xy * mip_res);
         vec3 grid_offset_ss = vec3(grid_index * grid_size, 0.0);
-        vec2 grid_center_uv = index_to_uv(grid_index, grid_size);
 
         float t = 0;
         bool has_hit =
             trace_ray_hit_grid(hit_ss - grid_offset_ss,
                                dir_ss,
                                grid_size,
-                               textureLod(hiz_buffer, grid_center_uv, level).r,
+                               // HiZ buffer uses nearest filtering, there is no
+                               // need to calculate grid center explicitly
+                               textureLod(hiz_buffer, hit_ss.xy, level).r,
                                border_offset,
                                t);
         hit_ss += t * dir_ss;

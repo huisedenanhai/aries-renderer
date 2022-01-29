@@ -60,7 +60,24 @@ float max_comp_value(vec4 v) {
 }
 
 bool point_inside_unit_rect(vec2 p) {
-    return p.x >= 0 && p.y >= 0 && p.x <= 1.0 && p.y <= 1.0;
+    bool x1 = p.x >= 0;
+    bool y1 = p.y >= 0;
+    bool x2 = p.x <= 1.0;
+    bool y2 = p.y <= 1.0;
+
+    return x1 && y1 && x2 && y2;
+}
+
+bool point_inside_unit_cube(vec3 p) {
+    // Expand the sub condition results in faster code on M1.
+    bool x1 = p.x >= 0;
+    bool y1 = p.y >= 0;
+    bool z1 = p.z >= 0;
+    bool x2 = p.x <= 1.0;
+    bool y2 = p.y <= 1.0;
+    bool z2 = p.z <= 1.0;
+
+    return x1 && y1 && z1 && x2 && y2 && z2;
 }
 
 #endif

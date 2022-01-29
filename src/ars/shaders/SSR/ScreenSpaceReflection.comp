@@ -32,28 +32,30 @@ layout(set = 1, binding = 1, std430) buffer MipLevels {
 // space.
 // Given a ray in grid's local coordinate, calculate the hit distance t.
 // The origin should be inside the grid.
-bool trace_ray_hit_grid(
-    vec3 origin, vec3 dir, vec2 grid_size, float grid_height, out float t) {
-    if (origin.z <= grid_height) {
-        t = 0;
-        return true;
-    }
-
+bool trace_ray_hit_grid(vec3 origin,
+                        vec3 dir,
+                        vec2 grid_size,
+                        float grid_height,
+                        vec2 border_offset,
+                        out float t) {
     // Hit the height plane
     float t0 = (grid_height - origin.z) / dir.z;
+    // Ray already under the grid, no need to trace
+    t0 = origin.z <= grid_height ? 0 : t0;
 
     // Hit border
-    // Add some padding so the ray can travel to next grid, otherwise the ray
-    // will keep stepping the same grid due to float point precision issue.
-    vec2 padding = 1e-3 * grid_size;
     float bx = dir.x > 0 ? grid_size.x : 0.0;
     float by = dir.y > 0 ? grid_size.y : 0.0;
-    vec2 b = vec2(bx, by) + sign(dir.xy) * padding;
+    // Add some offset to pad the grid bigger so the ray can go into the
+    // neighbor grid, otherwise the ray will keep stepping the same grid due to
+    // float point precision issue.
+    vec2 b = vec2(bx, by) + border_offset;
     vec2 tb = (b - origin.xy) / dir.xy;
     float t1 = max(min(tb.x, tb.y), 0.0);
 
+    t = min(t0, t1);
     // t0 < 0 means no hit happens with height plane
-    t = t0 < 0 ? t1 : min(t0, t1);
+    t = t0 < 0 ? t1 : t;
 
     return t == t0;
 }
@@ -62,25 +64,35 @@ bool trace_ray_hiz(vec3 origin_ss,
                    vec3 dir_ss,
                    int start_mip_level,
                    out vec3 hit_ss) {
-    int level = start_mip_level;
     int root_level = hiz_mip_count - 1;
+    start_mip_level = min(start_mip_level, root_level);
+    int level = start_mip_level;
+
+    vec2 start_mip_res = mip_resolutions[start_mip_level];
+    vec2 start_grid_size = 1.0 / start_mip_res;
+
+    vec2 border_offset = sign(dir_ss.xy) * start_grid_size * 1e-3;
 
     hit_ss = origin_ss;
     // step one grid to avoid self intersection
     {
-        vec2 mip_res = mip_resolutions[level];
-        vec2 grid_size = 1.0 / mip_res;
+        vec2 mip_res = start_mip_res;
+        vec2 grid_size = start_grid_size;
         vec2 grid_index = floor(hit_ss.xy * mip_res);
         vec3 grid_offset_ss = vec3(grid_index * grid_size, 0.0);
 
         float t = 0;
-        trace_ray_hit_grid(hit_ss - grid_offset_ss, dir_ss, grid_size, 0.0, t);
+        trace_ray_hit_grid(
+            hit_ss - grid_offset_ss, dir_ss, grid_size, 0.0, border_offset, t);
         hit_ss += t * dir_ss;
     }
 
     int iter = 0;
-    while (iter < 4 * hiz_mip_count && level >= start_mip_level &&
-           level <= root_level && point_inside_unit_rect(hit_ss.xy)) {
+    // The max iter count only works as a safety guard from the kernel stalling
+    // the GPU. Decrease it will results in missing ray tracing hits.
+    const int MAX_ITER_COUNT = 400;
+    while (iter < MAX_ITER_COUNT && level >= start_mip_level &&
+           level <= root_level && point_inside_unit_cube(hit_ss)) {
         vec2 mip_res = mip_resolutions[level];
         vec2 grid_size = 1.0 / mip_res;
         vec2 grid_index = floor(hit_ss.xy * mip_res);
@@ -93,6 +105,7 @@ bool trace_ray_hiz(vec3 origin_ss,
                                dir_ss,
                                grid_size,
                                textureLod(hiz_buffer, grid_center_uv, level).r,
+                               border_offset,
                                t);
         hit_ss += t * dir_ss;
 
@@ -111,6 +124,7 @@ bool trace_ray_dda(vec3 origin_ss,
                    out vec3 hit_ss) {
     vec2 mip_res = mip_resolutions[mip_level];
     vec2 grid_size = 1.0 / mip_res;
+    vec2 border_offset = sign(dir_ss.xy) * grid_size * 1e-3;
     hit_ss = origin_ss;
 
     // step one grid to avoid self intersection
@@ -119,7 +133,8 @@ bool trace_ray_dda(vec3 origin_ss,
         vec3 grid_offset_ss = vec3(grid_index * grid_size, 0.0);
 
         float t = 0;
-        trace_ray_hit_grid(hit_ss - grid_offset_ss, dir_ss, grid_size, 0.0, t);
+        trace_ray_hit_grid(
+            hit_ss - grid_offset_ss, dir_ss, grid_size, 0.0, border_offset, t);
         hit_ss += t * dir_ss;
     }
 
@@ -134,6 +149,7 @@ bool trace_ray_dda(vec3 origin_ss,
             dir_ss,
             grid_size,
             textureLod(hiz_buffer, grid_center_uv, mip_level).r,
+            border_offset,
             t);
         hit_ss += t * dir_ss;
 
@@ -156,6 +172,9 @@ vec3 calculate_color(ivec2 index) {
                                      texture(gbuffer1_tex, uv),
                                      texture(gbuffer2_tex, uv),
                                      vec4(0));
+    int start_mip_level = 0;
+    // Correct z to avoid self intersection
+    depth01 = textureLod(hiz_buffer, uv, start_mip_level).r;
 
     vec3 pos_vs = reconstruct_position_from_ss(I_P, uv, depth01);
     vec3 view_dir_vs = -normalize(pos_vs);
@@ -167,8 +186,10 @@ vec3 calculate_color(ivec2 index) {
     vec3 reflect_dir_ss = offset_pos_ss - pos_ss;
 
     vec3 hit_ss;
-    bool has_hit = trace_ray_hiz(pos_ss, reflect_dir_ss, 0, hit_ss);
-    // bool has_hit = trace_ray_dda(pos_ss, reflect_dir_ss, 0, hit_ss);
+    bool has_hit =
+        trace_ray_hiz(pos_ss, reflect_dir_ss, start_mip_level, hit_ss);
+    // bool has_hit = trace_ray_dda(pos_ss, reflect_dir_ss, start_mip_level,
+    // hit_ss);
 
     return texture(src_color_tex, hit_ss.xy).rgb * (has_hit ? 1.0 : 0.0);
 }

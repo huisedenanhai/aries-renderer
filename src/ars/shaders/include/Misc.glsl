@@ -86,4 +86,8 @@ bool value_in_01(float v) {
     return v1 && v2;
 }
 
+float fade_on_edge_01(float v, float fade_size) {
+    return clamp(min(v, 1.0 - v) / fade_size, 0.0, 1.0);
+}
+
 #endif

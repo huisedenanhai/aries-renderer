@@ -1,5 +1,6 @@
 #include "Entity.h"
 #include <ars/runtime/core/Log.h>
+#include <ars/runtime/core/Profiler.h>
 #include <ars/runtime/engine/Engine.h>
 #include <ars/runtime/engine/Entity.Editor.h>
 #include <ars/runtime/engine/Entity.h>
@@ -19,6 +20,7 @@ constexpr const char *ARS_3D_VIEW_ID = "3D View";
 constexpr const char *ARS_HIERARCHY_INSPECTOR_ID = "Hierarchy";
 constexpr const char *ARS_ENTITY_INSPECTOR_ID = "Entity Inspector";
 constexpr const char *ARS_FILE_BROWSER_ID = "File Browser";
+constexpr const char *ARS_PROFILER_WINDOW_ID = "Profiler";
 
 constexpr const char *ARS_SPAWNABLE_EXTENSION = ".aspawn";
 
@@ -160,6 +162,8 @@ class Editor : public engine::IApplication {
         editor::file_browser(_file_browser_state, ".", _current_selected_file);
         ImGui::End();
 
+        profiler_on_gui(ARS_PROFILER_WINDOW_ID, _profiler_gui_state);
+
         bool need_reset_layout = _is_first_imgui_frame && !_have_stored_layout;
         if (ImGui::BeginMenuBar()) {
             if (ImGui::BeginMenu("File")) {
@@ -206,12 +210,20 @@ class Editor : public engine::IApplication {
             dock_main_id, ImGuiDir_Down, 0.50f, nullptr, &dock_main_id);
         auto dock_file_browser = ImGui::DockBuilderSplitNode(
             dock_id_3d_view, ImGuiDir_Down, 0.30f, nullptr, &dock_id_3d_view);
+        auto dock_profiler_window =
+            ImGui::DockBuilderSplitNode(dock_file_browser,
+                                        ImGuiDir_Right,
+                                        0.80f,
+                                        nullptr,
+                                        &dock_file_browser);
 
         ImGui::DockBuilderDockWindow(ARS_3D_VIEW_ID, dock_id_3d_view);
         ImGui::DockBuilderDockWindow(ARS_HIERARCHY_INSPECTOR_ID, dock_main_id);
         ImGui::DockBuilderDockWindow(ARS_ENTITY_INSPECTOR_ID,
                                      dock_id_inspector);
         ImGui::DockBuilderDockWindow(ARS_FILE_BROWSER_ID, dock_file_browser);
+        ImGui::DockBuilderDockWindow(ARS_PROFILER_WINDOW_ID,
+                                     dock_profiler_window);
         ImGui::DockBuilderFinish(dock_space_id);
     }
 
@@ -230,6 +242,7 @@ class Editor : public engine::IApplication {
     editor::SaveAsModalState _save_as_state{};
     std::filesystem::path _current_selected_file{};
     engine::Entity *_current_selected_entity = nullptr;
+    ProfilerGuiState _profiler_gui_state{};
 };
 
 int main() {

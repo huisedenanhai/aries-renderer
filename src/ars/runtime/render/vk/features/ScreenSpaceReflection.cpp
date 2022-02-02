@@ -78,12 +78,9 @@ void GenerateHierarchyZ::propagate_hiz(CommandBuffer *cmd) {
     auto &hiz_info = hiz_buffer->info();
 
     _propagate_hiz_pipeline->bind(cmd);
-    auto level_width = hiz_info.extent.width;
-    auto level_height = hiz_info.extent.height;
+    auto last_level_width = hiz_info.extent.width;
+    auto last_level_height = hiz_info.extent.height;
     for (int i = 1; i < hiz_info.mip_levels; i++) {
-        // Update size
-        level_width = calculate_next_mip_size(level_width);
-        level_height = calculate_next_mip_size(level_height);
 
         // Wait for last level initialized
         VkImageMemoryBarrier barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
@@ -111,17 +108,25 @@ void GenerateHierarchyZ::propagate_hiz(CommandBuffer *cmd) {
         desc.set_texture(0, 1, hiz_buffer.get(), i);
 
         struct Param {
-            int32_t cur_level_width;
-            int32_t cur_level_height;
+            int32_t last_level_width;
+            int32_t last_level_height;
         };
+
+        auto cur_level_width = calculate_next_mip_size(last_level_width);
+        auto cur_level_height = calculate_next_mip_size(last_level_height);
+
         Param param{};
-        param.cur_level_width = static_cast<int32_t>(level_width);
-        param.cur_level_height = static_cast<int32_t>(level_height);
+        param.last_level_width = static_cast<int32_t>(last_level_width);
+        param.last_level_height = static_cast<int32_t>(last_level_height);
         desc.set_buffer_data(1, 0, param);
         desc.commit(cmd, _propagate_hiz_pipeline.get());
 
         _propagate_hiz_pipeline->local_size().dispatch(
-            cmd, level_width, level_height, 1);
+            cmd, cur_level_width, cur_level_height, 1);
+
+        // Update size
+        last_level_width = cur_level_width;
+        last_level_height = cur_level_height;
     }
 }
 

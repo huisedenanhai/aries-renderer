@@ -8,20 +8,51 @@ layout(set = 0, binding = 0) uniform sampler2D last_level;
 layout(set = 0, binding = 1, r32f) writeonly uniform image2D cur_level;
 
 layout(set = 1, binding = 0) uniform Param {
-    int cur_level_width;
-    int cur_level_height;
+    int last_level_width;
+    int last_level_height;
 };
 
 void main() {
     ivec2 index = ivec2(gl_GlobalInvocationID.xy);
+    int cur_level_width = max(last_level_width / 2, 1);
+    int cur_level_height = max(last_level_height / 2, 1);
     if (index.x >= cur_level_width || index.y >= cur_level_height) {
         return;
     }
+    ivec2 index_in_last_level = index * 2;
+    vec2 last_level_grid_size = 1.0 / vec2(last_level_width, last_level_height);
+    vec2 last_level_uv = (index_in_last_level + 1) * last_level_grid_size;
 
-    vec2 uv =
-        index_to_uv(index, vec2(1.0 / cur_level_width, 1.0 / cur_level_height));
+    float max_depth01 =
+        max_comp_value(textureGather(last_level, last_level_uv, 0));
 
-    vec4 max_depth01 = textureGather(last_level, uv, 0);
+    // For NPOT(none power of two) texture
+    bool pad_width = (cur_level_width * 2 < last_level_width) &&
+                     (index.x + 1 == cur_level_width);
+    bool pad_height = (cur_level_height * 2 < last_level_height) &&
+                      (index.y + 1 == cur_level_height);
 
-    imageStore(cur_level, index, vec4(max_comp_value(max_depth01), 0, 0, 0));
+    if (pad_width) {
+        float pad_max_depth01 = max_comp_value(
+            textureGather(last_level,
+                          last_level_uv + vec2(last_level_grid_size.x, 0.0))
+                .yz);
+        max_depth01 = max(max_depth01, pad_max_depth01);
+    }
+
+    if (pad_height) {
+        float pad_max_depth01 = max_comp_value(
+            textureGather(last_level,
+                          last_level_uv + vec2(0.0, last_level_grid_size.y))
+                .xy);
+        max_depth01 = max(max_depth01, pad_max_depth01);
+    }
+
+    if (pad_width && pad_height) {
+        float pad_max_depth01 =
+            texture(last_level, last_level_uv + 1.5 * last_level_grid_size).r;
+        max_depth01 = max(max_depth01, pad_max_depth01);
+    }
+
+    imageStore(cur_level, index, vec4(max_depth01, 0, 0, 0));
 }

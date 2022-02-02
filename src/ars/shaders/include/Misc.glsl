@@ -59,6 +59,14 @@ float max_comp_value(vec4 v) {
     return max(max(v.x, v.y), max(v.z, v.w));
 }
 
+float min_comp_value(vec2 v) {
+    return min(v.x, v.y);
+}
+
+float max_comp_value(vec2 v) {
+    return max(v.x, v.y);
+}
+
 bool point_inside_unit_rect(vec2 p) {
     bool x1 = p.x >= 0;
     bool y1 = p.y >= 0;

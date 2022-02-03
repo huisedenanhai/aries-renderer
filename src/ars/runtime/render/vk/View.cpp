@@ -24,6 +24,9 @@ void View::render() {
     auto ctx = context();
     _rt_manager->update(translate(_size));
 
+    RenderGraph rg(this);
+    rg.add_pass([](RenderGraphPassBuilder &builder) {},
+                [](CommandBuffer *cmd) {});
     auto final_rt = ctx->queue()->submit_once([&](CommandBuffer *cmd) {
         ARS_PROFILER_SAMPLE_VK(cmd, "Render Scene", 0xFF772183);
         return _renderer->render(cmd);
@@ -35,6 +38,8 @@ void View::render() {
             _overlay_renderer->render(cmd, final_rt);
         });
     }
+    rg.compile();
+    rg.execute();
 
     update_color_tex_adapter(final_rt);
 }

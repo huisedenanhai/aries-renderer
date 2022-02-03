@@ -9,7 +9,7 @@ class ToneMapping : public IRenderGraphPass {
   public:
     ToneMapping(View *view, NamedRT src_rt, NamedRT dst_rt);
 
-    void render(CommandBuffer *cmd) override;
+    void execute(CommandBuffer *cmd) override;
 
     std::vector<PassDependency> src_dependencies() override;
 

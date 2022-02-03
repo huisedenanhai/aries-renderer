@@ -10,7 +10,7 @@ class DeferredShading : public IRenderGraphPass {
     DeferredShading(View *view, NamedRT final_color_rt);
 
     std::vector<PassDependency> src_dependencies() override;
-    void render(CommandBuffer *cmd) override;
+    void execute(CommandBuffer *cmd) override;
     std::vector<PassDependency> dst_dependencies() override;
 
   private:

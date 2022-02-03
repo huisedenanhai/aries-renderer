@@ -11,7 +11,7 @@ class GenerateHierarchyZ : public IRenderGraphPass {
 
     std::vector<PassDependency> src_dependencies() override;
     std::vector<PassDependency> dst_dependencies() override;
-    void render(CommandBuffer *cmd) override;
+    void execute(CommandBuffer *cmd) override;
 
   private:
     void init_hiz(CommandBuffer *cmd);
@@ -28,7 +28,7 @@ class ScreenSpaceReflection : public IRenderGraphPass {
 
     std::vector<PassDependency> src_dependencies() override;
     std::vector<PassDependency> dst_dependencies() override;
-    void render(CommandBuffer *cmd) override;
+    void execute(CommandBuffer *cmd) override;
 
   private:
     View *_view = nullptr;

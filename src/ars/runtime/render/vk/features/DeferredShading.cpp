@@ -15,7 +15,7 @@ DeferredShading::DeferredShading(View *view, NamedRT final_color_rt)
     init_pipeline();
 }
 
-void DeferredShading::render(CommandBuffer *cmd) {
+void DeferredShading::execute(CommandBuffer *cmd) {
     ARS_PROFILER_SAMPLE_VK(cmd, "Deferred Shading", 0xFF771233);
 
     auto final_color = _view->render_target(_final_color_rt);

@@ -33,7 +33,7 @@ std::vector<PassDependency> GenerateHierarchyZ::dst_dependencies() {
     return deps;
 }
 
-void GenerateHierarchyZ::render(CommandBuffer *cmd) {
+void GenerateHierarchyZ::execute(CommandBuffer *cmd) {
     ARS_PROFILER_SAMPLE_VK(cmd, "Generate HiZ", 0xFF116622);
     init_hiz(cmd);
     propagate_hiz(cmd);
@@ -162,7 +162,7 @@ std::vector<PassDependency> ScreenSpaceReflection::dst_dependencies() {
     return deps;
 }
 
-void ScreenSpaceReflection::render(CommandBuffer *cmd) {
+void ScreenSpaceReflection::execute(CommandBuffer *cmd) {
     ARS_PROFILER_SAMPLE_VK(cmd, "Screen Space Reflection", 0xFF432134);
     auto src_color_tex = _view->render_target(_src_rt_name);
     auto dst_color_tex = _view->render_target(_dst_rt_name);

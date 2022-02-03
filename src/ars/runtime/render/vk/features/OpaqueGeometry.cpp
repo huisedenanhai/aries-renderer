@@ -12,7 +12,7 @@ OpaqueGeometry::OpaqueGeometry(View *view) : _view(view) {
     init_pipeline();
 }
 
-void OpaqueGeometry::render(CommandBuffer *cmd) {
+void OpaqueGeometry::execute(CommandBuffer *cmd) {
     ARS_PROFILER_SAMPLE_VK(cmd, "Opaque Geometry", 0xFF12AA34);
 
     auto ctx = _view->context();

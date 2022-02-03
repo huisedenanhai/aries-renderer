@@ -12,7 +12,7 @@ class OpaqueGeometry : public IRenderGraphPass {
   public:
     explicit OpaqueGeometry(View *view);
 
-    void render(CommandBuffer *cmd) override;
+    void execute(CommandBuffer *cmd) override;
     [[nodiscard]] std::vector<PassDependency> dst_dependencies() override;
 
   private:

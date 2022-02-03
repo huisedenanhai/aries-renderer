@@ -1,4 +1,5 @@
 #include "RenderGraph.h"
+#include "Context.h"
 
 namespace ars::render::vk {
 void PassDependency::barrier(CommandBuffer *cmd,
@@ -77,5 +78,86 @@ void PassDependency::barrier(CommandBuffer *cmd,
     for (auto &dep : dst_deps) {
         dep.texture->assure_layout(dep.layout);
     }
+}
+
+void RenderGraph::execute() {
+    _view->context()->queue()->submit_once([&](CommandBuffer *cmd) {
+        for (int i = 0; i < _passes.size(); i++) {
+            if (i > 0) {
+                PassDependency::barrier(cmd,
+                                        _passes[i - 1]->dst_dependencies(),
+                                        _passes[i]->src_dependencies());
+            }
+            _passes[i]->execute(cmd);
+        }
+    });
+}
+
+void RenderGraph::compile() {
+    // For now, do nothing
+}
+
+void RenderGraph::add_pass_internal(std::unique_ptr<IRenderGraphPass> pass) {
+    _passes.emplace_back(std::move(pass));
+}
+
+RenderGraph::RenderGraph(View *view) : _view(view) {}
+
+std::vector<PassDependency> RenderGraphPass::src_dependencies() {
+    return _src_dependencies;
+}
+
+std::vector<PassDependency> RenderGraphPass::dst_dependencies() {
+    return _dst_dependencies;
+}
+
+void RenderGraphPass::execute(CommandBuffer *cmd) {
+    if (_execute_action) {
+        _execute_action(cmd);
+    }
+}
+
+RenderGraphPass::RenderGraphPass(std::function<void(CommandBuffer *)> action)
+    : _execute_action(std::move(action)) {}
+
+RenderGraphPassBuilder::RenderGraphPassBuilder(View *view,
+                                               RenderGraphPass *pass)
+    : _view(view), _pass(pass),
+      _src_deps_builder(view, &pass->_src_dependencies),
+      _dst_deps_builder(view, &pass->_dst_dependencies) {}
+
+PassDependencyBuilder &RenderGraphPassBuilder::src_dependencies() {
+    return _src_deps_builder;
+}
+
+PassDependencyBuilder &RenderGraphPassBuilder::dst_dependencies() {
+    return _dst_deps_builder;
+}
+
+PassDependencyBuilder::PassDependencyBuilder(View *view,
+                                             std::vector<PassDependency> *deps)
+    : _view(view), _deps(deps) {
+    assert(_view != nullptr);
+    assert(_deps != nullptr);
+}
+
+void PassDependencyBuilder::add(NamedRT rt,
+                                VkAccessFlags access_mask,
+                                VkPipelineStageFlags stage_mask,
+                                VkImageLayout layout) {
+    add(_view->render_target(rt), access_mask, stage_mask, layout);
+}
+
+void PassDependencyBuilder::add(const Handle<Texture> &rt,
+                                VkAccessFlags access_mask,
+                                VkPipelineStageFlags stage_mask,
+                                VkImageLayout layout) {
+    PassDependency dep{};
+    dep.texture = rt;
+    dep.access_mask = access_mask;
+    dep.stage_mask = stage_mask;
+    dep.layout = layout;
+
+    _deps->emplace_back(std::move(dep));
 }
 } // namespace ars::render::vk

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Texture.h"
+#include "View.h"
 #include <vector>
 
 namespace ars::render::vk {
@@ -31,10 +32,78 @@ class IRenderGraphPass {
         return {};
     }
 
-    virtual void render(CommandBuffer *cmd) = 0;
+    virtual void execute(CommandBuffer *cmd) = 0;
 };
 
-class RenderGraph {
-    // TODO
+struct RenderGraphPassBuilder;
+
+class RenderGraphPass : public IRenderGraphPass {
+  public:
+    explicit RenderGraphPass(
+        std::function<void(CommandBuffer *)> execute_action);
+    std::vector<PassDependency> src_dependencies() override;
+    std::vector<PassDependency> dst_dependencies() override;
+    void execute(CommandBuffer *cmd) override;
+
+  private:
+    friend RenderGraphPassBuilder;
+
+    std::vector<PassDependency> _src_dependencies{};
+    std::vector<PassDependency> _dst_dependencies{};
+    std::function<void(CommandBuffer *)> _execute_action{};
+};
+
+struct PassDependencyBuilder {
+  public:
+    PassDependencyBuilder(View *view, std::vector<PassDependency> *deps);
+
+    void add(NamedRT rt,
+             VkAccessFlags access_mask,
+             VkPipelineStageFlags stage_mask,
+             VkImageLayout layout = VK_IMAGE_LAYOUT_GENERAL);
+
+    void add(const Handle<Texture> &rt,
+             VkAccessFlags access_mask,
+             VkPipelineStageFlags stage_mask,
+             VkImageLayout layout = VK_IMAGE_LAYOUT_GENERAL);
+
+  private:
+    View *_view = nullptr;
+    std::vector<PassDependency> *_deps{};
+};
+
+struct RenderGraphPassBuilder {
+  public:
+    RenderGraphPassBuilder(View *view, RenderGraphPass *pass);
+
+    PassDependencyBuilder &src_dependencies();
+    PassDependencyBuilder &dst_dependencies();
+
+  private:
+    View *_view = nullptr;
+    RenderGraphPass *_pass = nullptr;
+    PassDependencyBuilder _src_deps_builder;
+    PassDependencyBuilder _dst_deps_builder;
+};
+
+struct RenderGraph {
+  public:
+    explicit RenderGraph(View *view);
+
+    void compile();
+    void execute();
+    void add_pass_internal(std::unique_ptr<IRenderGraphPass> pass);
+
+    template <typename SetUp, typename Exec>
+    void add_pass(SetUp &&set_up, Exec &&exec) {
+        auto pass = std::make_unique<RenderGraphPass>(exec);
+        RenderGraphPassBuilder builder(_view, pass.get());
+        set_up(builder);
+        add_pass_internal(std::move(pass));
+    }
+
+  private:
+    View *_view = nullptr;
+    std::vector<std::unique_ptr<IRenderGraphPass>> _passes{};
 };
 } // namespace ars::render::vk

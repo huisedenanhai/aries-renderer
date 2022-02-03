@@ -31,7 +31,7 @@ std::vector<PassDependency> ToneMapping::src_dependencies() {
     return deps;
 }
 
-void ToneMapping::render(CommandBuffer *cmd) {
+void ToneMapping::execute(CommandBuffer *cmd) {
     ARS_PROFILER_SAMPLE_VK(cmd, "Tone Mapping", 0xFF81EFA2);
 
     _pipeline->bind(cmd);

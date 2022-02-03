@@ -13,7 +13,7 @@ NamedRT Renderer::render(CommandBuffer *cmd) {
                                     _passes[i - 1]->dst_dependencies(),
                                     _passes[i]->src_dependencies());
         }
-        _passes[i]->render(cmd);
+        _passes[i]->execute(cmd);
     }
     return NamedRT_FinalColor0;
 }

@@ -28,29 +28,31 @@ layout(set = 1, binding = 1, std430) buffer MipLevels {
     vec2 mip_resolutions[];
 };
 
-// Aries uses reverse Z, near plane maps to 1 and far plane maps to 0 in screen
-// space.
-// Given a ray in grid's local coordinate, calculate the hit distance t.
-// The origin MUST be inside the grid.
-bool trace_ray_hit_grid(vec3 origin,
-                        vec3 dir,
-                        vec2 grid_size,
-                        float grid_height,
-                        vec2 border_offset,
-                        out float t) {
-    // Hit the height plane
-    float t0 = (grid_height - origin.z) / dir.z;
-    // Ray already under the grid, no need to trace
-    t0 = origin.z <= grid_height ? 0 : t0;
-
-    // Hit border
+// Select a border and offset it.
+// The border selection assumes the ray origin is inside the grid.
+vec2 offset_grid_border(vec3 dir, vec2 grid_size, vec2 border_offset) {
     float bx = dir.x > 0 ? grid_size.x : 0.0;
     float by = dir.y > 0 ? grid_size.y : 0.0;
     // Add some offset to pad the grid bigger so the ray can go into the
     // neighbor grid, otherwise the ray will keep stepping the same grid due to
     // floating point precision issue.
     vec2 b = vec2(bx, by) + border_offset;
-    vec2 tb = (b - origin.xy) / dir.xy;
+    return b;
+}
+
+// Aries uses reverse Z, near plane maps to 1 and far plane maps to 0 in screen
+// space.
+// Given a ray in grid's local coordinate, calculate the hit distance t.
+// border is given by offset_grid_border
+bool trace_ray_hit_grid(
+    vec3 origin, vec3 dir, vec2 border, float grid_height, out float t) {
+    // Hit the height plane
+    float t0 = (grid_height - origin.z) / dir.z;
+    // Ray already under the grid, no need to trace
+    t0 = origin.z <= grid_height ? 0 : t0;
+
+    // Hit border
+    vec2 tb = (border - origin.xy) / dir.xy;
     // t1 >= 0.0 if the origin is inside the grid.
     float t1 = min(tb.x, tb.y);
 
@@ -77,18 +79,17 @@ bool trace_ray_hiz(vec3 origin_ss,
     vec3 dir_idx = vec3(dir_ss.xy * start_mip_res, dir_ss.z);
 
     vec2 border_offset = sign(dir_ss.xy) * SSR_GRID_EPSILON;
+    vec2 grid_border = offset_grid_border(dir_ss, vec2(1.0), border_offset);
 
     vec3 hit_idx = origin_idx;
     // Step one grid to avoid self intersection
     {
         float t = 0;
-        trace_ray_hit_grid(
-            fract(hit_idx), dir_idx, vec2(1.0), 0.0, border_offset, t);
+        trace_ray_hit_grid(fract(hit_idx), dir_idx, grid_border, 0.0, t);
         hit_idx += t * dir_idx;
     }
 
     int iter = 0;
-    vec2 grid_size = vec2(1.0);
     // The max iter count only works as a safety guard from the kernel stalling
     // the GPU. Decrease it will results in missing ray tracing hits.
     const int MAX_ITER_COUNT = 400;
@@ -98,28 +99,40 @@ bool trace_ray_hiz(vec3 origin_ss,
     // to the profiler.
     while (iter < MAX_ITER_COUNT && level >= start_mip_level &&
            level <= root_level && value_in_01(hit_idx.z)) {
-        vec2 grid_index = floor(hit_idx.xy / grid_size);
-        vec3 grid_offset_idx = vec3(grid_index * grid_size, 0.0);
+        // hit_idx and dir_idx always stands for index in current level
+        vec2 grid_index = floor(hit_idx.xy);
+        vec3 grid_offset_idx = vec3(grid_index, 0.0);
+        vec2 max_mip_index = mip_resolutions[level] - 1;
 
         float t = 0;
         bool has_hit = trace_ray_hit_grid(
             hit_idx - grid_offset_idx,
             dir_idx,
-            grid_size,
-            // The hiz buffer uses clamp to edge so there is
-            // no need to adjust uv manually.
-            texelFetch(hiz_buffer, ivec2(grid_index), level).r,
-            border_offset,
+            grid_border,
+            // We may read wrong value when grid_index < 0, but that does not
+            // cause light leaking because hiz buffer only pad when grid_index
+            // >= size
+            texelFetch(hiz_buffer,
+                       ivec2(min(grid_index.x, max_mip_index.x),
+                             min(grid_index.y, max_mip_index.y)),
+                       level)
+                .r,
             t);
 
         hit_idx += t * dir_idx;
 
         level += has_hit ? -1 : 1;
-        grid_size *= has_hit ? 0.5 : 2.0;
+
+        // Adjust index
+        float idx_scale = has_hit ? 2.0 : 0.5;
+        hit_idx.xy *= idx_scale;
+        dir_idx.xy *= idx_scale;
         iter++;
     }
 
-    hit_ss = vec3(hit_idx.xy / start_mip_res, hit_idx.z);
+    // If hit happens, the hit_idx is in level -1, multiply it with 0.5 to get
+    // the hit_idx in level 0
+    hit_ss = vec3(0.5 * hit_idx.xy / start_mip_res, hit_idx.z);
     return level < start_mip_level;
 }
 
@@ -132,6 +145,7 @@ bool trace_ray_dda(vec3 origin_ss,
     vec2 mip_res = mip_resolutions[mip_level];
     vec2 grid_size = 1.0 / mip_res;
     vec2 border_offset = sign(dir_ss.xy) * grid_size * 1e-3;
+    vec2 grid_border = offset_grid_border(dir_ss, grid_size, border_offset);
     hit_ss = origin_ss;
 
     // step one grid to avoid self intersection
@@ -141,7 +155,7 @@ bool trace_ray_dda(vec3 origin_ss,
 
         float t = 0;
         trace_ray_hit_grid(
-            hit_ss - grid_offset_ss, dir_ss, grid_size, 0.0, border_offset, t);
+            hit_ss - grid_offset_ss, dir_ss, grid_border, 0.0, t);
         hit_ss += t * dir_ss;
     }
 
@@ -154,9 +168,8 @@ bool trace_ray_dda(vec3 origin_ss,
         bool has_hit = trace_ray_hit_grid(
             hit_ss - grid_offset_ss,
             dir_ss,
-            grid_size,
+            grid_border,
             textureLod(hiz_buffer, grid_center_uv, mip_level).r,
-            border_offset,
             t);
         hit_ss += t * dir_ss;
 
@@ -207,8 +220,8 @@ vec3 calculate_color(ivec2 index) {
     vec3 hit_ss;
     bool has_hit =
         trace_ray_hiz(pos_ss, reflect_dir_ss, start_mip_level, hit_ss);
-    // bool has_hit = trace_ray_dda(pos_ss, reflect_dir_ss, start_mip_level,
-    // hit_ss);
+    // bool has_hit =
+    // trace_ray_dda(pos_ss, reflect_dir_ss, start_mip_level, hit_ss);
 
     vec3 reflect_color = texture(src_color_tex, hit_ss.xy).rgb;
     float screen_border_fade_size = 0.1;

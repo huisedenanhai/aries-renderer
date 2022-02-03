@@ -537,9 +537,9 @@ void DescriptorEncoder::commit(CommandBuffer *cmd, Pipeline *pipeline) {
     image_infos.resize(_bindings.size());
     buffer_infos.resize(_bindings.size());
 
-    size_t write_index = 0;
-    size_t image_index = 0;
-    size_t buffer_index = 0;
+    size_t write_count = 0;
+    size_t image_count = 0;
+    size_t buffer_count = 0;
 
     auto ctx = pipeline->context();
     auto &layout_info = pipeline->pipeline_layout_info();
@@ -558,8 +558,8 @@ void DescriptorEncoder::commit(CommandBuffer *cmd, Pipeline *pipeline) {
         auto desc_type = bind_info->descriptorType;
         std::visit(make_visitor(
                        [&](const ImageInfo &data) {
-                           auto &w = writes[write_index++];
-                           auto &img_info = image_infos[image_index++];
+                           auto &w = writes[write_count++];
+                           auto &img_info = image_infos[image_count++];
 
                            fill_desc_image(&w,
                                            &img_info,
@@ -570,8 +570,8 @@ void DescriptorEncoder::commit(CommandBuffer *cmd, Pipeline *pipeline) {
                                            data.level);
                        },
                        [&](const BufferDataInfo &data) {
-                           auto &w = writes[write_index++];
-                           auto &buf_info = buffer_infos[buffer_index++];
+                           auto &w = writes[write_count++];
+                           auto &buf_info = buffer_infos[buffer_count++];
 
                            VkBufferUsageFlags usage = 0;
                            if (desc_type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) {
@@ -596,8 +596,8 @@ void DescriptorEncoder::commit(CommandBuffer *cmd, Pipeline *pipeline) {
                                             desc_type);
                        },
                        [&](const BufferInfo &data) {
-                           auto &w = writes[write_index++];
-                           auto &buf_info = buffer_infos[buffer_index++];
+                           auto &w = writes[write_count++];
+                           auto &buf_info = buffer_infos[buffer_count++];
 
                            fill_desc_buffer(&w,
                                             &buf_info,
@@ -612,7 +612,7 @@ void DescriptorEncoder::commit(CommandBuffer *cmd, Pipeline *pipeline) {
     }
 
     ctx->device()->UpdateDescriptorSets(
-        static_cast<uint32_t>(std::size(writes)), writes.data(), 0, nullptr);
+        static_cast<uint32_t>(write_count), writes.data(), 0, nullptr);
 
     for (int i = 0; i < std::size(desc_sets); i++) {
         auto set = desc_sets[i];

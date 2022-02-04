@@ -2,6 +2,6 @@
     "sources": [
         "InitHiZ.comp",
         "PropagateHiZ.comp",
-        "ScreenSpaceReflection.comp"
+        "HiZTraceRay.comp"
     ]
 }

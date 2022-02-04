@@ -112,79 +112,16 @@ void GenerateHierarchyZ::render(RenderGraph &rg) {
         [this](CommandBuffer *cmd) { execute(cmd); });
 }
 
-void ScreenSpaceReflection::execute(CommandBuffer *cmd,
-                                    NamedRT src_rt,
-                                    NamedRT dst_rt) {
-    ARS_PROFILER_SAMPLE_VK(cmd, "Screen Space Reflection", 0xFF432134);
-    auto src_color_tex = _view->render_target(src_rt);
-    auto dst_color_tex = _view->render_target(dst_rt);
-    auto hiz_buffer = _view->render_target(NamedRT_HiZBuffer);
-
-    auto dst_extent = dst_color_tex->info().extent;
-    _ssr_pipeline->bind(cmd);
-
-    DescriptorEncoder desc{};
-    desc.set_texture(0, 0, dst_color_tex.get());
-    desc.set_texture(0, 1, hiz_buffer.get());
-    desc.set_texture(0, 2, src_color_tex.get());
-    desc.set_texture(0, 3, _view->render_target(NamedRT_GBuffer0).get());
-    desc.set_texture(0, 4, _view->render_target(NamedRT_GBuffer1).get());
-    desc.set_texture(0, 5, _view->render_target(NamedRT_GBuffer2).get());
-
-    struct Param {
-        glm::mat4 P;
-        glm::mat4 I_P;
-        int32_t width;
-        int32_t height;
-        int32_t hiz_mip_count;
-        ARS_PADDING_FIELD(uint32_t);
-    };
-
-    Param param{};
-    param.P = _view->projection_matrix();
-    param.I_P = glm::inverse(param.P);
-    param.width = static_cast<int32_t>(dst_extent.width);
-    param.height = static_cast<int32_t>(dst_extent.height);
-    param.hiz_mip_count = static_cast<int32_t>(hiz_buffer->info().mip_levels);
-
-    desc.set_buffer_data(1, 0, param);
-
-    std::vector<glm::vec2> mip_sizes{};
-    mip_sizes.reserve(param.hiz_mip_count);
-
-    uint32_t mip_width = hiz_buffer->info().extent.width;
-    uint32_t mip_height = hiz_buffer->info().extent.height;
-    for (int i = 0; i < param.hiz_mip_count; i++) {
-        mip_sizes.emplace_back(mip_width, mip_height);
-        mip_width = calculate_next_mip_size(mip_width);
-        mip_height = calculate_next_mip_size(mip_height);
-    }
-
-    desc.set_buffer_data(
-        1, 1, mip_sizes.data(), mip_sizes.size() * sizeof(glm::vec2));
-
-    desc.commit(cmd, _ssr_pipeline.get());
-
-    _ssr_pipeline->local_size().dispatch(cmd, dst_extent);
-}
-
 ScreenSpaceReflection::ScreenSpaceReflection(View *view) : _view(view) {
-    _ssr_pipeline = ComputePipeline::create(_view->context(),
-                                            "SSR/ScreenSpaceReflection.comp");
+    _hiz_trace_pipeline =
+        ComputePipeline::create(_view->context(), "SSR/HiZTraceRay.comp");
+    alloc_hit_buffer();
 }
 
-void ScreenSpaceReflection::render(RenderGraph &rg,
-                                   NamedRT src_rt,
-                                   NamedRT dst_rt) {
+void ScreenSpaceReflection::trace_rays(RenderGraph &rg) {
     rg.add_pass(
         [&](RenderGraphPassBuilder &builder) {
             builder.read(NamedRT_HiZBuffer,
-                         VK_ACCESS_SHADER_READ_BIT,
-                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-            builder.read(src_rt,
-                         VK_ACCESS_SHADER_READ_BIT,
-                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-            builder.read(NamedRT_GBuffer0,
                          VK_ACCESS_SHADER_READ_BIT,
                          VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
             builder.read(NamedRT_GBuffer1,
@@ -193,10 +130,73 @@ void ScreenSpaceReflection::render(RenderGraph &rg,
             builder.read(NamedRT_GBuffer2,
                          VK_ACCESS_SHADER_READ_BIT,
                          VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-            builder.write(dst_rt,
+            builder.write(_hit_buffer_id,
                           VK_ACCESS_SHADER_WRITE_BIT,
                           VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
         },
-        [=](CommandBuffer *cmd) { execute(cmd, src_rt, dst_rt); });
+        [=](CommandBuffer *cmd) {
+            ARS_PROFILER_SAMPLE_VK(cmd, "SSR Trace", 0xFF432134);
+            auto hit_buffer = _view->rt_manager()->get(_hit_buffer_id);
+            auto hiz_buffer = _view->render_target(NamedRT_HiZBuffer);
+
+            auto dst_extent = hit_buffer->info().extent;
+
+            _hiz_trace_pipeline->bind(cmd);
+
+            DescriptorEncoder desc{};
+            desc.set_texture(0, 0, hit_buffer.get());
+            desc.set_texture(0, 1, hiz_buffer.get());
+            desc.set_texture(
+                0, 2, _view->render_target(NamedRT_GBuffer1).get());
+            desc.set_texture(
+                0, 3, _view->render_target(NamedRT_GBuffer2).get());
+
+            struct Param {
+                glm::mat4 P;
+                glm::mat4 I_P;
+                int32_t width;
+                int32_t height;
+                int32_t hiz_mip_count;
+                ARS_PADDING_FIELD(uint32_t);
+            };
+
+            Param param{};
+            param.P = _view->projection_matrix();
+            param.I_P = glm::inverse(param.P);
+            param.width = static_cast<int32_t>(dst_extent.width);
+            param.height = static_cast<int32_t>(dst_extent.height);
+            param.hiz_mip_count =
+                static_cast<int32_t>(hiz_buffer->info().mip_levels);
+
+            desc.set_buffer_data(1, 0, param);
+
+            std::vector<glm::vec2> mip_sizes{};
+            mip_sizes.reserve(param.hiz_mip_count);
+
+            uint32_t mip_width = hiz_buffer->info().extent.width;
+            uint32_t mip_height = hiz_buffer->info().extent.height;
+            for (int i = 0; i < param.hiz_mip_count; i++) {
+                mip_sizes.emplace_back(mip_width, mip_height);
+                mip_width = calculate_next_mip_size(mip_width);
+                mip_height = calculate_next_mip_size(mip_height);
+            }
+
+            desc.set_buffer_data(
+                1, 1, mip_sizes.data(), mip_sizes.size() * sizeof(glm::vec2));
+
+            desc.commit(cmd, _hiz_trace_pipeline.get());
+
+            _hiz_trace_pipeline->local_size().dispatch(cmd, dst_extent);
+        });
+}
+
+void ScreenSpaceReflection::alloc_hit_buffer() {
+    RenderTargetInfo info{};
+    info.texture =
+        TextureCreateInfo::sampled_2d(VK_FORMAT_R16G16B16A16_SFLOAT, 1, 1, 1);
+    info.texture.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+
+    // Trace at half resolution
+    _hit_buffer_id = _view->rt_manager()->alloc(info, 0.5f);
 }
 } // namespace ars::render::vk

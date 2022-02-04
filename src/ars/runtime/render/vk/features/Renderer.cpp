@@ -18,8 +18,7 @@ NamedRT Renderer::render(RenderGraph &rg) {
     flip_pingpong_buffer();
     _deferred_shading->render(rg, final_colors[0]);
     _generate_hierarchy_z->render(rg);
-    flip_pingpong_buffer();
-    _screen_space_reflection->render(rg, final_colors[1], final_colors[0]);
+    _screen_space_reflection->trace_rays(rg);
     flip_pingpong_buffer();
     _tone_mapping->render(rg, final_colors[1], final_colors[0]);
 

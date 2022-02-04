@@ -25,12 +25,13 @@ class ScreenSpaceReflection {
   public:
     explicit ScreenSpaceReflection(View *view);
 
-    void render(RenderGraph &rg, NamedRT src_rt, NamedRT dst_rt);
+    void trace_rays(RenderGraph &rg);
 
   private:
-    void execute(CommandBuffer *cmd, NamedRT src_rt, NamedRT dst_rt);
+    void alloc_hit_buffer();
 
     View *_view = nullptr;
-    std::unique_ptr<ComputePipeline> _ssr_pipeline;
+    std::unique_ptr<ComputePipeline> _hiz_trace_pipeline;
+    RenderTargetId _hit_buffer_id;
 };
 } // namespace ars::render::vk

@@ -2,6 +2,7 @@
 
 #include "../Mesh.h"
 #include "../Pipeline.h"
+#include "../RenderGraph.h"
 #include "../View.h"
 
 namespace ars::render::vk {
@@ -28,15 +29,15 @@ class OverlayRenderer : public IOverlay {
 
     [[nodiscard]] LightGizmo light_gizmo() const;
 
-    bool need_render() const;
-    void render(CommandBuffer *cmd, NamedRT dst_rt_name);
+    void render(RenderGraph &rg, NamedRT dst_rt_name);
 
   private:
     void init_forward_render_pass();
     void init_billboard_pipeline();
     void init_line_pipeline();
     void ensure_outline_rts();
-    void render_outline(CommandBuffer *cmd, const Handle<Texture> &dst_rt);
+    void render_object_ids(CommandBuffer *cmd);
+    void calculate_outline(CommandBuffer *cmd, const Handle<Texture> &dst_rt);
     void render_billboard(CommandBuffer *cmd);
     void render_line(CommandBuffer *cmd);
     bool need_render_outline() const;

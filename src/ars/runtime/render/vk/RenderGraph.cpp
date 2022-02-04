@@ -97,7 +97,7 @@ void RenderGraph::execute() {
 
 void RenderGraph::compile() {
     ARS_PROFILER_SAMPLE("Render Graph Compile", 0xFF125512);
-    // For now, do nothing
+    // TODO culling, virtual resource management, automatic scheduling
 }
 
 void RenderGraph::add_pass_internal(std::unique_ptr<IRenderGraphPass> pass) {
@@ -162,5 +162,12 @@ void PassDependencyBuilder::add(const Handle<Texture> &rt,
     dep.layout = layout;
 
     _deps->emplace_back(std::move(dep));
+}
+
+void PassDependencyBuilder::add(RenderTargetId rt,
+                                VkAccessFlags access_mask,
+                                VkPipelineStageFlags stage_mask,
+                                VkImageLayout layout) {
+    add(_view->rt_manager()->get(rt), access_mask, stage_mask, layout);
 }
 } // namespace ars::render::vk

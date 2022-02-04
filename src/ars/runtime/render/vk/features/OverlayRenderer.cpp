@@ -41,45 +41,58 @@ void OverlayRenderer::draw_outline(uint8_t group,
     _outline_draw_requests.emplace_back(std::move(request));
 }
 
-bool OverlayRenderer::need_render() const {
-    return need_forward_pass() || need_render_outline();
-}
-
-void OverlayRenderer::render(CommandBuffer *cmd, NamedRT dst_rt_name) {
+void OverlayRenderer::render(RenderGraph &rg, NamedRT dst_rt_name) {
     auto rd_outline = need_render_outline();
     auto rd_forward = need_forward_pass();
     auto dst_rt = _view->render_target(dst_rt_name);
     if (rd_outline) {
-        render_outline(cmd, dst_rt);
-    }
-    if (rd_outline && rd_forward) {
-        VkImageMemoryBarrier barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
-        barrier.image = dst_rt->image();
-        barrier.subresourceRange = dst_rt->subresource_range();
-        barrier.oldLayout = dst_rt->layout();
-        barrier.newLayout = dst_rt->layout();
-        barrier.srcAccessMask =
-            VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
-        barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
-                                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        // Draw object ids
+        ensure_outline_rts();
+        rg.add_pass(
+            [&](RenderGraphPassBuilder &builder) {
+                builder.write(_outline_depth_rt,
+                              VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
+                                  VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT,
+                              VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT);
+                builder.write(_outline_id_rt,
+                              VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                              VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+            },
+            [=](CommandBuffer *cmd) { render_object_ids(cmd); });
 
-        cmd->PipelineBarrier(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                             0,
-                             0,
-                             nullptr,
-                             0,
-                             nullptr,
-                             1,
-                             &barrier);
+        // Calculate outline based on object ids
+        rg.add_pass(
+            [&](RenderGraphPassBuilder &builder) {
+                builder.read(_outline_id_rt,
+                             VK_ACCESS_SHADER_READ_BIT,
+                             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+                builder.write(dst_rt,
+                              VK_ACCESS_SHADER_WRITE_BIT,
+                              VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+            },
+            [=](CommandBuffer *cmd) { calculate_outline(cmd, dst_rt); });
     }
     if (rd_forward) {
-        auto depth_rt = _view->render_target(NamedRT_Depth);
-        auto rp_exec = _overlay_forward_pass->begin(
-            cmd, {dst_rt, depth_rt}, VK_SUBPASS_CONTENTS_INLINE);
-        render_line(cmd);
-        render_billboard(cmd);
-        _overlay_forward_pass->end(rp_exec);
+        rg.add_pass(
+            [&](RenderGraphPassBuilder &builder) {
+                builder.write(dst_rt,
+                              VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+                                  VK_ACCESS_COLOR_ATTACHMENT_READ_BIT,
+                              VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+                // Outline and billboard are all rendered transparently and does
+                // not write depth
+                builder.read(NamedRT_Depth,
+                             VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT,
+                             VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT);
+            },
+            [=](CommandBuffer *cmd) {
+                auto depth_rt = _view->render_target(NamedRT_Depth);
+                auto rp_exec = _overlay_forward_pass->begin(
+                    cmd, {dst_rt, depth_rt}, VK_SUBPASS_CONTENTS_INLINE);
+                render_line(cmd);
+                render_billboard(cmd);
+                _overlay_forward_pass->end(rp_exec);
+            });
     }
 }
 
@@ -180,59 +193,9 @@ void OverlayRenderer::init_billboard_pipeline() {
     _billboard_pipeline = std::make_unique<GraphicsPipeline>(ctx, info);
 }
 
-void OverlayRenderer::render_outline(CommandBuffer *cmd,
-                                     const Handle<Texture> &dst_rt) {
-    ensure_outline_rts();
-    auto rt_manager = _view->rt_manager();
-
-    auto p_matrix = _view->projection_matrix();
-    auto v_matrix = _view->view_matrix();
-
-    std::vector<uint32_t> ids{};
-    std::vector<glm::mat4> mvp_arr{};
-    std::vector<std::shared_ptr<Mesh>> meshes{};
-
-    auto outline_request_count = _outline_draw_requests.size();
-
-    ids.reserve(outline_request_count);
-    mvp_arr.reserve(outline_request_count);
-    meshes.reserve(outline_request_count);
-
-    for (int i = 0; i < outline_request_count; i++) {
-        auto &req = _outline_draw_requests[i];
-        ids.push_back(encode_outline_id(req.group, i + 1));
-        mvp_arr.push_back(p_matrix * v_matrix * req.xform.matrix());
-        meshes.push_back(req.mesh);
-    }
-
-    auto outline_id = rt_manager->get(_outline_id_rt);
-    auto outline_depth = rt_manager->get(_outline_depth_rt);
-
-    auto id_rp = _view->drawer()->draw_id_render_pass();
-    auto id_rp_exec = id_rp->begin(
-        cmd, {outline_id, outline_depth}, VK_SUBPASS_CONTENTS_INLINE);
-    _view->drawer()->draw_ids(
-        cmd, outline_request_count, mvp_arr.data(), ids.data(), meshes.data());
-    id_rp->end(id_rp_exec);
-
-    VkImageMemoryBarrier barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
-    barrier.image = outline_id->image();
-    barrier.subresourceRange = outline_id->subresource_range();
-    barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
-    barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-    barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-    cmd->PipelineBarrier(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                         0,
-                         0,
-                         nullptr,
-                         0,
-                         nullptr,
-                         1,
-                         &barrier);
-
+void OverlayRenderer::calculate_outline(CommandBuffer *cmd,
+                                        const Handle<Texture> &dst_rt) {
+    auto outline_id = _view->rt_manager()->get(_outline_id_rt);
     struct Param {
         int width;
         int height;
@@ -434,5 +397,39 @@ void OverlayRenderer::render_line(CommandBuffer *cmd) {
 
 bool OverlayRenderer::need_forward_pass() const {
     return need_render_billboard() || need_render_line();
+}
+
+void OverlayRenderer::render_object_ids(CommandBuffer *cmd) {
+    auto rt_manager = _view->rt_manager();
+
+    auto p_matrix = _view->projection_matrix();
+    auto v_matrix = _view->view_matrix();
+
+    std::vector<uint32_t> ids{};
+    std::vector<glm::mat4> mvp_arr{};
+    std::vector<std::shared_ptr<Mesh>> meshes{};
+
+    auto outline_request_count = _outline_draw_requests.size();
+
+    ids.reserve(outline_request_count);
+    mvp_arr.reserve(outline_request_count);
+    meshes.reserve(outline_request_count);
+
+    for (int i = 0; i < outline_request_count; i++) {
+        auto &req = _outline_draw_requests[i];
+        ids.push_back(encode_outline_id(req.group, i + 1));
+        mvp_arr.push_back(p_matrix * v_matrix * req.xform.matrix());
+        meshes.push_back(req.mesh);
+    }
+
+    auto outline_id = rt_manager->get(_outline_id_rt);
+    auto outline_depth = rt_manager->get(_outline_depth_rt);
+
+    auto id_rp = _view->drawer()->draw_id_render_pass();
+    auto id_rp_exec = id_rp->begin(
+        cmd, {outline_id, outline_depth}, VK_SUBPASS_CONTENTS_INLINE);
+    _view->drawer()->draw_ids(
+        cmd, outline_request_count, mvp_arr.data(), ids.data(), meshes.data());
+    id_rp->end(id_rp_exec);
 }
 } // namespace ars::render::vk

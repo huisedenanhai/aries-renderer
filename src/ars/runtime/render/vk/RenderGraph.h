@@ -67,6 +67,11 @@ struct PassDependencyBuilder {
              VkPipelineStageFlags stage_mask,
              VkImageLayout layout = VK_IMAGE_LAYOUT_GENERAL);
 
+    void add(RenderTargetId rt,
+             VkAccessFlags access_mask,
+             VkPipelineStageFlags stage_mask,
+             VkImageLayout layout = VK_IMAGE_LAYOUT_GENERAL);
+
   private:
     View *_view = nullptr;
     std::vector<PassDependency> *_deps{};

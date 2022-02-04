@@ -25,16 +25,12 @@ void View::render() {
     _rt_manager->update(translate(_size));
 
     RenderGraph rg(this);
+
     auto final_rt = _renderer->render(rg);
+    _overlay_renderer->render(rg, final_rt);
+
     rg.compile();
     rg.execute();
-
-    if (_overlay_renderer->need_render()) {
-        ctx->queue()->submit_once([&](CommandBuffer *cmd) {
-            ARS_PROFILER_SAMPLE_VK(cmd, "Render Overlay", 0xFF152439);
-            _overlay_renderer->render(cmd, final_rt);
-        });
-    }
 
     update_color_tex_adapter(final_rt);
 }

@@ -21,8 +21,11 @@ A very coarse plan for development.
     + [ ] DOF
     + [ ] Dynamic Sky
     + [ ] Volumetric Cloud
+    + [ ] Super Resolution
 3. Architecture
-    + [ ] Render Graph
+    + [x] Render Graph
+        + [ ] Virtual Resource Management
+        + [ ] Scheduling
 4. System
    > Build on top of existing rendering features
     + [ ] Particle

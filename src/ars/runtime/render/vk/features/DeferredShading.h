@@ -5,19 +5,17 @@
 #include "../View.h"
 
 namespace ars::render::vk {
-class DeferredShading : public IRenderGraphPass {
+class DeferredShading {
   public:
-    DeferredShading(View *view, NamedRT final_color_rt);
+    explicit DeferredShading(View *view);
 
-    std::vector<PassDependency> src_dependencies() override;
-    void execute(CommandBuffer *cmd) override;
-    std::vector<PassDependency> dst_dependencies() override;
+    void render(RenderGraph &rg, NamedRT final_color_rt);
 
   private:
+    void execute(CommandBuffer *cmd, NamedRT final_color_rt);
     void init_pipeline();
 
     View *_view = nullptr;
-    NamedRT _final_color_rt{};
     std::unique_ptr<ComputePipeline> _pipeline{};
 };
 } // namespace ars::render::vk

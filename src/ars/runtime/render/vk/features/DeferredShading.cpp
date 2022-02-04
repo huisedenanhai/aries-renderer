@@ -10,15 +10,14 @@ void DeferredShading::init_pipeline() {
     _pipeline = ComputePipeline::create(_view->context(), "ShadingPass.comp");
 }
 
-DeferredShading::DeferredShading(View *view, NamedRT final_color_rt)
-    : _view(view), _final_color_rt(final_color_rt) {
+DeferredShading::DeferredShading(View *view) : _view(view) {
     init_pipeline();
 }
 
-void DeferredShading::execute(CommandBuffer *cmd) {
+void DeferredShading::execute(CommandBuffer *cmd, NamedRT final_color_rt) {
     ARS_PROFILER_SAMPLE_VK(cmd, "Deferred Shading", 0xFF771233);
 
-    auto final_color = _view->render_target(_final_color_rt);
+    auto final_color = _view->render_target(final_color_rt);
     auto final_color_extent = final_color->info().extent;
     auto env = _view->environment_vk();
 
@@ -120,45 +119,29 @@ void DeferredShading::execute(CommandBuffer *cmd) {
     _pipeline->local_size().dispatch(cmd, param.width, param.height, 1);
 }
 
-std::vector<PassDependency> DeferredShading::dst_dependencies() {
-    std::vector<PassDependency> deps(1);
-    auto &d = deps[0];
-    d.texture = _view->render_target(_final_color_rt);
-    d.access_mask = VK_ACCESS_SHADER_WRITE_BIT;
-    d.layout = VK_IMAGE_LAYOUT_GENERAL;
-    d.stage_mask = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+void DeferredShading::render(RenderGraph &rg, NamedRT final_color_rt) {
+    rg.add_pass(
+        [&](RenderGraphPassBuilder &builder) {
+            builder.write(final_color_rt,
+                          VK_ACCESS_SHADER_WRITE_BIT,
+                          VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 
-    return deps;
-}
+            NamedRT rts[5] = {
+                NamedRT_GBuffer0,
+                NamedRT_GBuffer1,
+                NamedRT_GBuffer2,
+                NamedRT_GBuffer3,
+                NamedRT_Depth,
+            };
 
-std::vector<PassDependency> DeferredShading::src_dependencies() {
-    std::vector<PassDependency> deps;
-    deps.reserve(6);
-
-    NamedRT rts[5] = {
-        NamedRT_GBuffer0,
-        NamedRT_GBuffer1,
-        NamedRT_GBuffer2,
-        NamedRT_GBuffer3,
-        NamedRT_Depth,
-    };
-
-    for (auto &rt : rts) {
-        PassDependency d{};
-        d.texture = _view->render_target(rt);
-        d.access_mask = VK_ACCESS_SHADER_READ_BIT;
-        d.layout = VK_IMAGE_LAYOUT_GENERAL;
-        d.stage_mask = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-        deps.push_back(d);
-    }
-
-    PassDependency d{};
-    d.texture = _view->render_target(_final_color_rt);
-    d.access_mask = VK_ACCESS_SHADER_WRITE_BIT;
-    d.layout = VK_IMAGE_LAYOUT_GENERAL;
-    d.stage_mask = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-    deps.push_back(d);
-
-    return deps;
+            for (auto &rt : rts) {
+                builder.read(rt,
+                             VK_ACCESS_SHADER_READ_BIT,
+                             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+            }
+        },
+        [this, final_color_rt](CommandBuffer *cmd) {
+            execute(cmd, final_color_rt);
+        });
 }
 } // namespace ars::render::vk

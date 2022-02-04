@@ -5,21 +5,18 @@
 #include "../View.h"
 
 namespace ars::render::vk {
-class ToneMapping : public IRenderGraphPass {
+class ToneMapping {
   public:
-    ToneMapping(View *view, NamedRT src_rt, NamedRT dst_rt);
+    explicit ToneMapping(View *view);
 
-    void execute(CommandBuffer *cmd) override;
-
-    std::vector<PassDependency> src_dependencies() override;
+    void render(RenderGraph &rg, NamedRT src_rt, NamedRT dst_rt);
 
   private:
+    void execute(CommandBuffer *cmd, NamedRT src_rt_name, NamedRT dst_rt_name);
+
     void init_pipeline();
 
     View *_view = nullptr;
-    NamedRT _src_rt_name{};
-    NamedRT _dst_rt_name{};
-
     std::unique_ptr<ComputePipeline> _pipeline{};
 };
 } // namespace ars::render::vk

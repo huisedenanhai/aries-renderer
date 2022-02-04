@@ -2,37 +2,6 @@
 #include "../Profiler.h"
 
 namespace ars::render::vk {
-std::vector<PassDependency> GenerateHierarchyZ::src_dependencies() {
-    std::vector<PassDependency> deps(2);
-    {
-        auto &d = deps[0];
-        d.texture = _view->render_target(NamedRT_Depth);
-        d.access_mask = VK_ACCESS_SHADER_READ_BIT;
-        d.layout = VK_IMAGE_LAYOUT_GENERAL;
-        d.stage_mask = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-    }
-    {
-        auto &d = deps[1];
-        d.texture = _view->render_target(NamedRT_HiZBuffer);
-        d.access_mask = VK_ACCESS_SHADER_WRITE_BIT;
-        d.layout = VK_IMAGE_LAYOUT_GENERAL;
-        d.stage_mask = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-    }
-    return deps;
-}
-
-std::vector<PassDependency> GenerateHierarchyZ::dst_dependencies() {
-    std::vector<PassDependency> deps(1);
-    {
-        auto &d = deps[0];
-        d.texture = _view->render_target(NamedRT_HiZBuffer);
-        d.access_mask = VK_ACCESS_SHADER_WRITE_BIT;
-        d.layout = VK_IMAGE_LAYOUT_GENERAL;
-        d.stage_mask = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-    }
-    return deps;
-}
-
 void GenerateHierarchyZ::execute(CommandBuffer *cmd) {
     ARS_PROFILER_SAMPLE_VK(cmd, "Generate HiZ", 0xFF116622);
     init_hiz(cmd);
@@ -130,42 +99,25 @@ void GenerateHierarchyZ::propagate_hiz(CommandBuffer *cmd) {
     }
 }
 
-std::vector<PassDependency> ScreenSpaceReflection::src_dependencies() {
-    std::vector<PassDependency> deps{};
-    auto add_dep = [&](NamedRT rt_name, VkAccessFlags access_mask) {
-        PassDependency d{};
-        d.texture = _view->render_target(rt_name);
-        d.access_mask = access_mask;
-        d.layout = VK_IMAGE_LAYOUT_GENERAL;
-        d.stage_mask = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-        deps.push_back(d);
-    };
-    add_dep(NamedRT_HiZBuffer, VK_ACCESS_SHADER_READ_BIT);
-    add_dep(_src_rt_name, VK_ACCESS_SHADER_READ_BIT);
-    add_dep(_dst_rt_name, VK_ACCESS_SHADER_WRITE_BIT);
-    add_dep(NamedRT_GBuffer0, VK_ACCESS_SHADER_READ_BIT);
-    add_dep(NamedRT_GBuffer1, VK_ACCESS_SHADER_READ_BIT);
-    add_dep(NamedRT_GBuffer2, VK_ACCESS_SHADER_READ_BIT);
-
-    return deps;
+void GenerateHierarchyZ::render(RenderGraph &rg) {
+    rg.add_pass(
+        [this](RenderGraphPassBuilder &builder) {
+            builder.read(NamedRT_Depth,
+                         VK_ACCESS_SHADER_READ_BIT,
+                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+            builder.write(NamedRT_HiZBuffer,
+                          VK_ACCESS_SHADER_WRITE_BIT,
+                          VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+        },
+        [this](CommandBuffer *cmd) { execute(cmd); });
 }
 
-std::vector<PassDependency> ScreenSpaceReflection::dst_dependencies() {
-    std::vector<PassDependency> deps(1);
-    {
-        auto &d = deps[0];
-        d.texture = _view->render_target(_dst_rt_name);
-        d.access_mask = VK_ACCESS_SHADER_WRITE_BIT;
-        d.layout = VK_IMAGE_LAYOUT_GENERAL;
-        d.stage_mask = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-    }
-    return deps;
-}
-
-void ScreenSpaceReflection::execute(CommandBuffer *cmd) {
+void ScreenSpaceReflection::execute(CommandBuffer *cmd,
+                                    NamedRT src_rt,
+                                    NamedRT dst_rt) {
     ARS_PROFILER_SAMPLE_VK(cmd, "Screen Space Reflection", 0xFF432134);
-    auto src_color_tex = _view->render_target(_src_rt_name);
-    auto dst_color_tex = _view->render_target(_dst_rt_name);
+    auto src_color_tex = _view->render_target(src_rt);
+    auto dst_color_tex = _view->render_target(dst_rt);
     auto hiz_buffer = _view->render_target(NamedRT_HiZBuffer);
 
     auto dst_extent = dst_color_tex->info().extent;
@@ -216,11 +168,35 @@ void ScreenSpaceReflection::execute(CommandBuffer *cmd) {
     _ssr_pipeline->local_size().dispatch(cmd, dst_extent);
 }
 
-ScreenSpaceReflection::ScreenSpaceReflection(View *view,
-                                             NamedRT src_rt,
-                                             NamedRT dst_rt)
-    : _view(view), _src_rt_name(src_rt), _dst_rt_name(dst_rt) {
+ScreenSpaceReflection::ScreenSpaceReflection(View *view) : _view(view) {
     _ssr_pipeline = ComputePipeline::create(_view->context(),
                                             "SSR/ScreenSpaceReflection.comp");
+}
+
+void ScreenSpaceReflection::render(RenderGraph &rg,
+                                   NamedRT src_rt,
+                                   NamedRT dst_rt) {
+    rg.add_pass(
+        [&](RenderGraphPassBuilder &builder) {
+            builder.read(NamedRT_HiZBuffer,
+                         VK_ACCESS_SHADER_READ_BIT,
+                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+            builder.read(src_rt,
+                         VK_ACCESS_SHADER_READ_BIT,
+                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+            builder.read(NamedRT_GBuffer0,
+                         VK_ACCESS_SHADER_READ_BIT,
+                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+            builder.read(NamedRT_GBuffer1,
+                         VK_ACCESS_SHADER_READ_BIT,
+                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+            builder.read(NamedRT_GBuffer2,
+                         VK_ACCESS_SHADER_READ_BIT,
+                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+            builder.write(dst_rt,
+                          VK_ACCESS_SHADER_WRITE_BIT,
+                          VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+        },
+        [=](CommandBuffer *cmd) { execute(cmd, src_rt, dst_rt); });
 }
 } // namespace ars::render::vk

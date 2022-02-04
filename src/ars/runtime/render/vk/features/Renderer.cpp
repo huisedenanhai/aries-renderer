@@ -1,4 +1,5 @@
 #include "Renderer.h"
+#include "../Profiler.h"
 #include "DeferredShading.h"
 #include "OpaqueGeometry.h"
 #include "QuerySelection.h"
@@ -6,25 +7,31 @@
 #include "ToneMapping.h"
 
 namespace ars::render::vk {
-NamedRT Renderer::render(CommandBuffer *cmd) {
-    for (int i = 0; i < _passes.size(); i++) {
-        if (i > 0) {
-            PassDependency::barrier(cmd,
-                                    _passes[i - 1]->dst_dependencies(),
-                                    _passes[i]->src_dependencies());
-        }
-        _passes[i]->execute(cmd);
-    }
-    return NamedRT_FinalColor0;
+NamedRT Renderer::render(RenderGraph &rg) {
+    ARS_PROFILER_SAMPLE("Build Render Graph", 0xFF772641);
+    NamedRT final_colors[2] = {NamedRT_FinalColor0, NamedRT_FinalColor1};
+    auto flip_pingpong_buffer = [&]() {
+        std::swap(final_colors[0], final_colors[1]);
+    };
+
+    _opaque_geometry->render(rg);
+    flip_pingpong_buffer();
+    _deferred_shading->render(rg, final_colors[0]);
+    _generate_hierarchy_z->render(rg);
+    flip_pingpong_buffer();
+    _screen_space_reflection->render(rg, final_colors[1], final_colors[0]);
+    flip_pingpong_buffer();
+    _tone_mapping->render(rg, final_colors[1], final_colors[0]);
+
+    return final_colors[0];
 }
 
 Renderer::Renderer(View *view) : _view(view) {
-    add_pass<OpaqueGeometry>(_view);
-    add_pass<DeferredShading>(_view, NamedRT_FinalColor0);
-    add_pass<GenerateHierarchyZ>(_view);
-    add_pass<ScreenSpaceReflection>(
-        _view, NamedRT_FinalColor0, NamedRT_FinalColor1);
-    add_pass<ToneMapping>(_view, NamedRT_FinalColor1, NamedRT_FinalColor0);
+    _opaque_geometry = std::make_unique<OpaqueGeometry>(_view);
+    _deferred_shading = std::make_unique<DeferredShading>(_view);
+    _generate_hierarchy_z = std::make_unique<GenerateHierarchyZ>(_view);
+    _screen_space_reflection = std::make_unique<ScreenSpaceReflection>(_view);
+    _tone_mapping = std::make_unique<ToneMapping>(_view);
 
     _query_selection = std::make_unique<QuerySelection>(_view);
 }

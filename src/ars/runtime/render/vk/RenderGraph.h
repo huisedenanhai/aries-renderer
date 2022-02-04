@@ -79,6 +79,17 @@ struct RenderGraphPassBuilder {
     PassDependencyBuilder &src_dependencies();
     PassDependencyBuilder &dst_dependencies();
 
+    template <typename... Args> RenderGraphPassBuilder &read(Args &&...args) {
+        src_dependencies().add(std::forward<Args>(args)...);
+        return *this;
+    }
+
+    template <typename... Args> RenderGraphPassBuilder &write(Args &&...args) {
+        src_dependencies().add(std::forward<Args>(args)...);
+        dst_dependencies().add(std::forward<Args>(args)...);
+        return *this;
+    }
+
   private:
     View *_view = nullptr;
     RenderGraphPass *_pass = nullptr;

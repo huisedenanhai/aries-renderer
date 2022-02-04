@@ -5,15 +5,14 @@
 #include "../View.h"
 
 namespace ars::render::vk {
-class GenerateHierarchyZ : public IRenderGraphPass {
+class GenerateHierarchyZ {
   public:
     explicit GenerateHierarchyZ(View *view);
 
-    std::vector<PassDependency> src_dependencies() override;
-    std::vector<PassDependency> dst_dependencies() override;
-    void execute(CommandBuffer *cmd) override;
+    void render(RenderGraph &rg);
 
   private:
+    void execute(CommandBuffer *cmd);
     void init_hiz(CommandBuffer *cmd);
     void propagate_hiz(CommandBuffer *cmd);
 
@@ -22,19 +21,16 @@ class GenerateHierarchyZ : public IRenderGraphPass {
     std::unique_ptr<ComputePipeline> _propagate_hiz_pipeline;
 };
 
-class ScreenSpaceReflection : public IRenderGraphPass {
+class ScreenSpaceReflection {
   public:
-    ScreenSpaceReflection(View *view, NamedRT src_rt, NamedRT dst_rt);
+    explicit ScreenSpaceReflection(View *view);
 
-    std::vector<PassDependency> src_dependencies() override;
-    std::vector<PassDependency> dst_dependencies() override;
-    void execute(CommandBuffer *cmd) override;
+    void render(RenderGraph &rg, NamedRT src_rt, NamedRT dst_rt);
 
   private:
-    View *_view = nullptr;
-    NamedRT _src_rt_name{};
-    NamedRT _dst_rt_name{};
+    void execute(CommandBuffer *cmd, NamedRT src_rt, NamedRT dst_rt);
 
+    View *_view = nullptr;
     std::unique_ptr<ComputePipeline> _ssr_pipeline;
 };
 } // namespace ars::render::vk

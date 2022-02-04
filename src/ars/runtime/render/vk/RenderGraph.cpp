@@ -1,5 +1,6 @@
 #include "RenderGraph.h"
 #include "Context.h"
+#include "Profiler.h"
 
 namespace ars::render::vk {
 void PassDependency::barrier(CommandBuffer *cmd,
@@ -82,6 +83,7 @@ void PassDependency::barrier(CommandBuffer *cmd,
 
 void RenderGraph::execute() {
     _view->context()->queue()->submit_once([&](CommandBuffer *cmd) {
+        ARS_PROFILER_SAMPLE_VK(cmd, "Render Graph Execute", 0xFF772183);
         for (int i = 0; i < _passes.size(); i++) {
             if (i > 0) {
                 PassDependency::barrier(cmd,
@@ -94,6 +96,7 @@ void RenderGraph::execute() {
 }
 
 void RenderGraph::compile() {
+    ARS_PROFILER_SAMPLE("Render Graph Compile", 0xFF125512);
     // For now, do nothing
 }
 

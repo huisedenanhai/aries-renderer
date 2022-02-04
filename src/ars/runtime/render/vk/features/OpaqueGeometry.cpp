@@ -184,26 +184,24 @@ std::array<NamedRT, 5> OpaqueGeometry::geometry_pass_rt_names() {
             NamedRT_Depth};
 }
 
-std::vector<PassDependency> OpaqueGeometry::dst_dependencies() {
-    std::vector<PassDependency> deps{};
-    deps.reserve(5);
-    for (auto rt : geometry_pass_rt_names()) {
-        PassDependency d{};
-        d.texture = _view->render_target(rt);
-        d.access_mask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-        d.layout = VK_IMAGE_LAYOUT_GENERAL;
-        d.stage_mask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-
-        if (rt == NamedRT_Depth) {
-            d.access_mask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-            d.stage_mask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
-                           VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-        }
-
-        deps.push_back(d);
-    }
-
-    return deps;
+void OpaqueGeometry::render(RenderGraph &rg) {
+    rg.add_pass(
+        [this](RenderGraphPassBuilder &builder) {
+            for (auto rt : geometry_pass_rt_names()) {
+                if (rt != NamedRT_Depth) {
+                    builder.write(
+                        rt,
+                        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+                } else {
+                    builder.write(
+                        rt,
+                        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                        VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
+                            VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT);
+                }
+            }
+        },
+        [this](CommandBuffer *cmd) { execute(cmd); });
 }
-
 } // namespace ars::render::vk

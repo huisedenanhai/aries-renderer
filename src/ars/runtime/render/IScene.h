@@ -183,6 +183,9 @@ class IView {
     // Not null
     virtual IEffect *effect() = 0;
 
+    // Draw some debug info with ImGui
+    virtual void debug_gui() {}
+
     [[nodiscard]] glm::mat4 view_matrix();
     [[nodiscard]] glm::mat4 projection_matrix();
     // Transform a quad with object space position (-0.5, -0.5) to (0.5, 0.5) to

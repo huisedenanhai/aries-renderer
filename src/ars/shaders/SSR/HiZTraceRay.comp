@@ -59,7 +59,7 @@ bool trace_ray_hit_grid(
     return t == t0;
 }
 
-const float SSR_GRID_EPSILON = 1e-3;
+const float SSR_GRID_EPSILON = 0.01;
 
 bool trace_ray_hiz(vec3 origin_ss,
                    vec3 dir_ss,
@@ -177,7 +177,8 @@ bool trace_ray_dda(vec3 origin_ss,
 }
 
 vec4 trace_ray(ivec2 index) {
-    vec2 uv = index_to_uv(index, vec2(1.0 / width, 1.0 / height));
+    vec2 inv_resolution = vec2(1.0 / width, 1.0 / height);
+    vec2 uv = index_to_uv(index, inv_resolution);
     float depth01 = textureLod(hiz_buffer, uv, 0).r;
 
     if (depth01 == 0) {
@@ -187,40 +188,35 @@ vec4 trace_ray(ivec2 index) {
     GBuffer gbuffer = decode_gbuffer(
         vec4(0), texture(gbuffer1_tex, uv), texture(gbuffer2_tex, uv), vec4(0));
 
-    int start_mip_level = 0;
     // Correct z to avoid self intersection
-    depth01 = textureLod(hiz_buffer, uv, start_mip_level).r;
+    depth01 = textureLod(hiz_buffer, uv, 0).r;
 
     vec3 pos_vs = reconstruct_position_from_ss(I_P, uv, depth01);
+
+    vec2 uv_x = uv + vec2(inv_resolution.x, 0);
+    vec3 pos_vs_x = reconstruct_position_from_ss(
+        I_P, uv_x, textureLod(hiz_buffer, uv_x, 0).r);
+    vec2 uv_y = uv + vec2(0, inv_resolution.y);
+    vec3 pos_vs_y = reconstruct_position_from_ss(
+        I_P, uv_y, textureLod(hiz_buffer, uv_y, 0).r);
+    vec3 geom_normal_vs =
+        normalize(cross(pos_vs_y - pos_vs, pos_vs_x - pos_vs));
+
     vec3 view_dir_vs = -normalize(pos_vs);
     vec3 reflect_dir_vs = normalize(reflect(-view_dir_vs, gbuffer.normal_vs));
 
-    // Rays go towards camera generally hits backface and SSR will read
-    // incorrect result.
-    float direction_fade =
-        smoothstep(-0.6, 0.5, dot(-view_dir_vs, reflect_dir_vs));
-
-    float fade = direction_fade;
-    if (fade <= 0) {
-        return vec4(0.0);
-    }
-
     vec3 pos_ss = vec3(uv, depth01);
-    vec3 offset_pos_ss =
+    vec3 reflect_offset_pos_ss =
         transform_position_hclip_to_ss(P * vec4(pos_vs + reflect_dir_vs, 1.0));
-    vec3 reflect_dir_ss = offset_pos_ss - pos_ss;
+    vec3 reflect_dir_ss = reflect_offset_pos_ss - pos_ss;
 
+    float normal_offset = 0.005;
+    // Avoid self intersection
+    vec3 offset_origin_ss = transform_position_hclip_to_ss(
+        P * vec4(pos_vs + geom_normal_vs * normal_offset, 1.0));
     vec3 hit_ss;
-    bool has_hit =
-        trace_ray_hiz(pos_ss, reflect_dir_ss, start_mip_level, hit_ss);
-
-    // vec3 reflect_color = texture(src_color_tex, hit_ss.xy).rgb;
-    // float screen_border_fade_size = 0.1;
-    // float border_fade = fade_on_edge_01(hit_ss.x, screen_border_fade_size) *
-    // fade_on_edge_01(hit_ss.y, screen_border_fade_size);
-    //
-    // fade *= border_fade;
-    // fade *= (has_hit ? 1.0 : 0.0);
+    bool has_hit = trace_ray_hiz(offset_origin_ss, reflect_dir_ss, 0, hit_ss);
+    // trace_ray_dda(pos_ss, reflect_dir_ss, start_mip_level, hit_ss);
 
     return vec4(hit_ss, has_hit ? 1.0 : 0.0);
 }

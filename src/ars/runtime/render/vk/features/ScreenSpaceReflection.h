@@ -27,7 +27,7 @@ class ScreenSpaceReflection {
 
     void trace_rays(RenderGraph &rg);
 
-    void resolve_reflection(RenderGraph &rg);
+    void resolve_reflection(RenderGraph &rg, NamedRT src_rt);
 
   private:
     void alloc_hit_buffer();

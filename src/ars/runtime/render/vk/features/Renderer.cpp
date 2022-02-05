@@ -20,7 +20,7 @@ NamedRT Renderer::render(RenderGraph &rg) {
 
     _generate_hierarchy_z->render(rg);
     _screen_space_reflection->trace_rays(rg);
-    _screen_space_reflection->resolve_reflection(rg);
+    _screen_space_reflection->resolve_reflection(rg, final_colors[0]);
     add_inplace(rg, NamedRT_Reflection, final_colors[0]);
 
     flip_pingpong_buffer();

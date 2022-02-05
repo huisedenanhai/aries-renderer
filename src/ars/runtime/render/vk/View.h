@@ -61,7 +61,7 @@ class View : public IView {
     std::shared_ptr<Environment> environment_vk();
 
     IEffect *effect() override;
-
+    void debug_gui() override;
     OverlayRenderer *vk_overlay() const;
 
     [[nodiscard]] Context *context() const;

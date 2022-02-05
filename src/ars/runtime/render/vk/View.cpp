@@ -11,6 +11,7 @@
 #include "features/OverlayRenderer.h"
 #include "features/Renderer.h"
 #include <ars/runtime/core/Log.h>
+#include <imgui/imgui.h>
 
 namespace ars::render::vk {
 namespace {
@@ -263,5 +264,25 @@ std::shared_ptr<Environment> View::environment_vk() {
 
 IEffect *View::effect() {
     return _effect.get();
+}
+
+void View::debug_gui() {
+    ImGui::Begin("Vulkan Debug");
+    auto width = ImGui::GetContentRegionAvailWidth();
+    auto draw_rt = [&](const char *name, NamedRT rt) {
+        ImGui::Text("%s", name);
+        auto tex = render_target(rt);
+        auto extent = tex->info().extent;
+        float height = static_cast<float>(extent.height) /
+                       static_cast<float>(extent.width) * width;
+        ImGui::Image(render_target(rt).get(), {width, height});
+    };
+
+    draw_rt("GBuffer 0", NamedRT_GBuffer0);
+    draw_rt("GBuffer 1", NamedRT_GBuffer1);
+    draw_rt("GBuffer 2", NamedRT_GBuffer2);
+    draw_rt("GBuffer 3", NamedRT_GBuffer3);
+    draw_rt("Reflection", NamedRT_Reflection);
+    ImGui::End();
 }
 } // namespace ars::render::vk

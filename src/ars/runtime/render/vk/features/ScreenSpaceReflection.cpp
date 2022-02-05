@@ -196,7 +196,8 @@ void ScreenSpaceReflection::alloc_hit_buffer() {
     _hit_buffer_id = _view->rt_manager()->alloc(info, 0.5f);
 }
 
-void ScreenSpaceReflection::resolve_reflection(RenderGraph &rg) {
+void ScreenSpaceReflection::resolve_reflection(RenderGraph &rg,
+                                               NamedRT src_rt) {
     rg.add_pass(
         [&](RenderGraphPassBuilder &builder) {
             builder.compute_shader_read(_hit_buffer_id);
@@ -204,12 +205,14 @@ void ScreenSpaceReflection::resolve_reflection(RenderGraph &rg) {
             builder.compute_shader_read(NamedRT_GBuffer1);
             builder.compute_shader_read(NamedRT_GBuffer2);
             builder.compute_shader_read(NamedRT_Depth);
+            builder.compute_shader_read(src_rt);
             builder.compute_shader_write(NamedRT_Reflection);
         },
         [=](CommandBuffer *cmd) {
             _resolve_reflection->bind(cmd);
             auto reflect_color_image = _view->render_target(NamedRT_Reflection);
             auto hit_buffer = _view->rt_manager()->get(_hit_buffer_id);
+            auto cube_map = _view->environment_vk()->irradiance_cube_map_vk();
 
             auto dst_extent = reflect_color_image->info().extent;
 
@@ -224,8 +227,8 @@ void ScreenSpaceReflection::resolve_reflection(RenderGraph &rg) {
                 0, 4, _view->render_target(NamedRT_GBuffer2).get());
             desc.set_texture(0, 5, _view->render_target(NamedRT_Depth).get());
             desc.set_texture(0, 6, _view->context()->lut()->brdf_lut().get());
-            desc.set_texture(
-                0, 7, _view->environment_vk()->irradiance_cube_map_vk().get());
+            desc.set_texture(0, 7, cube_map.get());
+            desc.set_texture(0, 8, _view->render_target(src_rt).get());
 
             struct Param {
                 int32_t width;
@@ -245,10 +248,7 @@ void ScreenSpaceReflection::resolve_reflection(RenderGraph &rg) {
             param.I_V = glm::inverse(_view->view_matrix());
             param.env_radiance_factor = _view->environment_vk()->radiance();
             param.cube_map_mip_count =
-                static_cast<int32_t>(_view->environment_vk()
-                                         ->irradiance_cube_map_vk()
-                                         ->info()
-                                         .mip_levels);
+                static_cast<int32_t>(cube_map->info().mip_levels);
             desc.set_buffer_data(1, 0, param);
 
             desc.commit(cmd, _resolve_reflection.get());

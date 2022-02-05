@@ -19,6 +19,7 @@ layout(set = 0, binding = 4) uniform sampler2D gbuffer2_tex;
 layout(set = 0, binding = 5) uniform sampler2D depth_stencil_tex;
 layout(set = 0, binding = 6) uniform sampler2D brdf_lut;
 layout(set = 0, binding = 7) uniform samplerCube cube_map;
+layout(set = 0, binding = 8) uniform sampler2D shaded_radiance_tex;
 
 layout(set = 1, binding = 0) uniform Param {
     int width;
@@ -30,6 +31,33 @@ layout(set = 1, binding = 0) uniform Param {
     vec3 env_randiance_factor;
     int cube_map_mip_count;
 };
+
+vec3 get_env_irradiance(vec3 v_ws, float lod) {
+    return env_randiance_factor * textureLod(cube_map, v_ws, lod).rgb * PI;
+}
+
+vec3 resolve_ssr_radiance(vec2 uv, out float weight) {
+    // Resolve SSR
+    vec4 ssr_hit = texture(hit_buffer, uv);
+    vec3 hit_ss = ssr_hit.xyz;
+    float hit_pdf = ssr_hit.a;
+
+    if (hit_pdf == 0) {
+        weight = 0.0;
+        return vec3(0.0);
+    }
+
+    vec3 reflect_radiance = texture(shaded_radiance_tex, hit_ss.xy).rgb;
+
+    float screen_border_fade_size = 0.1;
+    float border_fade = fade_on_edge_01(hit_ss.x, screen_border_fade_size) *
+                        fade_on_edge_01(hit_ss.y, screen_border_fade_size);
+
+    weight = border_fade;
+
+    return abs(hit_ss - vec3(uv, texture(depth_stencil_tex, uv).r));
+    return reflect_radiance;
+}
 
 vec3 calculate_reflection(ivec2 index) {
     if (index.x >= width || index.y >= height) {
@@ -61,17 +89,19 @@ vec3 calculate_reflection(ivec2 index) {
     vec3 n_ws = transform_vector(I_V, n_vs);
     vec3 reflect_dir_ws = reflect(-sp.v_ws, n_ws);
     vec3 specular_env_irradiance =
-        brdf.occlusion * env_randiance_factor *
-        textureLod(cube_map,
-                   reflect_dir_ws,
-                   (cube_map_mip_count - 1) * brdf.perceptual_roughness)
-            .rgb *
-        PI;
-    return fe * specular_env_irradiance;
+        brdf.occlusion * get_env_irradiance(reflect_dir_ws,
+                                            (cube_map_mip_count - 1) *
+                                                brdf.perceptual_roughness);
+    vec3 prefiltered_glossy_indirect_radiance = fe * specular_env_irradiance;
+
+    float ssr_weight = 0.0;
+    vec3 ssr_radiance = resolve_ssr_radiance(uv, ssr_weight);
+
+    return mix(prefiltered_glossy_indirect_radiance, ssr_radiance, ssr_weight);
 }
 
 void main() {
     ivec2 index = ivec2(gl_GlobalInvocationID.xy);
-    vec3 reflect_color = calculate_reflection(index);
-    imageStore(reflect_color_image, index, vec4(reflect_color, 1));
+    vec3 reflect_radiance = calculate_reflection(index);
+    imageStore(reflect_color_image, index, vec4(reflect_radiance, 1));
 }

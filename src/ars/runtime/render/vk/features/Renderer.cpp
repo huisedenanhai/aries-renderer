@@ -54,12 +54,8 @@ void Renderer::add_inplace(RenderGraph &rg,
                            NamedRT target_rt) {
     rg.add_pass(
         [&](RenderGraphPassBuilder &builder) {
-            builder.read(add_src_rt,
-                         VK_ACCESS_SHADER_READ_BIT,
-                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-            builder.write(target_rt,
-                          VK_ACCESS_SHADER_WRITE_BIT,
-                          VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+            builder.compute_shader_read(add_src_rt);
+            builder.compute_shader_write(target_rt);
         },
         [=](CommandBuffer *cmd) {
             auto target = _view->render_target(target_rt);

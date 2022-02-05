@@ -1,25 +1,59 @@
 #version 450 core
 
+#include <GBuffer.glsl>
+#include <MetallicRoughnessPBR.glsl>
 #include <Misc.glsl>
+#include <ShadingModel.glsl>
+#include <Transform.glsl>
 
 layout(local_size_x = 32, local_size_y = 32) in;
 
 layout(set = 0,
        binding = 0,
        r11f_g11f_b10f) writeonly uniform image2D reflect_color_image;
+
 layout(set = 0, binding = 1) uniform sampler2D hit_buffer;
+layout(set = 0, binding = 2) uniform sampler2D gbuffer0_tex;
+layout(set = 0, binding = 3) uniform sampler2D gbuffer1_tex;
+layout(set = 0, binding = 4) uniform sampler2D gbuffer2_tex;
+layout(set = 0, binding = 5) uniform sampler2D depth_stencil_tex;
+layout(set = 0, binding = 6) uniform sampler2D brdf_lut;
+layout(set = 0, binding = 7) uniform samplerCube cube_map;
 
 layout(set = 1, binding = 0) uniform Param {
     int width;
     int height;
+
+    mat4 I_P;
+    mat4 I_V;
 };
 
-void main() {
-    ivec2 index = ivec2(gl_GlobalInvocationID.xy);
+vec3 calculate_reflection(ivec2 index) {
     if (index.x >= width || index.y >= height) {
-        return;
+        return vec3(0.0);
     }
 
     vec2 uv = index_to_uv(index, vec2(1.0 / width, 1.0 / height));
-    imageStore(reflect_color_image, index, vec4(1, 1, 0, 1));
+
+    GBuffer gbuffer = decode_gbuffer(texture(gbuffer0_tex, uv),
+                                     texture(gbuffer1_tex, uv),
+                                     texture(gbuffer2_tex, uv),
+                                     vec4(0));
+
+    if (gbuffer.shading_model != SHADING_MODEL_METALLIC_ROUGHNESS_PBR) {
+        return vec3(0.0);
+    }
+
+    MetallicRoughnessPBR brdf = get_metallic_roughness_pbr(gbuffer);
+
+    float depth01 = texture(depth_stencil_tex, uv).r;
+    ShadingPoint shading_point = get_shading_point(uv, depth01, I_P, I_V);
+
+    return vec3(0.0);
+}
+
+void main() {
+    ivec2 index = ivec2(gl_GlobalInvocationID.xy);
+    vec3 reflect_color = calculate_reflection(index);
+    imageStore(reflect_color_image, index, vec4(reflect_color, 1));
 }

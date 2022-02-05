@@ -1,6 +1,7 @@
 #ifndef ARS_METALLIC_ROUGHNESS_PBR
 #define ARS_METALLIC_ROUGHNESS_PBR
 
+#include <GBuffer.glsl>
 #include <Misc.glsl>
 
 // GBuffer encoding for metallic roughness pbr
@@ -54,7 +55,22 @@ struct MetallicRoughnessPBR {
     vec3 base_color;
     float metallic;
     float perceptual_roughness;
+    float occlusion;
 };
+
+// Call this method only when
+// gbuffer.shading_model == SHADING_MODEL_METALLIC_ROUGHNESS_PBR
+MetallicRoughnessPBR get_metallic_roughness_pbr(GBuffer gbuffer) {
+    MetallicRoughnessPBRGBuffer material = decode_material(gbuffer.material);
+
+    MetallicRoughnessPBR brdf;
+    brdf.base_color = gbuffer.base_color.rgb;
+    brdf.metallic = material.metallic;
+    brdf.perceptual_roughness = material.perceptual_roughness;
+    brdf.occlusion = material.occlusion;
+
+    return brdf;
+}
 
 const float METALLIC_ROUGHNESS_MIN_REFLECTIVITY = 0.04;
 

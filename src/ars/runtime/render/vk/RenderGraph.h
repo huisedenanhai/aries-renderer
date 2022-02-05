@@ -84,6 +84,27 @@ struct RenderGraphPassBuilder {
     PassDependencyBuilder &src_dependencies();
     PassDependencyBuilder &dst_dependencies();
 
+    template <typename Tex>
+    RenderGraphPassBuilder &compute_shader_read(Tex &&rt) {
+        return read(std::forward<Tex>(rt),
+                    VK_ACCESS_SHADER_READ_BIT,
+                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+    }
+
+    template <typename Tex>
+    RenderGraphPassBuilder &compute_shader_write(Tex &&rt) {
+        return write(std::forward<Tex>(rt),
+                     VK_ACCESS_SHADER_WRITE_BIT,
+                     VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+    }
+
+    template <typename Tex>
+    RenderGraphPassBuilder &compute_shader_read_write(Tex &&rt) {
+        return write(std::forward<Tex>(rt),
+                     VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
+                     VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+    }
+
     template <typename... Args> RenderGraphPassBuilder &read(Args &&...args) {
         src_dependencies().add(std::forward<Args>(args)...);
         return *this;

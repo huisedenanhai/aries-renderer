@@ -63,12 +63,8 @@ void OverlayRenderer::render(RenderGraph &rg, NamedRT dst_rt_name) {
         // Calculate outline based on object ids
         rg.add_pass(
             [&](RenderGraphPassBuilder &builder) {
-                builder.read(_outline_id_rt,
-                             VK_ACCESS_SHADER_READ_BIT,
-                             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-                builder.write(dst_rt,
-                              VK_ACCESS_SHADER_WRITE_BIT,
-                              VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+                builder.compute_shader_read(_outline_id_rt);
+                builder.compute_shader_write(dst_rt);
             },
             [=](CommandBuffer *cmd) { calculate_outline(cmd, dst_rt); });
     }

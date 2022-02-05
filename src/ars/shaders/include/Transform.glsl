@@ -32,4 +32,23 @@ vec3 transform_position_hclip_to_ss(vec4 p) {
     return vec3(p.xy * 0.5 + 0.5, p.z);
 }
 
+struct ShadingPoint {
+    vec2 screen_uv;
+    float depth01;
+    vec3 pos_vs;
+    // v_vs points from shading point to view point
+    vec3 v_vs;
+    vec3 v_ws;
+};
+
+ShadingPoint get_shading_point(vec2 uv, float depth01, mat4 I_P, mat4 I_V) {
+    ShadingPoint info;
+    info.screen_uv = uv;
+    info.depth01 = depth01;
+    info.pos_vs = reconstruct_position_from_ss(I_P, uv, info.depth01);
+    info.v_vs = -normalize(info.pos_vs);
+    info.v_ws = transform_vector(I_V, info.v_vs);
+    return info;
+}
+
 #endif

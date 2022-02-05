@@ -122,9 +122,7 @@ void DeferredShading::execute(CommandBuffer *cmd, NamedRT final_color_rt) {
 void DeferredShading::render(RenderGraph &rg, NamedRT final_color_rt) {
     rg.add_pass(
         [&](RenderGraphPassBuilder &builder) {
-            builder.write(final_color_rt,
-                          VK_ACCESS_SHADER_WRITE_BIT,
-                          VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+            builder.compute_shader_write(final_color_rt);
 
             NamedRT rts[5] = {
                 NamedRT_GBuffer0,
@@ -135,9 +133,7 @@ void DeferredShading::render(RenderGraph &rg, NamedRT final_color_rt) {
             };
 
             for (auto &rt : rts) {
-                builder.read(rt,
-                             VK_ACCESS_SHADER_READ_BIT,
-                             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+                builder.compute_shader_read(rt);
             }
         },
         [this, final_color_rt](CommandBuffer *cmd) {

@@ -13,12 +13,8 @@ void ToneMapping::init_pipeline() {
 void ToneMapping::render(RenderGraph &rg, NamedRT src_rt, NamedRT dst_rt) {
     rg.add_pass(
         [&](RenderGraphPassBuilder &builder) {
-            builder.read(src_rt,
-                         VK_ACCESS_SHADER_READ_BIT,
-                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-            builder.write(dst_rt,
-                          VK_ACCESS_SHADER_WRITE_BIT,
-                          VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+            builder.compute_shader_read(src_rt);
+            builder.compute_shader_write(dst_rt);
         },
         [=](CommandBuffer *cmd) { execute(cmd, src_rt, dst_rt); });
 }

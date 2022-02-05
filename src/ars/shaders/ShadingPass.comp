@@ -51,25 +51,6 @@ vec3 get_env_radiance_from_hdr_tex(vec3 v_ws) {
     return env_randiance_factor * texture(hdr_environment_tex, uv).rgb;
 }
 
-struct ShadingPoint {
-    vec2 screen_uv;
-    float depth01;
-    vec3 pos_vs;
-    // v_vs points from shading point to view point
-    vec3 v_vs;
-    vec3 v_ws;
-};
-
-ShadingPoint get_shading_point(vec2 uv) {
-    ShadingPoint info;
-    info.screen_uv = uv;
-    info.depth01 = texture(depth_stencil_tex, uv).r;
-    info.pos_vs = reconstruct_position_from_ss(I_P, uv, info.depth01);
-    info.v_vs = -normalize(info.pos_vs);
-    info.v_ws = transform_vector(I_V, info.v_vs);
-    return info;
-}
-
 vec3 shade_background(vec3 v_ws) {
     return get_env_radiance_from_hdr_tex(-v_ws);
 }
@@ -79,12 +60,7 @@ vec3 shade_unlit(GBuffer gbuffer) {
 }
 
 vec3 shade_metallic_roughness_pbr(GBuffer gbuffer, ShadingPoint shading_point) {
-    MetallicRoughnessPBRGBuffer material = decode_material(gbuffer.material);
-
-    MetallicRoughnessPBR brdf;
-    brdf.base_color = gbuffer.base_color.rgb;
-    brdf.metallic = material.metallic;
-    brdf.perceptual_roughness = material.perceptual_roughness;
+    MetallicRoughnessPBR brdf = get_metallic_roughness_pbr(gbuffer);
 
     vec3 fd = diffuse_BRDF(brdf);
 
@@ -122,11 +98,11 @@ vec3 shade_metallic_roughness_pbr(GBuffer gbuffer, ShadingPoint shading_point) {
     vec3 n_ws = transform_vector(I_V, n_vs);
     vec3 reflect_dir_ws = reflect(-v_ws, n_ws);
     vec3 specular_env_irradiance =
-        material.occlusion * get_env_irradiance(reflect_dir_ws,
-                                                (cube_map_mip_count - 1) *
-                                                    brdf.perceptual_roughness);
+        brdf.occlusion * get_env_irradiance(reflect_dir_ws,
+                                            (cube_map_mip_count - 1) *
+                                                brdf.perceptual_roughness);
     vec3 diffuse_env_irradiance =
-        material.occlusion * get_env_irradiance(n_ws, cube_map_mip_count - 1);
+        brdf.occlusion * get_env_irradiance(n_ws, cube_map_mip_count - 1);
     vec3 indirect_radiance =
         fd * diffuse_env_irradiance + fe * specular_env_irradiance;
 
@@ -134,7 +110,8 @@ vec3 shade_metallic_roughness_pbr(GBuffer gbuffer, ShadingPoint shading_point) {
 }
 
 vec3 shade(GBuffer gbuffer, vec2 uv) {
-    ShadingPoint shading_point = get_shading_point(uv);
+    float depth01 = texture(depth_stencil_tex, uv).r;
+    ShadingPoint shading_point = get_shading_point(uv, depth01, I_P, I_V);
     if (gbuffer.shading_model == SHADING_MODEL_BACKGROUND) {
         return shade_background(shading_point.v_ws);
     }

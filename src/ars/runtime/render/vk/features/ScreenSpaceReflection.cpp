@@ -1,4 +1,7 @@
 #include "ScreenSpaceReflection.h"
+#include "../Context.h"
+#include "../Environment.h"
+#include "../Lut.h"
 #include "../Profiler.h"
 
 namespace ars::render::vk {
@@ -101,13 +104,9 @@ void GenerateHierarchyZ::propagate_hiz(CommandBuffer *cmd) {
 
 void GenerateHierarchyZ::render(RenderGraph &rg) {
     rg.add_pass(
-        [this](RenderGraphPassBuilder &builder) {
-            builder.read(NamedRT_Depth,
-                         VK_ACCESS_SHADER_READ_BIT,
-                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-            builder.write(NamedRT_HiZBuffer,
-                          VK_ACCESS_SHADER_WRITE_BIT,
-                          VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+        [&](RenderGraphPassBuilder &builder) {
+            builder.compute_shader_read(NamedRT_Depth);
+            builder.compute_shader_write(NamedRT_HiZBuffer);
         },
         [this](CommandBuffer *cmd) { execute(cmd); });
 }
@@ -124,18 +123,10 @@ ScreenSpaceReflection::ScreenSpaceReflection(View *view) : _view(view) {
 void ScreenSpaceReflection::trace_rays(RenderGraph &rg) {
     rg.add_pass(
         [&](RenderGraphPassBuilder &builder) {
-            builder.read(NamedRT_HiZBuffer,
-                         VK_ACCESS_SHADER_READ_BIT,
-                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-            builder.read(NamedRT_GBuffer1,
-                         VK_ACCESS_SHADER_READ_BIT,
-                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-            builder.read(NamedRT_GBuffer2,
-                         VK_ACCESS_SHADER_READ_BIT,
-                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-            builder.write(_hit_buffer_id,
-                          VK_ACCESS_SHADER_WRITE_BIT,
-                          VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+            builder.compute_shader_read(NamedRT_HiZBuffer);
+            builder.compute_shader_read(NamedRT_GBuffer1);
+            builder.compute_shader_read(NamedRT_GBuffer2);
+            builder.compute_shader_write(_hit_buffer_id);
         },
         [=](CommandBuffer *cmd) {
             ARS_PROFILER_SAMPLE_VK(cmd, "SSR Trace", 0xFF432134);
@@ -195,9 +186,11 @@ void ScreenSpaceReflection::trace_rays(RenderGraph &rg) {
 
 void ScreenSpaceReflection::alloc_hit_buffer() {
     RenderTargetInfo info{};
-    info.texture =
+    auto &tex = info.texture =
         TextureCreateInfo::sampled_2d(VK_FORMAT_R16G16B16A16_SFLOAT, 1, 1, 1);
-    info.texture.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+    tex.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+    tex.min_filter = VK_FILTER_NEAREST;
+    tex.mag_filter = VK_FILTER_NEAREST;
 
     // Trace at half resolution
     _hit_buffer_id = _view->rt_manager()->alloc(info, 0.5f);
@@ -206,31 +199,49 @@ void ScreenSpaceReflection::alloc_hit_buffer() {
 void ScreenSpaceReflection::resolve_reflection(RenderGraph &rg) {
     rg.add_pass(
         [&](RenderGraphPassBuilder &builder) {
-            builder.read(_hit_buffer_id,
-                         VK_ACCESS_SHADER_READ_BIT,
-                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-            builder.write(NamedRT_Reflection,
-                          VK_ACCESS_SHADER_WRITE_BIT,
-                          VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+            builder.compute_shader_read(_hit_buffer_id);
+            builder.compute_shader_read(NamedRT_GBuffer0);
+            builder.compute_shader_read(NamedRT_GBuffer1);
+            builder.compute_shader_read(NamedRT_GBuffer2);
+            builder.compute_shader_read(NamedRT_Depth);
+            builder.compute_shader_write(NamedRT_Reflection);
         },
         [=](CommandBuffer *cmd) {
             _resolve_reflection->bind(cmd);
             auto reflect_color_image = _view->render_target(NamedRT_Reflection);
             auto hit_buffer = _view->rt_manager()->get(_hit_buffer_id);
+            auto gbuffer0 = _view->render_target(NamedRT_GBuffer0);
+            auto gbuffer1 = _view->render_target(NamedRT_GBuffer1);
+            auto gbuffer2 = _view->render_target(NamedRT_GBuffer2);
+            auto depth = _view->render_target(NamedRT_Depth);
+
             auto dst_extent = reflect_color_image->info().extent;
 
             DescriptorEncoder desc{};
             desc.set_texture(0, 0, reflect_color_image.get());
             desc.set_texture(0, 1, hit_buffer.get());
+            desc.set_texture(0, 2, gbuffer0.get());
+            desc.set_texture(0, 3, gbuffer1.get());
+            desc.set_texture(0, 4, gbuffer2.get());
+            desc.set_texture(0, 5, depth.get());
+            desc.set_texture(0, 6, _view->context()->lut()->brdf_lut().get());
+            desc.set_texture(
+                0, 7, _view->environment_vk()->irradiance_cube_map_vk().get());
 
             struct Param {
                 int32_t width;
                 int32_t height;
+                ARS_PADDING_FIELD(float);
+                ARS_PADDING_FIELD(float);
+                glm::mat4 I_P;
+                glm::mat4 I_V;
             };
 
             Param param{};
             param.width = static_cast<int32_t>(dst_extent.width);
             param.height = static_cast<int32_t>(dst_extent.height);
+            param.I_P = glm::inverse(_view->projection_matrix());
+            param.I_V = glm::inverse(_view->view_matrix());
             desc.set_buffer_data(1, 0, param);
 
             desc.commit(cmd, _resolve_reflection.get());

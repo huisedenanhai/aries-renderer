@@ -115,6 +115,9 @@ void GenerateHierarchyZ::render(RenderGraph &rg) {
 ScreenSpaceReflection::ScreenSpaceReflection(View *view) : _view(view) {
     _hiz_trace_pipeline =
         ComputePipeline::create(_view->context(), "SSR/HiZTraceRay.comp");
+    _resolve_reflection =
+        ComputePipeline::create(_view->context(), "SSR/ResolveReflection.comp");
+
     alloc_hit_buffer();
 }
 
@@ -198,5 +201,41 @@ void ScreenSpaceReflection::alloc_hit_buffer() {
 
     // Trace at half resolution
     _hit_buffer_id = _view->rt_manager()->alloc(info, 0.5f);
+}
+
+void ScreenSpaceReflection::resolve_reflection(RenderGraph &rg) {
+    rg.add_pass(
+        [&](RenderGraphPassBuilder &builder) {
+            builder.read(_hit_buffer_id,
+                         VK_ACCESS_SHADER_READ_BIT,
+                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+            builder.write(NamedRT_Reflection,
+                          VK_ACCESS_SHADER_WRITE_BIT,
+                          VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+        },
+        [=](CommandBuffer *cmd) {
+            _resolve_reflection->bind(cmd);
+            auto reflect_color_image = _view->render_target(NamedRT_Reflection);
+            auto hit_buffer = _view->rt_manager()->get(_hit_buffer_id);
+            auto dst_extent = reflect_color_image->info().extent;
+
+            DescriptorEncoder desc{};
+            desc.set_texture(0, 0, reflect_color_image.get());
+            desc.set_texture(0, 1, hit_buffer.get());
+
+            struct Param {
+                int32_t width;
+                int32_t height;
+            };
+
+            Param param{};
+            param.width = static_cast<int32_t>(dst_extent.width);
+            param.height = static_cast<int32_t>(dst_extent.height);
+            desc.set_buffer_data(1, 0, param);
+
+            desc.commit(cmd, _resolve_reflection.get());
+
+            _resolve_reflection->local_size().dispatch(cmd, dst_extent);
+        });
 }
 } // namespace ars::render::vk

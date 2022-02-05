@@ -2,6 +2,7 @@
     "sources": [
         "InitHiZ.comp",
         "PropagateHiZ.comp",
-        "HiZTraceRay.comp"
+        "HiZTraceRay.comp",
+        "ResolveReflection.comp"
     ]
 }

@@ -18,7 +18,8 @@
     "VertexColor.vert",
     "VertexColor.frag",
     "CaptureHDRToCubeMap.comp",
-    "PrefilterCubeMap.comp"
+    "PrefilterCubeMap.comp",
+    "AddInplace.comp"
   ],
   "includes": [
     "include"

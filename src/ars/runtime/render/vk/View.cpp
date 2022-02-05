@@ -96,7 +96,7 @@ TextureInfo View::color_tex_info() const {
     info.width = _size.width;
     info.height = _size.height;
     info.mip_levels = 1;
-    info.mipmap_mode = MipmapMode::Nearest;
+    info.mipmap_mode = MipmapMode::Linear;
     return info;
 }
 
@@ -187,6 +187,12 @@ RenderTargetInfo View::rt_info(NamedRT name) const {
         tex.address_mode_u = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         tex.address_mode_v = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         tex.address_mode_w = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        break;
+    }
+    case NamedRT_Reflection: {
+        auto &tex = info.texture = TextureCreateInfo::sampled_2d(
+            VK_FORMAT_B10G11R11_UFLOAT_PACK32, 1, 1, 1);
+        tex.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
         break;
     }
     case NamedRT_Count:

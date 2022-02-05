@@ -1,0 +1,25 @@
+#version 450 core
+
+#include <Misc.glsl>
+
+layout(local_size_x = 32, local_size_y = 32) in;
+
+layout(set = 0,
+       binding = 0,
+       r11f_g11f_b10f) writeonly uniform image2D reflect_color_image;
+layout(set = 0, binding = 1) uniform sampler2D hit_buffer;
+
+layout(set = 1, binding = 0) uniform Param {
+    int width;
+    int height;
+};
+
+void main() {
+    ivec2 index = ivec2(gl_GlobalInvocationID.xy);
+    if (index.x >= width || index.y >= height) {
+        return;
+    }
+
+    vec2 uv = index_to_uv(index, vec2(1.0 / width, 1.0 / height));
+    imageStore(reflect_color_image, index, vec4(1, 1, 0, 1));
+}

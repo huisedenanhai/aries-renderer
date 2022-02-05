@@ -25,6 +25,7 @@ enum NamedRT {
 
     // stores max value in mip levels
     NamedRT_HiZBuffer,
+    NamedRT_Reflection,
 
     NamedRT_Count
 };

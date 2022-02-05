@@ -27,11 +27,14 @@ class ScreenSpaceReflection {
 
     void trace_rays(RenderGraph &rg);
 
+    void resolve_reflection(RenderGraph &rg);
+
   private:
     void alloc_hit_buffer();
 
     View *_view = nullptr;
     std::unique_ptr<ComputePipeline> _hiz_trace_pipeline;
+    std::unique_ptr<ComputePipeline> _resolve_reflection;
     RenderTargetId _hit_buffer_id;
 };
 } // namespace ars::render::vk

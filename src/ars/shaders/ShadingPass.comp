@@ -91,22 +91,14 @@ vec3 shade_metallic_roughness_pbr(GBuffer gbuffer, ShadingPoint shading_point) {
         direct_radiance += (fd + fr) * NoL * lr;
     }
 
-    float NoV = clamp01(dot(n_vs, v_vs));
-    vec3 fe = environment_BRDF(brdf, brdf_lut, NoV);
-
     // Sample env irradiance
     vec3 n_ws = transform_vector(I_V, n_vs);
-    vec3 reflect_dir_ws = reflect(-v_ws, n_ws);
-    vec3 specular_env_irradiance =
-        brdf.occlusion * get_env_irradiance(reflect_dir_ws,
-                                            (cube_map_mip_count - 1) *
-                                                brdf.perceptual_roughness);
     vec3 diffuse_env_irradiance =
         brdf.occlusion * get_env_irradiance(n_ws, cube_map_mip_count - 1);
-    vec3 indirect_radiance =
-        fd * diffuse_env_irradiance + fe * specular_env_irradiance;
+    // Glossy indirect radiance is calculated in SSR/ResolveReflection.comp
+    vec3 diffuse_indirect_radiance = fd * diffuse_env_irradiance;
 
-    return direct_radiance + indirect_radiance + gbuffer.emission;
+    return direct_radiance + diffuse_indirect_radiance + gbuffer.emission;
 }
 
 vec3 shade(GBuffer gbuffer, vec2 uv) {

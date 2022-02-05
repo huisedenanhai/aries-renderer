@@ -210,20 +210,19 @@ void ScreenSpaceReflection::resolve_reflection(RenderGraph &rg) {
             _resolve_reflection->bind(cmd);
             auto reflect_color_image = _view->render_target(NamedRT_Reflection);
             auto hit_buffer = _view->rt_manager()->get(_hit_buffer_id);
-            auto gbuffer0 = _view->render_target(NamedRT_GBuffer0);
-            auto gbuffer1 = _view->render_target(NamedRT_GBuffer1);
-            auto gbuffer2 = _view->render_target(NamedRT_GBuffer2);
-            auto depth = _view->render_target(NamedRT_Depth);
 
             auto dst_extent = reflect_color_image->info().extent;
 
             DescriptorEncoder desc{};
             desc.set_texture(0, 0, reflect_color_image.get());
             desc.set_texture(0, 1, hit_buffer.get());
-            desc.set_texture(0, 2, gbuffer0.get());
-            desc.set_texture(0, 3, gbuffer1.get());
-            desc.set_texture(0, 4, gbuffer2.get());
-            desc.set_texture(0, 5, depth.get());
+            desc.set_texture(
+                0, 2, _view->render_target(NamedRT_GBuffer0).get());
+            desc.set_texture(
+                0, 3, _view->render_target(NamedRT_GBuffer1).get());
+            desc.set_texture(
+                0, 4, _view->render_target(NamedRT_GBuffer2).get());
+            desc.set_texture(0, 5, _view->render_target(NamedRT_Depth).get());
             desc.set_texture(0, 6, _view->context()->lut()->brdf_lut().get());
             desc.set_texture(
                 0, 7, _view->environment_vk()->irradiance_cube_map_vk().get());
@@ -235,6 +234,8 @@ void ScreenSpaceReflection::resolve_reflection(RenderGraph &rg) {
                 ARS_PADDING_FIELD(float);
                 glm::mat4 I_P;
                 glm::mat4 I_V;
+                glm::vec3 env_radiance_factor;
+                int32_t cube_map_mip_count;
             };
 
             Param param{};
@@ -242,6 +243,12 @@ void ScreenSpaceReflection::resolve_reflection(RenderGraph &rg) {
             param.height = static_cast<int32_t>(dst_extent.height);
             param.I_P = glm::inverse(_view->projection_matrix());
             param.I_V = glm::inverse(_view->view_matrix());
+            param.env_radiance_factor = _view->environment_vk()->radiance();
+            param.cube_map_mip_count =
+                static_cast<int32_t>(_view->environment_vk()
+                                         ->irradiance_cube_map_vk()
+                                         ->info()
+                                         .mip_levels);
             desc.set_buffer_data(1, 0, param);
 
             desc.commit(cmd, _resolve_reflection.get());

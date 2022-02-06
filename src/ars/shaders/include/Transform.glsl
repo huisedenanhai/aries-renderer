@@ -51,4 +51,32 @@ ShadingPoint get_shading_point(vec2 uv, float depth01, mat4 I_P, mat4 I_V) {
     return info;
 }
 
+vec3 calculate_geometry_normal_vs_from_depth_buffer(sampler2D depth_tex,
+                                                    vec2 uv,
+                                                    vec2 inv_resolution,
+                                                    mat4 I_P,
+                                                    float depth_level) {
+    float depth01 = textureLod(depth_tex, uv, depth_level).r;
+
+    vec3 pos_vs = reconstruct_position_from_ss(I_P, uv, depth01);
+
+    vec2 uv_x = uv + vec2(inv_resolution.x, 0);
+    vec3 pos_vs_x = reconstruct_position_from_ss(
+        I_P, uv_x, textureLod(depth_tex, uv_x, depth_level).r);
+    vec2 uv_y = uv + vec2(0, inv_resolution.y);
+    vec3 pos_vs_y = reconstruct_position_from_ss(
+        I_P, uv_y, textureLod(depth_tex, uv_y, depth_level).r);
+    vec3 geom_normal_vs =
+        normalize(cross(pos_vs_y - pos_vs, pos_vs_x - pos_vs));
+    return geom_normal_vs;
+}
+
+vec3 calculate_geometry_normal_vs_from_depth_buffer(sampler2D depth_tex,
+                                                    vec2 uv,
+                                                    vec2 inv_resolution,
+                                                    mat4 I_P) {
+    return calculate_geometry_normal_vs_from_depth_buffer(
+        depth_tex, uv, inv_resolution, I_P, 0);
+}
+
 #endif

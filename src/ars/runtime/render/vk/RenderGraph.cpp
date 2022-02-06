@@ -86,6 +86,7 @@ void RenderGraph::execute() {
         ARS_PROFILER_SAMPLE_VK(cmd, "Render Graph Execute", 0xFF772183);
         for (int i = 0; i < _passes.size(); i++) {
             if (i > 0) {
+                // TODO optimize barrier
                 PassDependency::barrier(cmd,
                                         _passes[i - 1]->dst_dependencies(),
                                         _passes[i]->src_dependencies());

@@ -15,6 +15,7 @@ A very coarse plan for development.
     + [ ] Shadow
     + [ ] Shader Graph
     + [ ] Dynamic GI
+    + [ ] GPU Driven Pipeline
 2. Effect
     + [ ] SSR
     + [ ] TAA

@@ -114,8 +114,9 @@ class Application : public ars::engine::IApplication {
         }
 
         // auto model_file = "FlightHelmetWithLight/FlightHelmetWithLight.gltf";
-        auto model_file = "Balls/Balls.gltf";
+        // auto model_file = "Balls/Balls.gltf";
         // auto model_file = "Hexagon/Hexagon.gltf"
+        auto model_file = "SSRTest/SSR.gltf";
         auto model = load_gltf(ctx, model_file);
         _scene = std::make_unique<ars::engine::Scene>();
         _view = _scene->render_system()->render_scene()->create_view(

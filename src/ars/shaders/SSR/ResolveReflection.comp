@@ -36,12 +36,13 @@ vec3 get_env_irradiance(vec3 v_ws, float lod) {
     return env_randiance_factor * textureLod(cube_map, v_ws, lod).rgb * PI;
 }
 
-vec3 resolve_ssr_radiance(vec2 uv, out float weight) {
+vec3 resolve_ssr_radiance(ShadingPoint sp, out float weight) {
     // Resolve SSR
-    vec4 ssr_hit = texture(hit_buffer, uv);
+    vec4 ssr_hit = texture(hit_buffer, sp.screen_uv);
     vec3 hit_ss = ssr_hit.xyz;
     float hit_pdf = ssr_hit.a;
 
+    // No hit
     if (hit_pdf == 0) {
         weight = 0.0;
         return vec3(0.0);
@@ -49,13 +50,32 @@ vec3 resolve_ssr_radiance(vec2 uv, out float weight) {
 
     vec3 reflect_radiance = texture(shaded_radiance_tex, hit_ss.xy).rgb;
 
+    vec3 hit_vs = reconstruct_position_from_ss(I_P, hit_ss.xy, hit_ss.z);
+
+    float hit_surface_depth01 = texture(depth_stencil_tex, hit_ss.xy).r;
+    vec3 hit_surface_vs =
+        reconstruct_position_from_ss(I_P, hit_ss.xy, hit_surface_depth01);
+    // Infer geometry normal on object edge gives incorrect result, which is not
+    // usable for SSR, use shading normal instead
+    vec3 hit_normal_vs = decode_normal(texture(gbuffer1_tex, hit_ss.xy));
+
+    vec3 ray_dir_vs = normalize(hit_vs - sp.pos_vs);
+
+    float back_face_fade = smoothstep(0, -0.1, dot(ray_dir_vs, hit_normal_vs));
+
     float screen_border_fade_size = 0.1;
     float border_fade = fade_on_edge_01(hit_ss.x, screen_border_fade_size) *
                         fade_on_edge_01(hit_ss.y, screen_border_fade_size);
 
-    weight = border_fade;
+    float thickness_fade =
+        smoothstep(0.1, 0, length(hit_vs) - length(hit_surface_vs));
 
-    return abs(hit_ss - vec3(uv, texture(depth_stencil_tex, uv).r));
+    weight = thickness_fade * back_face_fade * border_fade;
+
+    // return vec3(dot(ray_dir_vs, hit_geom_normal_vs));
+
+    // return hit_normal_vs * 0.5 + 0.5;
+    // return ray_dir_vs * 0.5 + 0.5;
     return reflect_radiance;
 }
 
@@ -95,7 +115,14 @@ vec3 calculate_reflection(ivec2 index) {
     vec3 prefiltered_glossy_indirect_radiance = fe * specular_env_irradiance;
 
     float ssr_weight = 0.0;
-    vec3 ssr_radiance = resolve_ssr_radiance(uv, ssr_weight);
+    vec3 ssr_radiance = resolve_ssr_radiance(sp, ssr_weight);
+    // return 0.5 * calculate_geometry_normal_vs_from_depth_buffer(
+    //                  depth_stencil_tex,
+    //                  sp.screen_uv,
+    //                  1.0 / vec2(width, height),
+    //                  I_P,
+    //                  0) +
+    //        0.5;
 
     return mix(prefiltered_glossy_indirect_radiance, ssr_radiance, ssr_weight);
 }

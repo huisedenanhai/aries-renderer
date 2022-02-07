@@ -9,24 +9,20 @@
 namespace ars::render::vk {
 NamedRT Renderer::render(RenderGraph &rg) {
     ARS_PROFILER_SAMPLE("Build Render Graph", 0xFF772641);
-    NamedRT final_colors[2] = {NamedRT_FinalColor0, NamedRT_FinalColor1};
-    auto flip_pingpong_buffer = [&]() {
-        std::swap(final_colors[0], final_colors[1]);
-    };
 
     _opaque_geometry->render(rg);
-    flip_pingpong_buffer();
-    _deferred_shading->render(rg, final_colors[0]);
-
+    _deferred_shading->render(rg, NamedRT_LinearColor);
     _generate_hierarchy_z->render(rg);
     _screen_space_reflection->trace_rays(rg);
-    _screen_space_reflection->resolve_reflection(rg, final_colors[0]);
-    add_inplace(rg, NamedRT_Reflection, final_colors[0]);
+    _screen_space_reflection->resolve_reflection(rg);
+    add_inplace(rg, NamedRT_Reflection, NamedRT_LinearColor);
 
-    flip_pingpong_buffer();
-    _tone_mapping->render(rg, final_colors[1], final_colors[0]);
+    // Post-processing
+    NamedRT pp_buffer[2] = {NamedRT_PostProcessing0, NamedRT_PostProcessing1};
+    uint32_t pp_target_index = 0;
+    _tone_mapping->render(rg, NamedRT_LinearColor, NamedRT_PostProcessing0);
 
-    return final_colors[0];
+    return NamedRT_PostProcessing0;
 }
 
 Renderer::Renderer(View *view) : _view(view) {

@@ -20,12 +20,18 @@ enum NamedRT {
     NamedRT_GBuffer2, // for material
     NamedRT_GBuffer3, // for emission
     NamedRT_Depth,
-    NamedRT_FinalColor0,
-    NamedRT_FinalColor1,
+    // Anti-aliased color without further post-processing
+    NamedRT_LinearColor,
+    NamedRT_LinearColorHistory,
+    // Ping-pong buffer for post-processing
+    NamedRT_PostProcessing0,
+    NamedRT_PostProcessing1,
 
-    // stores max value in mip levels
+    // Stores max value in mip levels
     NamedRT_HiZBuffer,
     NamedRT_Reflection,
+    // Auto swapped with NamedRT_Reflection on frame end
+    NamedRT_ReflectionHistory,
 
     NamedRT_Count
 };
@@ -77,6 +83,7 @@ class View : public IView {
     [[nodiscard]] Drawer *drawer() const;
 
   private:
+    void flip_history_buffer();
     void alloc_render_targets();
     void update_color_tex_adapter(NamedRT rt);
     [[nodiscard]] TextureInfo color_tex_info() const;

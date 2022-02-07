@@ -27,12 +27,14 @@ class ScreenSpaceReflection {
 
     void trace_rays(RenderGraph &rg);
 
-    void resolve_reflection(RenderGraph &rg, NamedRT src_rt);
+    void resolve_reflection(RenderGraph &rg);
 
   private:
     void alloc_hit_buffer();
 
     View *_view = nullptr;
+    int32_t _frame_index = 0;
+    int32_t _max_acc_frame_count = 128;
     std::unique_ptr<ComputePipeline> _hiz_trace_pipeline;
     std::unique_ptr<ComputePipeline> _resolve_reflection;
     RenderTargetId _hit_buffer_id;

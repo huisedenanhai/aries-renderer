@@ -59,4 +59,10 @@ float rnd(inout uint seed) {
     return float(lcg(seed)) / float(0x01000000);
 }
 
+// From Next Generation Post Processing in Call of Duty: Advanced Warfare
+float interleaved_gradient_noise(vec2 screen_pos) {
+    vec3 magic = vec3(0.06711056, 0.00583715, 52.9829189);
+    return fract(magic.z * fract(dot(screen_pos, magic.xy)));
+}
+
 #endif

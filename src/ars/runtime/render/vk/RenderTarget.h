@@ -35,6 +35,7 @@ class RenderTargetManager {
 
     explicit RenderTargetManager(Context *context);
 
+    // index back in history
     [[nodiscard]] Handle<Texture> get(const Id &id) const;
 
     void update(VkExtent2D reference_size);

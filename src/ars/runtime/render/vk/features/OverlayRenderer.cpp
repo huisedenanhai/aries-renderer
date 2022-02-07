@@ -132,9 +132,9 @@ LightGizmo OverlayRenderer::light_gizmo() const {
 }
 
 void OverlayRenderer::init_forward_render_pass() {
-    // Final color have same rt info, use any of them for final render should be
-    // fine
-    auto color_info = _view->rt_info(NamedRT_FinalColor0);
+    // Write to Post-processing buffer. Two post-processing buffer have same
+    // info, use either one for render pass creation is ok
+    auto color_info = _view->rt_info(NamedRT_PostProcessing0);
     auto depth_info = _view->rt_info(NamedRT_Depth);
     RenderPassAttachmentInfo color_attach{};
     color_attach.format = color_info.texture.format;

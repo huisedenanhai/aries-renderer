@@ -9,6 +9,7 @@ Handle<Texture>
 RenderTargetManager::get(const RenderTargetManager::Id &id) const {
     auto &rts = _render_targets.get<RTArray>(id);
     auto &state = _render_targets.get<RTState>(id);
+    auto &info = _render_targets.get<RenderTargetInfo>(id);
     return rts[state.current_index];
 }
 

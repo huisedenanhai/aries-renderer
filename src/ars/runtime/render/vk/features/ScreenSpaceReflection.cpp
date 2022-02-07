@@ -121,6 +121,7 @@ ScreenSpaceReflection::ScreenSpaceReflection(View *view) : _view(view) {
 }
 
 void ScreenSpaceReflection::trace_rays(RenderGraph &rg) {
+    _frame_index = (_frame_index + 1) % _max_acc_frame_count;
     rg.add_pass(
         [&](RenderGraphPassBuilder &builder) {
             builder.compute_shader_read(NamedRT_HiZBuffer);
@@ -151,7 +152,9 @@ void ScreenSpaceReflection::trace_rays(RenderGraph &rg) {
                 int32_t width;
                 int32_t height;
                 int32_t hiz_mip_count;
-                ARS_PADDING_FIELD(uint32_t);
+                int32_t frame_index;
+                int32_t max_acc_frame_count;
+                ARS_PADDING_FIELD(glm::vec3);
             };
 
             Param param{};
@@ -161,6 +164,8 @@ void ScreenSpaceReflection::trace_rays(RenderGraph &rg) {
             param.height = static_cast<int32_t>(dst_extent.height);
             param.hiz_mip_count =
                 static_cast<int32_t>(hiz_buffer->info().mip_levels);
+            param.frame_index = _frame_index;
+            param.max_acc_frame_count = _max_acc_frame_count;
 
             desc.set_buffer_data(1, 0, param);
 
@@ -200,8 +205,7 @@ void ScreenSpaceReflection::alloc_hit_buffer() {
     _hit_buffer_id = _view->rt_manager()->alloc(info, 0.5f);
 }
 
-void ScreenSpaceReflection::resolve_reflection(RenderGraph &rg,
-                                               NamedRT src_rt) {
+void ScreenSpaceReflection::resolve_reflection(RenderGraph &rg) {
     rg.add_pass(
         [&](RenderGraphPassBuilder &builder) {
             builder.compute_shader_read(_hit_buffer_id);
@@ -209,7 +213,8 @@ void ScreenSpaceReflection::resolve_reflection(RenderGraph &rg,
             builder.compute_shader_read(NamedRT_GBuffer1);
             builder.compute_shader_read(NamedRT_GBuffer2);
             builder.compute_shader_read(NamedRT_Depth);
-            builder.compute_shader_read(src_rt);
+            builder.compute_shader_read(NamedRT_LinearColorHistory);
+            builder.compute_shader_read(NamedRT_ReflectionHistory);
             builder.compute_shader_write(NamedRT_Reflection);
         },
         [=](CommandBuffer *cmd) {
@@ -232,7 +237,10 @@ void ScreenSpaceReflection::resolve_reflection(RenderGraph &rg,
             desc.set_texture(0, 5, _view->render_target(NamedRT_Depth).get());
             desc.set_texture(0, 6, _view->context()->lut()->brdf_lut().get());
             desc.set_texture(0, 7, cube_map.get());
-            desc.set_texture(0, 8, _view->render_target(src_rt).get());
+            desc.set_texture(
+                0, 8, _view->render_target(NamedRT_LinearColorHistory).get());
+            desc.set_texture(
+                0, 9, _view->render_target(NamedRT_ReflectionHistory).get());
 
             struct Param {
                 int32_t width;

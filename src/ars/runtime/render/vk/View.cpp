@@ -34,6 +34,7 @@ void View::render() {
     rg.execute();
 
     update_color_tex_adapter(final_rt);
+    flip_history_buffer();
 }
 
 ITexture *View::get_color_texture() {
@@ -77,9 +78,11 @@ void View::set_size(const Extent2D &size) {
 }
 
 void View::update_color_tex_adapter(NamedRT rt) {
-    if (rt != NamedRT_FinalColor0 && rt != NamedRT_FinalColor1) {
-        ARS_LOG_ERROR("Final result from renderer must be either FinalColor0 "
-                      "or FinalColor1");
+    // TODO accept other rts
+    if (rt != NamedRT_PostProcessing0 && rt != NamedRT_PostProcessing1) {
+        ARS_LOG_WARN("Final rt color is neither NamedRT_PostProcessing0 nor "
+                     "NamedRT_PostProcessing1, the TextureInfo of color "
+                     "texture may be incorrect");
     }
     auto color_rt = render_target(rt);
     auto rt_info = color_tex_info();
@@ -171,8 +174,10 @@ RenderTargetInfo View::rt_info(NamedRT name) const {
                     VK_IMAGE_USAGE_SAMPLED_BIT;
         break;
     }
-    case NamedRT_FinalColor0:
-    case NamedRT_FinalColor1: {
+    case NamedRT_LinearColor:
+    case NamedRT_LinearColorHistory:
+    case NamedRT_PostProcessing0:
+    case NamedRT_PostProcessing1: {
         auto &tex = info.texture = translate(color_tex_info());
         tex.usage |=
             VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
@@ -190,6 +195,7 @@ RenderTargetInfo View::rt_info(NamedRT name) const {
         tex.address_mode_w = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         break;
     }
+    case NamedRT_ReflectionHistory:
     case NamedRT_Reflection: {
         auto &tex = info.texture = TextureCreateInfo::sampled_2d(
             VK_FORMAT_B10G11R11_UFLOAT_PACK32, 1, 1, 1);
@@ -284,5 +290,11 @@ void View::debug_gui() {
     draw_rt("GBuffer 3", NamedRT_GBuffer3);
     draw_rt("Reflection", NamedRT_Reflection);
     ImGui::End();
+}
+
+void View::flip_history_buffer() {
+    std::swap(_rt_ids[NamedRT_Reflection], _rt_ids[NamedRT_ReflectionHistory]);
+    std::swap(_rt_ids[NamedRT_LinearColor],
+              _rt_ids[NamedRT_LinearColorHistory]);
 }
 } // namespace ars::render::vk

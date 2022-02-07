@@ -67,15 +67,10 @@ vec3 resolve_ssr_radiance(ShadingPoint sp, out float weight) {
     float border_fade = fade_on_edge_01(hit_ss.x, screen_border_fade_size) *
                         fade_on_edge_01(hit_ss.y, screen_border_fade_size);
 
-    float thickness_fade =
-        smoothstep(0.1, 0, length(hit_vs) - length(hit_surface_vs));
+    float thickness_fade = smoothstep(0.1, 0, distance(hit_vs, hit_surface_vs));
 
     weight = thickness_fade * back_face_fade * border_fade;
 
-    // return vec3(dot(ray_dir_vs, hit_geom_normal_vs));
-
-    // return hit_normal_vs * 0.5 + 0.5;
-    // return ray_dir_vs * 0.5 + 0.5;
     return reflect_radiance;
 }
 
@@ -116,13 +111,6 @@ vec3 calculate_reflection(ivec2 index) {
 
     float ssr_weight = 0.0;
     vec3 ssr_radiance = resolve_ssr_radiance(sp, ssr_weight);
-    // return 0.5 * calculate_geometry_normal_vs_from_depth_buffer(
-    //                  depth_stencil_tex,
-    //                  sp.screen_uv,
-    //                  1.0 / vec2(width, height),
-    //                  I_P,
-    //                  0) +
-    //        0.5;
 
     return mix(prefiltered_glossy_indirect_radiance, ssr_radiance, ssr_weight);
 }

@@ -152,6 +152,17 @@ float calculate_dldh(vec3 v, vec3 l, vec3 h) {
     return square(length(l + v)) / dot(l, h);
 }
 
+// Importance sampling h from D(h) (n.h) with measure dl
+// The macro normal n is (0, 1, 0)
+float sample_l_from_D(vec2 u, float roughness, vec3 v, out vec3 l) {
+    vec3 h = sample_h_from_D(roughness, u);
+    l = reflect(-v, h);
+    float D = D_GGX(h.y, roughness);
+    // pdf in dl
+    float pdf = D * h.y * calculate_dldh(v, l, h);
+    return pdf;
+}
+
 // n, v, h should be pre-nomalized.
 vec2 specular_env_BRDF_factor(float roughness, vec3 n, vec3 v, vec3 h) {
     vec3 l = normalize(reflect(-v, h));

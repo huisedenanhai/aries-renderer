@@ -1,7 +1,10 @@
 #version 450 core
 
 #include <GBuffer.glsl>
+#include <MetallicRoughnessPBR.glsl>
 #include <Misc.glsl>
+#include <Sampling.glsl>
+#include <ShadingModel.glsl>
 #include <Transform.glsl>
 
 layout(local_size_x = 32, local_size_y = 32) in;
@@ -176,6 +179,28 @@ bool trace_ray_dda(vec3 origin_ss,
     return false;
 }
 
+float sample_reflect_dir(ivec2 index,
+                         MetallicRoughnessPBR pbr,
+                         vec3 v_vs,
+                         vec3 n_vs,
+                         out vec3 dir_vs) {
+    // Sample dir
+    uint seed = tea(2, index.x, index.y + 1021);
+    float roughness = square(max(pbr.perceptual_roughness, 0.01));
+    vec2 u = vec2(rnd(seed), rnd(seed));
+
+    vec3 t_vs, b_vs;
+    construct_TBN_with_normal(n_vs, t_vs, b_vs);
+    mat3 ts_to_vs = mat3(t_vs, n_vs, b_vs);
+
+    vec3 v_ts = v_vs * ts_to_vs;
+    vec3 l_ts;
+    float pdf = sample_l_from_D(u, roughness, v_ts, l_ts);
+    dir_vs = ts_to_vs * l_ts;
+
+    return pdf;
+}
+
 vec4 trace_ray(ivec2 index) {
     vec2 inv_resolution = vec2(1.0 / width, 1.0 / height);
     vec2 uv = index_to_uv(index, inv_resolution);
@@ -188,28 +213,35 @@ vec4 trace_ray(ivec2 index) {
     GBuffer gbuffer = decode_gbuffer(
         vec4(0), texture(gbuffer1_tex, uv), texture(gbuffer2_tex, uv), vec4(0));
 
-    // Correct z to avoid self intersection
-    depth01 = textureLod(hiz_buffer, uv, 0).r;
+    if (gbuffer.shading_model != SHADING_MODEL_METALLIC_ROUGHNESS_PBR) {
+        return vec4(0.0);
+    }
 
-    vec3 pos_vs = reconstruct_position_from_ss(I_P, uv, depth01);
+    MetallicRoughnessPBR brdf = get_metallic_roughness_pbr(gbuffer);
+    ShadingPoint sp = get_shading_point(uv, depth01, I_P, mat4(0));
 
-    vec3 view_dir_vs = -normalize(pos_vs);
-    vec3 reflect_dir_vs = normalize(reflect(-view_dir_vs, gbuffer.normal_vs));
+    vec3 reflect_dir_vs;
+    float pdf = sample_reflect_dir(
+        index, brdf, sp.v_vs, gbuffer.normal_vs, reflect_dir_vs);
+
+    if (dot(gbuffer.normal_vs, reflect_dir_vs) <= 0) {
+        return vec4(0.0);
+    }
 
     vec3 pos_ss = vec3(uv, depth01);
-    vec3 reflect_offset_pos_ss =
-        transform_position_hclip_to_ss(P * vec4(pos_vs + reflect_dir_vs, 1.0));
+    vec3 reflect_offset_pos_ss = transform_position_hclip_to_ss(
+        P * vec4(sp.pos_vs + reflect_dir_vs, 1.0));
     vec3 reflect_dir_ss = reflect_offset_pos_ss - pos_ss;
 
     float normal_offset = 0.005;
     // Avoid self intersection
     vec3 offset_origin_ss = transform_position_hclip_to_ss(
-        P * vec4(pos_vs + gbuffer.normal_vs * normal_offset, 1.0));
+        P * vec4(sp.pos_vs + gbuffer.normal_vs * normal_offset, 1.0));
     vec3 hit_ss;
     bool has_hit = trace_ray_hiz(offset_origin_ss, reflect_dir_ss, 0, hit_ss);
-    // trace_ray_dda(pos_ss, reflect_dir_ss, start_mip_level, hit_ss);
+    // trace_ray_dda(pos_ss, reflect_dir_ss, 0, hit_ss);
 
-    return vec4(hit_ss, has_hit ? 1.0 : 0.0);
+    return vec4(hit_ss, has_hit ? pdf : 0.0);
 }
 
 void main() {

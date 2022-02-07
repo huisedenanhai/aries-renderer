@@ -41,6 +41,7 @@ struct ShadingPoint {
     vec3 v_ws;
 };
 
+// Set I_V as mat4(0) if you do not need world space info
 ShadingPoint get_shading_point(vec2 uv, float depth01, mat4 I_P, mat4 I_V) {
     ShadingPoint info;
     info.screen_uv = uv;

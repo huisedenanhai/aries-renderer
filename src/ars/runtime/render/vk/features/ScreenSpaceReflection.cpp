@@ -187,7 +187,11 @@ void ScreenSpaceReflection::trace_rays(RenderGraph &rg) {
 void ScreenSpaceReflection::alloc_hit_buffer() {
     RenderTargetInfo info{};
     auto &tex = info.texture =
-        TextureCreateInfo::sampled_2d(VK_FORMAT_R16G16B16A16_SFLOAT, 1, 1, 1);
+        TextureCreateInfo::sampled_2d(VK_FORMAT_R16G16B16A16_SFLOAT,
+                                      1,
+                                      1,
+                                      1,
+                                      VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
     tex.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
     tex.min_filter = VK_FILTER_NEAREST;
     tex.mag_filter = VK_FILTER_NEAREST;

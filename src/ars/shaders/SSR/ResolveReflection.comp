@@ -25,6 +25,7 @@ layout(set = 0, binding = 9) uniform sampler2D reflection_history_tex;
 layout(set = 1, binding = 0) uniform Param {
     int width;
     int height;
+    int reset_history;
 
     mat4 I_P;
     mat4 I_V;
@@ -117,7 +118,8 @@ vec3 calculate_reflection(ivec2 index) {
         mix(prefiltered_glossy_indirect_radiance, ssr_radiance, ssr_weight);
 
     vec3 history_radiance = texture(reflection_history_tex, uv).rgb;
-    return mix(history_radiance, reflect_radiance, 0.1);
+    return mix(
+        history_radiance, reflect_radiance, reset_history != 0 ? 1.0 : 0.05);
 }
 
 void main() {

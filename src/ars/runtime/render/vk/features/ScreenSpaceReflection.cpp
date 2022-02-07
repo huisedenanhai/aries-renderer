@@ -121,7 +121,6 @@ ScreenSpaceReflection::ScreenSpaceReflection(View *view) : _view(view) {
 }
 
 void ScreenSpaceReflection::trace_rays(RenderGraph &rg) {
-    _frame_index = (_frame_index + 1) % _max_acc_frame_count;
     rg.add_pass(
         [&](RenderGraphPassBuilder &builder) {
             builder.compute_shader_read(NamedRT_HiZBuffer);
@@ -153,8 +152,6 @@ void ScreenSpaceReflection::trace_rays(RenderGraph &rg) {
                 int32_t height;
                 int32_t hiz_mip_count;
                 int32_t frame_index;
-                int32_t max_acc_frame_count;
-                ARS_PADDING_FIELD(glm::vec3);
             };
 
             Param param{};
@@ -164,8 +161,7 @@ void ScreenSpaceReflection::trace_rays(RenderGraph &rg) {
             param.height = static_cast<int32_t>(dst_extent.height);
             param.hiz_mip_count =
                 static_cast<int32_t>(hiz_buffer->info().mip_levels);
-            param.frame_index = _frame_index;
-            param.max_acc_frame_count = _max_acc_frame_count;
+            param.frame_index = _frame_index++;
 
             desc.set_buffer_data(1, 0, param);
 
@@ -245,7 +241,7 @@ void ScreenSpaceReflection::resolve_reflection(RenderGraph &rg) {
             struct Param {
                 int32_t width;
                 int32_t height;
-                ARS_PADDING_FIELD(float);
+                int32_t reset_history;
                 ARS_PADDING_FIELD(float);
                 glm::mat4 I_P;
                 glm::mat4 I_V;
@@ -256,6 +252,7 @@ void ScreenSpaceReflection::resolve_reflection(RenderGraph &rg) {
             Param param{};
             param.width = static_cast<int32_t>(dst_extent.width);
             param.height = static_cast<int32_t>(dst_extent.height);
+            param.reset_history = _frame_index == 0 ? 1 : 0;
             param.I_P = glm::inverse(_view->projection_matrix());
             param.I_V = glm::inverse(_view->view_matrix());
             param.env_radiance_factor = _view->environment_vk()->radiance();

@@ -22,7 +22,6 @@ layout(set = 1, binding = 0) uniform Param {
     int height;
     int hiz_mip_count;
     int frame_index;
-    int max_acc_frame_count;
 };
 
 layout(set = 1, binding = 1, std430) buffer MipLevels {
@@ -188,9 +187,9 @@ float sample_reflect_dir(ivec2 index,
                          out vec3 dir_vs) {
     // Sample dir
     float roughness = square(max(pbr.perceptual_roughness, 0.01));
-    vec2 u =
-        vec2(gloden_ratio_sequence(0.124, frame_index),
-             fract(float(frame_index + 0.134) / float(max_acc_frame_count)));
+    vec2 u = vec2(gloden_ratio_sequence(0.124, frame_index),
+                  radical_inverse_2(frame_index));
+    // Rotate sample point
     float rotate = 2.0 * PI * interleaved_gradient_noise(index);
     float sin_rotate = sin(rotate);
     float cos_rotate = cos(rotate);

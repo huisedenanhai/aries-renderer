@@ -242,7 +242,7 @@ void ScreenSpaceReflection::resolve_reflection(RenderGraph &rg) {
                 int32_t width;
                 int32_t height;
                 int32_t reset_history;
-                ARS_PADDING_FIELD(float);
+                int32_t frame_index;
                 glm::mat4 I_P;
                 glm::mat4 I_V;
                 glm::vec3 env_radiance_factor;
@@ -253,7 +253,7 @@ void ScreenSpaceReflection::resolve_reflection(RenderGraph &rg) {
             param.width = static_cast<int32_t>(dst_extent.width);
             param.height = static_cast<int32_t>(dst_extent.height);
             param.reset_history = _frame_index == 0 ? 1 : 0;
-//            param.reset_history = 1;
+            param.frame_index = _frame_index;
             param.I_P = glm::inverse(_view->projection_matrix());
             param.I_V = glm::inverse(_view->view_matrix());
             param.env_radiance_factor = _view->environment_vk()->radiance();

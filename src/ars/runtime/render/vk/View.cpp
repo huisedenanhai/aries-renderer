@@ -33,8 +33,10 @@ void View::render() {
     rg.compile();
     rg.execute();
 
+    // Finalize render
     update_color_tex_adapter(final_rt);
     flip_history_buffer();
+    _last_frame_projection_matrix = projection_matrix();
 }
 
 ITexture *View::get_color_texture() {
@@ -174,7 +176,12 @@ TextureCreateInfo View::rt_info(NamedRT name) const {
         break;
     }
     case NamedRT_LinearColor:
-    case NamedRT_LinearColorHistory:
+    case NamedRT_LinearColorHistory: {
+        info = TextureCreateInfo::sampled_2d(
+            VK_FORMAT_B10G11R11_UFLOAT_PACK32, 1, 1, MAX_MIP_LEVELS);
+        info.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+        break;
+    }
     case NamedRT_PostProcessing0:
     case NamedRT_PostProcessing1: {
         info = translate(color_tex_info());
@@ -295,5 +302,9 @@ void View::flip_history_buffer() {
     std::swap(_rt_ids[NamedRT_Reflection], _rt_ids[NamedRT_ReflectionHistory]);
     std::swap(_rt_ids[NamedRT_LinearColor],
               _rt_ids[NamedRT_LinearColorHistory]);
+}
+
+glm::mat4 View::last_frame_projection_matrix() {
+    return _last_frame_projection_matrix.value_or(projection_matrix());
 }
 } // namespace ars::render::vk

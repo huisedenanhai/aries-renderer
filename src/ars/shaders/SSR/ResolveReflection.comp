@@ -31,6 +31,7 @@ layout(set = 1, binding = 0) uniform Param {
 
     mat4 I_P;
     mat4 I_V;
+    mat4 last_frame_P;
 
     vec3 env_randiance_factor;
     int cube_map_mip_count;
@@ -213,7 +214,7 @@ vec3 calculate_reflection(ivec2 index) {
 
     vec3 history_radiance = texture(reflection_history_tex, uv).rgb;
     return mix(
-        history_radiance, reflect_radiance, reset_history != 0 ? 1.0 : 0.1);
+        history_radiance, reflect_radiance, reset_history != 0 ? 1.0 : 0.05);
 }
 
 void main() {

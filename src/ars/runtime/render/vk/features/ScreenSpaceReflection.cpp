@@ -244,6 +244,7 @@ void ScreenSpaceReflection::resolve_reflection(RenderGraph &rg) {
                 int32_t frame_index;
                 glm::mat4 I_P;
                 glm::mat4 I_V;
+                glm::mat4 last_frame_P;
                 glm::vec3 env_radiance_factor;
                 int32_t cube_map_mip_count;
             };
@@ -255,6 +256,7 @@ void ScreenSpaceReflection::resolve_reflection(RenderGraph &rg) {
             param.frame_index = _frame_index;
             param.I_P = glm::inverse(_view->projection_matrix());
             param.I_V = glm::inverse(_view->view_matrix());
+            param.last_frame_P = _view->last_frame_projection_matrix();
             param.env_radiance_factor = _view->environment_vk()->radiance();
             param.cube_map_mip_count =
                 static_cast<int32_t>(cube_map->info().mip_levels);

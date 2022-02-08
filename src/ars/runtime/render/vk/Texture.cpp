@@ -1,5 +1,6 @@
 #include "Texture.h"
 #include "Context.h"
+#include "RenderGraph.h"
 #include <ars/runtime/core/Log.h>
 #include <cassert>
 
@@ -410,6 +411,24 @@ void Texture::init() {
     if (_context->device()->Create(&sampler_info, &_sampler)) {
         ARS_LOG_CRITICAL("Failed to create sampler");
     }
+}
+
+void Texture::generate_mipmap(const Handle<Texture> &tex, RenderGraph &rg) {
+    rg.add_pass(
+        [&](RenderGraphPassBuilder &builder) {
+            builder.write(tex,
+                          VK_ACCESS_TRANSFER_WRITE_BIT |
+                              VK_ACCESS_TRANSFER_READ_BIT,
+                          VK_PIPELINE_STAGE_TRANSFER_BIT);
+        },
+        [=](CommandBuffer *cmd) {
+            // Externally synchronized
+            tex->generate_mipmap(cmd,
+                                 VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                                 0,
+                                 VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                                 0);
+        });
 }
 
 TextureCreateInfo

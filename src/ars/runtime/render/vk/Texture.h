@@ -6,6 +6,7 @@
 
 namespace ars::render::vk {
 class Context;
+struct RenderGraph;
 
 struct TextureCreateInfo {
     VkImageType image_type{};
@@ -62,6 +63,8 @@ class Texture : public ITextureHandle {
                          VkAccessFlags src_access_mask,
                          VkPipelineStageFlags dst_stage_mask,
                          VkAccessFlags dst_access_mask);
+
+    static void generate_mipmap(const Handle<Texture> &tex, RenderGraph &rg);
 
     [[nodiscard]] Context *context() const;
 

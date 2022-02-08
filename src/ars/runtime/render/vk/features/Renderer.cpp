@@ -17,6 +17,8 @@ NamedRT Renderer::render(RenderGraph &rg) {
     _screen_space_reflection->resolve_reflection(rg);
     add_inplace(rg, NamedRT_Reflection, NamedRT_LinearColor);
 
+    Texture::generate_mipmap(_view->render_target(NamedRT_LinearColor), rg);
+
     // Post-processing
     NamedRT pp_buffer[2] = {NamedRT_PostProcessing0, NamedRT_PostProcessing1};
     uint32_t pp_target_index = 0;

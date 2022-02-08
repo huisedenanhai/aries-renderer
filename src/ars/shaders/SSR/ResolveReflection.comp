@@ -20,7 +20,7 @@ layout(set = 0, binding = 4) uniform sampler2D gbuffer2_tex;
 layout(set = 0, binding = 5) uniform sampler2D depth_stencil_tex;
 layout(set = 0, binding = 6) uniform sampler2D brdf_lut;
 layout(set = 0, binding = 7) uniform samplerCube cube_map;
-layout(set = 0, binding = 8) uniform sampler2D shaded_radiance_tex;
+layout(set = 0, binding = 8) uniform sampler2D shaded_radiance_history_tex;
 layout(set = 0, binding = 9) uniform sampler2D reflection_history_tex;
 
 layout(set = 1, binding = 0) uniform Param {
@@ -31,7 +31,7 @@ layout(set = 1, binding = 0) uniform Param {
 
     mat4 I_P;
     mat4 I_V;
-    mat4 last_frame_P;
+    mat4 reproject_IV_VP;
 
     vec3 env_randiance_factor;
     int cube_map_mip_count;
@@ -91,6 +91,12 @@ const vec2 RESOLVE_HIT_OFFSET[RESOLVE_FRAME_JITTER_COUNT]
                                  },
 };
 
+vec2 reproject_uv(vec3 pos_vs) {
+    vec4 pos_hclip = reproject_IV_VP * vec4(pos_vs, 1.0);
+    vec2 uv = 0.5 + 0.5 * (pos_hclip.xy / pos_hclip.w);
+    return uv;
+}
+
 void resolve_ssr_single_sample(vec2 hit_buffer_uv,
                                MetallicRoughnessPBR brdf,
                                ShadingPoint sp,
@@ -133,7 +139,11 @@ void resolve_ssr_single_sample(vec2 hit_buffer_uv,
         max(brdf.perceptual_roughness, SSR_MIN_SAMPLING_ROUGHNESS);
     vec3 fr = specular_BRDF(brdf, n_vs, sp.v_vs, ray_dir_vs);
     float NoL = max(0, dot(n_vs, ray_dir_vs));
-    vec3 reflect_radiance = texture(shaded_radiance_tex, hit_ss.xy).rgb;
+
+    // Reproject hit point uv
+    vec2 last_frame_hit_uv = reproject_uv(hit_surface_vs);
+    vec3 reflect_radiance =
+        texture(shaded_radiance_history_tex, last_frame_hit_uv).rgb;
 
     vec3 w = fr * NoL / hit_pdf;
 
@@ -212,7 +222,8 @@ vec3 calculate_reflection(ivec2 index) {
     vec3 reflect_radiance = mix(
         prefiltered_glossy_indirect_radiance, ssr_reflect_radiance, ssr_fade);
 
-    vec3 history_radiance = texture(reflection_history_tex, uv).rgb;
+    vec2 history_uv = reproject_uv(sp.pos_vs);
+    vec3 history_radiance = texture(reflection_history_tex, history_uv).rgb;
     return mix(
         history_radiance, reflect_radiance, reset_history != 0 ? 1.0 : 0.05);
 }

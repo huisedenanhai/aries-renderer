@@ -83,6 +83,7 @@ class View : public IView {
     [[nodiscard]] Drawer *drawer() const;
 
     [[nodiscard]] glm::mat4 last_frame_projection_matrix();
+    [[nodiscard]] glm::mat4 last_frame_view_matrix();
 
   private:
     void flip_history_buffer();
@@ -107,5 +108,6 @@ class View : public IView {
     std::unique_ptr<Effect> _effect{};
 
     std::optional<glm::mat4> _last_frame_projection_matrix;
+    std::optional<math::XformTRS<float>> _last_frame_xform{};
 };
 } // namespace ars::render::vk

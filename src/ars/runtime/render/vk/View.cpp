@@ -37,6 +37,7 @@ void View::render() {
     update_color_tex_adapter(final_rt);
     flip_history_buffer();
     _last_frame_projection_matrix = projection_matrix();
+    _last_frame_xform = _xform;
 }
 
 ITexture *View::get_color_texture() {
@@ -306,5 +307,12 @@ void View::flip_history_buffer() {
 
 glm::mat4 View::last_frame_projection_matrix() {
     return _last_frame_projection_matrix.value_or(projection_matrix());
+}
+
+glm::mat4 View::last_frame_view_matrix() {
+    if (_last_frame_xform.has_value()) {
+        return glm::inverse(_last_frame_xform->matrix_no_scale());
+    }
+    return view_matrix();
 }
 } // namespace ars::render::vk

@@ -253,6 +253,7 @@ void ScreenSpaceReflection::resolve_reflection(RenderGraph &rg) {
             param.width = static_cast<int32_t>(dst_extent.width);
             param.height = static_cast<int32_t>(dst_extent.height);
             param.reset_history = _frame_index == 0 ? 1 : 0;
+//            param.reset_history = 1;
             param.I_P = glm::inverse(_view->projection_matrix());
             param.I_V = glm::inverse(_view->view_matrix());
             param.env_radiance_factor = _view->environment_vk()->radiance();

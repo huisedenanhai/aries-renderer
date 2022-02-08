@@ -1,5 +1,6 @@
 #version 450 core
 
+#include "SSRCommon.glsl"
 #include <GBuffer.glsl>
 #include <MetallicRoughnessPBR.glsl>
 #include <Misc.glsl>
@@ -186,7 +187,8 @@ float sample_reflect_dir(ivec2 index,
                          vec3 n_vs,
                          out vec3 dir_vs) {
     // Sample dir
-    float roughness = square(max(pbr.perceptual_roughness, 0.01));
+    float roughness =
+        square(max(pbr.perceptual_roughness, SSR_MIN_SAMPLING_ROUGHNESS));
     vec2 u = vec2(gloden_ratio_sequence(0.124, frame_index),
                   radical_inverse_2(frame_index));
     // Rotate sample point

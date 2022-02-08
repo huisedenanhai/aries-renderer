@@ -155,6 +155,10 @@ void ScreenSpaceReflection::trace_rays(RenderGraph &rg) {
                 int32_t height;
                 int32_t hiz_mip_count;
                 int32_t frame_index;
+                float unbiased_sampling;
+                ARS_PADDING_FIELD(int32_t);
+                ARS_PADDING_FIELD(int32_t);
+                ARS_PADDING_FIELD(int32_t);
             };
 
             Param param{};
@@ -165,6 +169,7 @@ void ScreenSpaceReflection::trace_rays(RenderGraph &rg) {
             param.hiz_mip_count =
                 static_cast<int32_t>(hiz_buffer->info().mip_levels);
             param.frame_index = _frame_index++;
+            param.unbiased_sampling = _unbiased_sampling;
 
             desc.set_buffer_data(1, 0, param);
 

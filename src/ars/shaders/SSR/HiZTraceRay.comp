@@ -23,6 +23,7 @@ layout(set = 1, binding = 0) uniform Param {
     int height;
     int hiz_mip_count;
     int frame_index;
+    float unbiased_sampling;
 };
 
 layout(set = 1, binding = 1, std430) buffer MipLevels {
@@ -196,6 +197,10 @@ float sample_reflect_dir(ivec2 index,
     float sin_rotate = sin(rotate);
     float cos_rotate = cos(rotate);
     u = fract(mat2(sin_rotate, cos_rotate, -cos_rotate, sin_rotate) * u + 5);
+    // Biased sampling trick on P.68, Stochastic Screen-Space Reflections
+    // (Tomasz Stachowiak)
+    // Clamp pdf to avoid noisy samples on GGX tail
+    u.x *= unbiased_sampling;
 
     vec3 t_vs, b_vs;
     construct_TBN_with_normal(n_vs, t_vs, b_vs);

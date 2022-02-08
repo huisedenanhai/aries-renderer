@@ -35,6 +35,7 @@ class ScreenSpaceReflection {
 
     View *_view = nullptr;
     int32_t _frame_index = 0;
+    float _unbiased_sampling = 0.9f;
     std::unique_ptr<ComputePipeline> _hiz_trace_pipeline;
     std::unique_ptr<ComputePipeline> _resolve_reflection_pipeline;
     std::unique_ptr<ComputePipeline> _temporal_filter_pipeline;

@@ -31,11 +31,14 @@ class ScreenSpaceReflection {
 
   private:
     void alloc_hit_buffer();
+    void alloc_resolve_single_sample_buffer();
 
     View *_view = nullptr;
     int32_t _frame_index = 0;
     std::unique_ptr<ComputePipeline> _hiz_trace_pipeline;
-    std::unique_ptr<ComputePipeline> _resolve_reflection;
+    std::unique_ptr<ComputePipeline> _resolve_reflection_pipeline;
+    std::unique_ptr<ComputePipeline> _temporal_filter_pipeline;
     RenderTargetId _hit_buffer_id;
+    RenderTargetId _resolve_buffer_single_sample;
 };
 } // namespace ars::render::vk

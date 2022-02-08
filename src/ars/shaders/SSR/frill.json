@@ -3,6 +3,7 @@
         "InitHiZ.comp",
         "PropagateHiZ.comp",
         "HiZTraceRay.comp",
-        "ResolveReflection.comp"
+        "ResolveReflection.comp",
+        "TemporalFiltering.comp"
     ]
 }

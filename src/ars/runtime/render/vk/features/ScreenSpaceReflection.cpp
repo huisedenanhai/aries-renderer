@@ -114,10 +114,13 @@ void GenerateHierarchyZ::render(RenderGraph &rg) {
 ScreenSpaceReflection::ScreenSpaceReflection(View *view) : _view(view) {
     _hiz_trace_pipeline =
         ComputePipeline::create(_view->context(), "SSR/HiZTraceRay.comp");
-    _resolve_reflection =
+    _resolve_reflection_pipeline =
         ComputePipeline::create(_view->context(), "SSR/ResolveReflection.comp");
+    _temporal_filter_pipeline =
+        ComputePipeline::create(_view->context(), "SSR/TemporalFiltering.comp");
 
     alloc_hit_buffer();
+    alloc_resolve_single_sample_buffer();
 }
 
 void ScreenSpaceReflection::trace_rays(RenderGraph &rg) {
@@ -209,12 +212,12 @@ void ScreenSpaceReflection::resolve_reflection(RenderGraph &rg) {
             builder.compute_shader_read(NamedRT_GBuffer2);
             builder.compute_shader_read(NamedRT_Depth);
             builder.compute_shader_read(NamedRT_LinearColorHistory);
-            builder.compute_shader_read(NamedRT_ReflectionHistory);
-            builder.compute_shader_write(NamedRT_Reflection);
+            builder.compute_shader_write(_resolve_buffer_single_sample);
         },
         [=](CommandBuffer *cmd) {
-            _resolve_reflection->bind(cmd);
-            auto reflect_color_image = _view->render_target(NamedRT_Reflection);
+            _resolve_reflection_pipeline->bind(cmd);
+            auto reflect_color_image =
+                _view->rt_manager()->get(_resolve_buffer_single_sample);
             auto hit_buffer = _view->rt_manager()->get(_hit_buffer_id);
             auto cube_map = _view->environment_vk()->irradiance_cube_map_vk();
 
@@ -234,17 +237,15 @@ void ScreenSpaceReflection::resolve_reflection(RenderGraph &rg) {
             desc.set_texture(0, 7, cube_map.get());
             desc.set_texture(
                 0, 8, _view->render_target(NamedRT_LinearColorHistory).get());
-            desc.set_texture(
-                0, 9, _view->render_target(NamedRT_ReflectionHistory).get());
 
             struct Param {
                 int32_t width;
                 int32_t height;
-                int32_t reset_history;
                 int32_t frame_index;
+                ARS_PADDING_FIELD(int32_t);
                 glm::mat4 I_P;
                 glm::mat4 I_V;
-                glm::mat4 last_frame_VP;
+                glm::mat4 reproject_IV_VP;
                 glm::vec3 env_radiance_factor;
                 int32_t cube_map_mip_count;
             };
@@ -252,20 +253,75 @@ void ScreenSpaceReflection::resolve_reflection(RenderGraph &rg) {
             Param param{};
             param.width = static_cast<int32_t>(dst_extent.width);
             param.height = static_cast<int32_t>(dst_extent.height);
-            param.reset_history = _frame_index == 0 ? 1 : 0;
             param.frame_index = _frame_index;
             param.I_P = glm::inverse(_view->projection_matrix());
             param.I_V = glm::inverse(_view->view_matrix());
-            param.last_frame_VP = _view->last_frame_projection_matrix() *
-                                  _view->last_frame_view_matrix() * param.I_V;
+            param.reproject_IV_VP = _view->last_frame_projection_matrix() *
+                                    _view->last_frame_view_matrix() * param.I_V;
             param.env_radiance_factor = _view->environment_vk()->radiance();
             param.cube_map_mip_count =
                 static_cast<int32_t>(cube_map->info().mip_levels);
             desc.set_buffer_data(1, 0, param);
 
-            desc.commit(cmd, _resolve_reflection.get());
+            desc.commit(cmd, _resolve_reflection_pipeline.get());
 
-            _resolve_reflection->local_size().dispatch(cmd, dst_extent);
+            _resolve_reflection_pipeline->local_size().dispatch(cmd,
+                                                                dst_extent);
         });
+
+    rg.add_pass(
+        [&](RenderGraphPassBuilder &builder) {
+            builder.compute_shader_read(NamedRT_Depth);
+            builder.compute_shader_read(NamedRT_ReflectionHistory);
+            builder.compute_shader_read(_resolve_buffer_single_sample);
+            builder.compute_shader_write(NamedRT_Reflection);
+        },
+        [=](CommandBuffer *cmd) {
+            _temporal_filter_pipeline->bind(cmd);
+            auto reflect_tex = _view->render_target(NamedRT_Reflection);
+            auto dst_extent = reflect_tex->info().extent;
+
+            DescriptorEncoder desc{};
+            desc.set_texture(0, 0, reflect_tex.get());
+            desc.set_texture(0, 1, _view->render_target(NamedRT_Depth).get());
+            desc.set_texture(
+                0, 2, _view->render_target(NamedRT_ReflectionHistory).get());
+            desc.set_texture(
+                0,
+                3,
+                _view->rt_manager()->get(_resolve_buffer_single_sample).get());
+
+            struct Param {
+                int width;
+                int height;
+                float blend_factor;
+                ARS_PADDING_FIELD(int32_t);
+                glm::mat4 I_P;
+                glm::mat4 reproject_IV_VP;
+            };
+
+            Param param{};
+            param.width = static_cast<int32_t>(dst_extent.width);
+            param.height = static_cast<int32_t>(dst_extent.height);
+            param.blend_factor = _frame_index == 0 ? 1 : 0.05f;
+            param.I_P = glm::inverse(_view->projection_matrix());
+            param.reproject_IV_VP = _view->last_frame_projection_matrix() *
+                                    _view->last_frame_view_matrix() *
+                                    glm::inverse(_view->view_matrix());
+            desc.set_buffer_data(1, 0, param);
+
+            desc.commit(cmd, _temporal_filter_pipeline.get());
+
+            _temporal_filter_pipeline->local_size().dispatch(cmd, dst_extent);
+        });
+}
+
+void ScreenSpaceReflection::alloc_resolve_single_sample_buffer() {
+    auto info = TextureCreateInfo::sampled_2d(
+        VK_FORMAT_B10G11R11_UFLOAT_PACK32, 1, 1, 1);
+    info.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+
+    // Resolve at full resolution
+    _resolve_buffer_single_sample = _view->rt_manager()->alloc(info);
 }
 } // namespace ars::render::vk

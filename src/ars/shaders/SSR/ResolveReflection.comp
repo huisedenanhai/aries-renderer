@@ -21,12 +21,10 @@ layout(set = 0, binding = 5) uniform sampler2D depth_stencil_tex;
 layout(set = 0, binding = 6) uniform sampler2D brdf_lut;
 layout(set = 0, binding = 7) uniform samplerCube cube_map;
 layout(set = 0, binding = 8) uniform sampler2D shaded_radiance_history_tex;
-layout(set = 0, binding = 9) uniform sampler2D reflection_history_tex;
 
 layout(set = 1, binding = 0) uniform Param {
     int width;
     int height;
-    int reset_history;
     int frame_index;
 
     mat4 I_P;
@@ -91,10 +89,11 @@ const vec2 RESOLVE_HIT_OFFSET[RESOLVE_FRAME_JITTER_COUNT]
                                  },
 };
 
-vec2 reproject_uv(vec3 pos_vs) {
+vec3 reproject_pos_ss(vec3 pos_vs) {
     vec4 pos_hclip = reproject_IV_VP * vec4(pos_vs, 1.0);
-    vec2 uv = 0.5 + 0.5 * (pos_hclip.xy / pos_hclip.w);
-    return uv;
+    vec3 pos_ss = pos_hclip.rgb / pos_hclip.w;
+    pos_ss.xy = 0.5 + 0.5 * pos_ss.xy;
+    return pos_ss;
 }
 
 void resolve_ssr_single_sample(vec2 hit_buffer_uv,
@@ -141,7 +140,7 @@ void resolve_ssr_single_sample(vec2 hit_buffer_uv,
     float NoL = max(0, dot(n_vs, ray_dir_vs));
 
     // Reproject hit point uv
-    vec2 last_frame_hit_uv = reproject_uv(hit_surface_vs);
+    vec2 last_frame_hit_uv = reproject_pos_ss(hit_surface_vs).xy;
     vec3 reflect_radiance =
         texture(shaded_radiance_history_tex, last_frame_hit_uv).rgb;
 
@@ -180,10 +179,6 @@ vec3 resolve_ssr_irradiance(MetallicRoughnessPBR brdf,
 }
 
 vec3 calculate_reflection(ivec2 index) {
-    if (index.x >= width || index.y >= height) {
-        return vec3(0.0);
-    }
-
     vec2 uv = index_to_uv(index, vec2(1.0 / width, 1.0 / height));
 
     GBuffer gbuffer = decode_gbuffer(texture(gbuffer0_tex, uv),
@@ -222,14 +217,15 @@ vec3 calculate_reflection(ivec2 index) {
     vec3 reflect_radiance = mix(
         prefiltered_glossy_indirect_radiance, ssr_reflect_radiance, ssr_fade);
 
-    vec2 history_uv = reproject_uv(sp.pos_vs);
-    vec3 history_radiance = texture(reflection_history_tex, history_uv).rgb;
-    return mix(
-        history_radiance, reflect_radiance, reset_history != 0 ? 1.0 : 0.05);
+    return reflect_radiance;
 }
 
 void main() {
     ivec2 index = ivec2(gl_GlobalInvocationID.xy);
+    if (index.x >= width || index.y >= height) {
+        return;
+    }
+
     vec3 reflect_radiance = calculate_reflection(index);
     imageStore(reflect_color_image, index, vec4(reflect_radiance, 1));
 }

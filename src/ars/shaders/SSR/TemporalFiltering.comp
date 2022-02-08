@@ -1,0 +1,54 @@
+#version 450 core
+
+#include <Misc.glsl>
+#include <Transform.glsl>
+
+layout(local_size_x = 32, local_size_y = 32) in;
+
+layout(set = 0,
+       binding = 0,
+       r11f_g11f_b10f) writeonly uniform image2D filtered_color_image;
+
+layout(set = 0, binding = 1) uniform sampler2D depth_stencil_tex;
+layout(set = 0, binding = 2) uniform sampler2D history_color_tex;
+layout(set = 0, binding = 3) uniform sampler2D current_color_tex;
+
+layout(set = 1, binding = 0) uniform Param {
+    int width;
+    int height;
+    float blend_factor;
+
+    mat4 I_P;
+    mat4 reproject_IV_VP;
+};
+
+vec3 reproject_pos_ss(vec3 pos_vs) {
+    vec4 pos_hclip = reproject_IV_VP * vec4(pos_vs, 1.0);
+    vec3 pos_ss = pos_hclip.rgb / pos_hclip.w;
+    pos_ss.xy = 0.5 + 0.5 * pos_ss.xy;
+    return pos_ss;
+}
+
+vec3 calculate_filtered_color(ivec2 index) {
+    vec2 uv = index_to_uv(index, 1.0 / vec2(width, height));
+    float depth01 = texture(depth_stencil_tex, uv).r;
+    vec3 pos_vs = reconstruct_position_from_ss(I_P, uv, depth01);
+
+    vec3 current_color = texture(current_color_tex, uv).rgb;
+    vec3 history_pos_ss = reproject_pos_ss(pos_vs);
+    if (point_inside_unit_rect(history_pos_ss.xy)) {
+        vec3 history_color = texture(history_color_tex, history_pos_ss.xy).rgb;
+        return mix(history_color, current_color, blend_factor);
+    }
+    return current_color;
+}
+
+void main() {
+    ivec2 index = ivec2(gl_GlobalInvocationID.xy);
+    if (index.x >= width || index.y >= height) {
+        return;
+    }
+
+    vec3 filtered_color = calculate_filtered_color(index);
+    imageStore(filtered_color_image, index, vec4(filtered_color, 1));
+}

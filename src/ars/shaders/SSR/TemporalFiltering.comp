@@ -29,8 +29,29 @@ vec3 reproject_pos_ss(vec3 pos_vs) {
     return pos_ss;
 }
 
+void neighbor_clamp(vec2 uv,
+                    vec2 inv_resolution,
+                    vec3 current_color,
+                    inout vec3 color) {
+    vec3 min_color = current_color;
+    vec3 max_color = current_color;
+    for (int i = -1; i < 2; i++) {
+        for (int j = -1; j < 2; j++) {
+            vec3 neighbor =
+                texture(current_color_tex, uv + vec2(i, j) * inv_resolution)
+                    .rgb;
+            min_color = min(min_color, neighbor);
+            max_color = min(max_color, neighbor);
+        }
+    }
+
+    color = max(min_color, color);
+    color = min(max_color, color);
+}
+
 vec3 calculate_filtered_color(ivec2 index) {
-    vec2 uv = index_to_uv(index, 1.0 / vec2(width, height));
+    vec2 inv_resolution = 1.0 / vec2(width, height);
+    vec2 uv = index_to_uv(index, inv_resolution);
     float depth01 = texture(depth_stencil_tex, uv).r;
     vec3 pos_vs = reconstruct_position_from_ss(I_P, uv, depth01);
 
@@ -38,6 +59,8 @@ vec3 calculate_filtered_color(ivec2 index) {
     vec3 history_pos_ss = reproject_pos_ss(pos_vs);
     if (point_inside_unit_rect(history_pos_ss.xy)) {
         vec3 history_color = texture(history_color_tex, history_pos_ss.xy).rgb;
+        // It flickers severely when input sample have too big variance :(
+        // neighbor_clamp(uv, inv_resolution, current_color, history_color);
         return mix(history_color, current_color, blend_factor);
     }
     return current_color;

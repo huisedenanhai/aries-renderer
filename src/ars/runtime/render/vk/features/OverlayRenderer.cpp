@@ -94,23 +94,20 @@ void OverlayRenderer::render(RenderGraph &rg, NamedRT dst_rt_name) {
 
 void OverlayRenderer::ensure_outline_rts() {
     if (!_outline_id_rt.valid()) {
-        RenderTargetInfo info{};
-        auto &tex = info.texture;
-        tex =
+        TextureCreateInfo info =
             TextureCreateInfo::sampled_2d(ID_COLOR_ATTACHMENT_FORMAT, 1, 1, 1);
-        tex.usage =
+        info.usage =
             VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-        tex.mag_filter = VK_FILTER_NEAREST;
-        tex.min_filter = VK_FILTER_NEAREST;
+        info.mag_filter = VK_FILTER_NEAREST;
+        info.min_filter = VK_FILTER_NEAREST;
         _outline_id_rt = _view->rt_manager()->alloc(info);
     }
 
     if (!_outline_depth_rt.valid()) {
-        RenderTargetInfo info{};
-        info.texture = TextureCreateInfo::sampled_2d(
+        TextureCreateInfo info = TextureCreateInfo::sampled_2d(
             ID_DEPTH_STENCIL_ATTACHMENT_FORMAT, 1, 1, 1);
-        info.texture.aspect_mask = VK_IMAGE_ASPECT_DEPTH_BIT;
-        info.texture.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        info.aspect_mask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
         _outline_depth_rt = _view->rt_manager()->alloc(info);
     }
 }
@@ -137,16 +134,16 @@ void OverlayRenderer::init_forward_render_pass() {
     auto color_info = _view->rt_info(NamedRT_PostProcessing0);
     auto depth_info = _view->rt_info(NamedRT_Depth);
     RenderPassAttachmentInfo color_attach{};
-    color_attach.format = color_info.texture.format;
-    color_attach.samples = color_info.texture.samples;
+    color_attach.format = color_info.format;
+    color_attach.samples = color_info.samples;
     color_attach.initial_layout = VK_IMAGE_LAYOUT_GENERAL;
     color_attach.final_layout = VK_IMAGE_LAYOUT_GENERAL;
     color_attach.load_op = VK_ATTACHMENT_LOAD_OP_LOAD;
     color_attach.store_op = VK_ATTACHMENT_STORE_OP_STORE;
 
     RenderPassAttachmentInfo depth_attach{};
-    depth_attach.format = depth_info.texture.format;
-    depth_attach.samples = depth_info.texture.samples;
+    depth_attach.format = depth_info.format;
+    depth_attach.samples = depth_info.samples;
     depth_attach.initial_layout = VK_IMAGE_LAYOUT_GENERAL;
     depth_attach.final_layout = VK_IMAGE_LAYOUT_GENERAL;
     depth_attach.load_op = VK_ATTACHMENT_LOAD_OP_LOAD;

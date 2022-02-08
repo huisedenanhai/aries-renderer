@@ -140,8 +140,8 @@ Scene *View::vk_scene() const {
     return _scene;
 }
 
-RenderTargetInfo View::rt_info(NamedRT name) const {
-    RenderTargetInfo info{};
+TextureCreateInfo View::rt_info(NamedRT name) const {
+    TextureCreateInfo info{};
 
     auto color_attachment = [&](VkFormat format) {
         auto tex = TextureCreateInfo::sampled_2d(format, 1, 1, 1);
@@ -151,55 +151,54 @@ RenderTargetInfo View::rt_info(NamedRT name) const {
 
     switch (name) {
     case NamedRT_GBuffer0: {
-        info.texture = color_attachment(VK_FORMAT_R8G8B8A8_SRGB);
+        info = color_attachment(VK_FORMAT_R8G8B8A8_SRGB);
         break;
     }
     case NamedRT_GBuffer1: {
-        info.texture = color_attachment(VK_FORMAT_A2R10G10B10_UNORM_PACK32);
+        info = color_attachment(VK_FORMAT_A2R10G10B10_UNORM_PACK32);
         break;
     }
     case NamedRT_GBuffer2: {
-        info.texture = color_attachment(VK_FORMAT_R8G8B8A8_UNORM);
+        info = color_attachment(VK_FORMAT_R8G8B8A8_UNORM);
         break;
     }
     case NamedRT_GBuffer3: {
-        info.texture = color_attachment(VK_FORMAT_B10G11R11_UFLOAT_PACK32);
+        info = color_attachment(VK_FORMAT_B10G11R11_UFLOAT_PACK32);
         break;
     }
     case NamedRT_Depth: {
-        auto &tex = info.texture =
-            TextureCreateInfo::sampled_2d(VK_FORMAT_D32_SFLOAT, 1, 1, 1);
-        tex.aspect_mask = VK_IMAGE_ASPECT_DEPTH_BIT;
-        tex.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT |
-                    VK_IMAGE_USAGE_SAMPLED_BIT;
+        info = TextureCreateInfo::sampled_2d(VK_FORMAT_D32_SFLOAT, 1, 1, 1);
+        info.aspect_mask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT |
+                     VK_IMAGE_USAGE_SAMPLED_BIT;
         break;
     }
     case NamedRT_LinearColor:
     case NamedRT_LinearColorHistory:
     case NamedRT_PostProcessing0:
     case NamedRT_PostProcessing1: {
-        auto &tex = info.texture = translate(color_tex_info());
-        tex.usage |=
+        info = translate(color_tex_info());
+        info.usage |=
             VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
         break;
     }
     case NamedRT_HiZBuffer: {
-        auto &tex = info.texture = TextureCreateInfo::sampled_2d(
+        info = TextureCreateInfo::sampled_2d(
             VK_FORMAT_R32_SFLOAT, 1, 1, MAX_MIP_LEVELS);
-        tex.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
-        tex.min_filter = VK_FILTER_NEAREST;
-        tex.mag_filter = VK_FILTER_NEAREST;
-        tex.mipmap_mode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-        tex.address_mode_u = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        tex.address_mode_v = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        tex.address_mode_w = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        info.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+        info.min_filter = VK_FILTER_NEAREST;
+        info.mag_filter = VK_FILTER_NEAREST;
+        info.mipmap_mode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+        info.address_mode_u = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        info.address_mode_v = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        info.address_mode_w = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         break;
     }
     case NamedRT_ReflectionHistory:
     case NamedRT_Reflection: {
-        auto &tex = info.texture = TextureCreateInfo::sampled_2d(
+        info = TextureCreateInfo::sampled_2d(
             VK_FORMAT_B10G11R11_UFLOAT_PACK32, 1, 1, 1);
-        tex.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+        info.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
         break;
     }
     case NamedRT_Count:
@@ -216,8 +215,8 @@ std::unique_ptr<RenderPass> View::create_single_pass_render_pass(
 
     auto init_attach_info = [&](RenderPassAttachmentInfo &attach, NamedRT rt) {
         auto info = rt_info(rt);
-        attach.format = info.texture.format;
-        attach.samples = info.texture.samples;
+        attach.format = info.format;
+        attach.samples = info.samples;
     };
 
     for (int i = 0; i < color_count; i++) {

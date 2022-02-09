@@ -45,6 +45,13 @@ void neighbor_clamp(vec2 uv,
         }
     }
 
+    vec3 color_center = 0.5 * (min_color + max_color);
+    vec3 half_delta = 0.5 * (max_color - min_color);
+
+    float expand = 1.0;
+    min_color = color_center - half_delta * expand;
+    max_color = color_center + half_delta * expand;
+
     color = max(min_color, color);
     color = min(max_color, color);
 }

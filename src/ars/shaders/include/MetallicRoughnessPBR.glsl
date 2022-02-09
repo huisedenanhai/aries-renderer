@@ -197,4 +197,10 @@ vec2 specular_env_BRDF_factor(float roughness, vec3 n, vec3 v, vec3 h) {
     return max(result, vec2(0.0));
 }
 
+// Fitted cone lobe from Practical Realtime Strategies for Accurate Indirect
+// Occlusion, Jimenez, SIGGRAPH 2016
+float cone_cosine_fitted(float roughness) {
+    return exp2(-3.32193 * roughness * roughness);
+}
+
 #endif

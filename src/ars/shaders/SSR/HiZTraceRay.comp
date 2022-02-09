@@ -178,6 +178,15 @@ bool trace_ray_dda(vec3 origin_ss,
     return false;
 }
 
+vec2 sample_noise(ivec2 index) {
+    vec2 u = vec2(gloden_ratio_sequence(0.124, frame_index),
+                  radical_inverse_2(frame_index));
+    // Add per-pixel noise
+    float noise = interleaved_gradient_noise(index) * 2.0 * PI;
+    u = fract(vec2(cos(noise), sin(noise) * 2.173631) + u);
+    return u;
+}
+
 float sample_reflect_dir(ivec2 index,
                          MetallicRoughnessPBR pbr,
                          vec3 v_vs,
@@ -186,13 +195,8 @@ float sample_reflect_dir(ivec2 index,
     // Sample dir
     float roughness =
         square(max(pbr.perceptual_roughness, SSR_MIN_SAMPLING_ROUGHNESS));
-    vec2 u = vec2(gloden_ratio_sequence(0.124, frame_index),
-                  radical_inverse_2(frame_index));
-    // Rotate sample point
-    float rotate = 2.0 * PI * interleaved_gradient_noise(index);
-    float sin_rotate = sin(rotate);
-    float cos_rotate = cos(rotate);
-    u = fract(mat2(sin_rotate, cos_rotate, -cos_rotate, sin_rotate) * u + 5);
+    vec2 u = sample_noise(index);
+
     // Biased sampling trick on P.68, Stochastic Screen-Space Reflections
     // (Tomasz Stachowiak)
     // Clamp pdf to avoid noisy samples on GGX tail
@@ -212,7 +216,8 @@ float sample_reflect_dir(ivec2 index,
 
 vec4 trace_ray(ivec2 index) {
     vec2 inv_resolution = vec2(1.0 / width, 1.0 / height);
-    vec2 uv = index_to_uv(index, inv_resolution);
+    vec2 noise = fract(sample_noise(index) * 2.163680312);
+    vec2 uv = (index + noise) * inv_resolution;
     float depth01 = textureLod(hiz_buffer, uv, 0).r;
 
     if (depth01 == 0) {

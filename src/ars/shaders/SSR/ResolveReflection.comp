@@ -30,6 +30,7 @@ layout(set = 1, binding = 0) uniform Param {
     int height;
     int frame_index;
 
+    mat4 P;
     mat4 I_P;
     mat4 I_V;
     mat4 reproject_IV_VP;
@@ -100,9 +101,16 @@ vec3 reproject_pos_ss(vec3 pos_vs) {
 }
 
 #ifdef ENABLE_SSR
+float footprint_vs_to_ss(float fp_vs, float z_vs) {
+    float w = P[2][3] * z_vs + P[3][3];
+    float fp_ss = 0.5 * max(P[0][0], P[1][1]) * fp_vs / w;
+    return fp_ss;
+}
+
 void resolve_ssr_single_sample(vec2 hit_buffer_uv,
                                MetallicRoughnessPBR brdf,
                                ShadingPoint sp,
+                               float cone_tan,
                                vec3 n_vs,
                                inout vec3 irradiance_acc,
                                inout vec3 irradiance_weight_acc,
@@ -143,10 +151,19 @@ void resolve_ssr_single_sample(vec2 hit_buffer_uv,
     vec3 fr = specular_BRDF(brdf, n_vs, sp.v_vs, ray_dir_vs);
     float NoL = max(0, dot(n_vs, ray_dir_vs));
 
+    float clone_bias = 1.0;
+    float cone_footprint_vs = distance(hit_vs, sp.pos_vs) * cone_tan;
+    float cone_footprint_ss =
+        footprint_vs_to_ss(cone_footprint_vs, sp.pos_vs.z) * clone_bias;
+    float history_lod =
+        log2(cone_footprint_ss *
+             max_comp_value(textureSize(shaded_radiance_history_tex, 0).xy));
+
     // Reproject hit point uv
     vec2 last_frame_hit_uv = reproject_pos_ss(hit_surface_vs).xy;
     vec3 reflect_radiance =
-        texture(shaded_radiance_history_tex, last_frame_hit_uv).rgb;
+        textureLod(shaded_radiance_history_tex, last_frame_hit_uv, history_lod)
+            .rgb;
 
     vec3 w = fr * NoL / hit_pdf;
 
@@ -164,13 +181,21 @@ vec3 resolve_ssr_irradiance(MetallicRoughnessPBR brdf,
     float fade_acc = 0.0;
     float fade_weight_acc = 0.0;
 
+    float cone_cos = cone_cosine_fitted(square(brdf.perceptual_roughness));
+    float cone_tan = sqrt(max(0.0, square(1.0 / cone_cos) - 1.0));
+    // Elongation fit from P.85, Stochastic Screen-Space Reflections (Tomasz
+    // Stachowiak)
+    cone_tan *=
+        mix(clamp01(2.0 * dot(n_vs, sp.v_vs)), 1.0, brdf.perceptual_roughness);
+
     int hit_jitter_index = frame_index % RESOLVE_FRAME_JITTER_COUNT;
     for (int i = 0; i < RESOLVE_SAMPLE_COUNT; i++) {
         vec2 jitter = RESOLVE_HIT_OFFSET[hit_jitter_index][i];
-        vec2 hit_uv = sp.screen_uv + jitter / vec2(width, height);
+        vec2 hit_uv = sp.screen_uv + jitter / textureSize(hit_buffer, 0).xy;
         resolve_ssr_single_sample(hit_uv,
                                   brdf,
                                   sp,
+                                  cone_tan,
                                   n_vs,
                                   irradiance_acc,
                                   irradiance_weight_acc,

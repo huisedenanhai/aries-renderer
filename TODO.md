@@ -25,6 +25,7 @@ A very coarse plan for development.
     + [ ] Super Resolution
 3. Architecture
     + [x] Render Graph
+        + [ ] Pass Culling
         + [ ] Virtual Resource Management
         + [ ] Scheduling
 4. System

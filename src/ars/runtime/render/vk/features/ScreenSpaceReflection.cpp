@@ -224,6 +224,7 @@ void ScreenSpaceReflection::resolve_reflection(RenderGraph &rg,
                 int32_t height;
                 int32_t frame_index;
                 ARS_PADDING_FIELD(int32_t);
+                glm::mat4 P;
                 glm::mat4 I_P;
                 glm::mat4 I_V;
                 glm::mat4 reproject_IV_VP;
@@ -235,7 +236,8 @@ void ScreenSpaceReflection::resolve_reflection(RenderGraph &rg,
             param.width = static_cast<int32_t>(dst_extent.width);
             param.height = static_cast<int32_t>(dst_extent.height);
             param.frame_index = _frame_index;
-            param.I_P = glm::inverse(_view->projection_matrix());
+            param.P = _view->projection_matrix();
+            param.I_P = glm::inverse(param.P);
             param.I_V = glm::inverse(_view->view_matrix());
             param.reproject_IV_VP = _view->last_frame_projection_matrix() *
                                     _view->last_frame_view_matrix() * param.I_V;

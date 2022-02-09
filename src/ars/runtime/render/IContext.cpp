@@ -1,4 +1,5 @@
 #include "IContext.h"
+#include "IEffect.h"
 #include "vk/Context.h"
 #include "vk/Swapchain.h"
 #include <algorithm>
@@ -7,7 +8,12 @@
 namespace ars::render {
 namespace {
 std::unique_ptr<ApplicationInfo> s_application_info{};
+
+void register_types() {
+    IEffect::register_type();
+    IScreenSpaceReflectionEffect::register_type();
 }
+} // namespace
 
 void init_render_backend(const ApplicationInfo &info) {
     if (s_application_info != nullptr) {
@@ -22,6 +28,8 @@ void init_render_backend(const ApplicationInfo &info) {
         vk::init_vulkan_backend(info);
         break;
     }
+
+    register_types();
 }
 
 void destroy_render_backend() {

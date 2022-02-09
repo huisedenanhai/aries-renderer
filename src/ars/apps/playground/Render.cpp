@@ -7,6 +7,8 @@
 #include <ars/runtime/engine/Entity.Editor.h>
 #include <ars/runtime/engine/Entity.h>
 #include <ars/runtime/engine/components/RenderSystem.h>
+#include <ars/runtime/engine/gui/ImGui.h>
+#include <ars/runtime/render/IEffect.h>
 #include <ars/runtime/render/IEnvironment.h>
 #include <ars/runtime/render/IScene.h>
 #include <ars/runtime/render/ITexture.h>
@@ -275,6 +277,10 @@ class Application : public ars::engine::IApplication {
         _view->debug_gui();
 
         ars::profiler_on_gui("Profiler", _profiler_gui_state);
+
+        ImGui::Begin("Effect");
+        ars::gui::input_instance(rttr::instance(_view->effect()));
+        ImGui::End();
 
         if (ImGui::GetIO().WantCaptureMouse) {
             return;

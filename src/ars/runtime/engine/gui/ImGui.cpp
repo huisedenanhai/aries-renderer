@@ -164,18 +164,28 @@ bool input_variant(const char *label,
     if (input_variant_type<std::string>(label, v, changed, input_text)) {
         return changed;
     }
+
+    if (input_variant_type<bool>(
+            label, v, changed, [&](const char *label, bool &value) {
+                return ImGui::Checkbox(label, &value);
+            })) {
+        return changed;
+    }
+
     if (input_variant_type<float>(
             label, v, changed, [&](const char *label, float &v) {
                 return ImGui::InputFloat(label, &v);
             })) {
         return changed;
     }
+
     if (input_variant_type<int>(
             label, v, changed, [&](const char *label, int &v) {
                 return ImGui::InputInt(label, &v);
             })) {
         return changed;
     }
+
     if (input_variant_type<glm::vec2>(label, v, changed, input_vec2)) {
         return changed;
     }

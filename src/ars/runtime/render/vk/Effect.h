@@ -8,9 +8,12 @@ class ScreenSpaceReflectionEffect : public IScreenSpaceReflectionEffect {
   public:
     bool enabled() override;
     void set_enabled(bool enabled) override;
+    float sampling_bias() override;
+    void set_sampling_bias(float bias) override;
 
   private:
     bool _enabled = false;
+    float _sampling_bias = 0.1f;
 };
 
 class Effect : public IEffect {

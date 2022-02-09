@@ -13,8 +13,7 @@ NamedRT Renderer::render(RenderGraph &rg) {
     _opaque_geometry->render(rg);
     _deferred_shading->render(rg, NamedRT_LinearColor);
     _generate_hierarchy_z->render(rg);
-    _screen_space_reflection->trace_rays(rg);
-    _screen_space_reflection->resolve_reflection(rg);
+    _screen_space_reflection->render(rg);
     add_inplace(rg, NamedRT_Reflection, NamedRT_LinearColor);
 
     Texture::generate_mipmap(_view->render_target(NamedRT_LinearColor), rg);

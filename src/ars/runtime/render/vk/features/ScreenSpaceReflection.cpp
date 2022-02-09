@@ -1,5 +1,6 @@
 #include "ScreenSpaceReflection.h"
 #include "../Context.h"
+#include "../Effect.h"
 #include "../Environment.h"
 #include "../Lut.h"
 #include "../Profiler.h"
@@ -91,6 +92,8 @@ ScreenSpaceReflection::ScreenSpaceReflection(View *view) : _view(view) {
     _hiz_trace_pipeline = ComputePipeline::create(ctx, "SSR/HiZTraceRay.comp");
     _resolve_reflection_pipeline =
         ComputePipeline::create(ctx, "SSR/ResolveReflection.comp");
+    _resolve_ssr_reflection_pipeline = ComputePipeline::create(
+        ctx, "SSR/ResolveReflection.comp", {"ENABLE_SSR"});
     _temporal_filter_pipeline =
         ComputePipeline::create(ctx, "SSR/TemporalFiltering.comp");
 
@@ -169,40 +172,50 @@ void ScreenSpaceReflection::alloc_hit_buffer() {
     _hit_buffer_id = _view->rt_manager()->alloc(info, 0.5f);
 }
 
-void ScreenSpaceReflection::resolve_reflection(RenderGraph &rg) {
+void ScreenSpaceReflection::resolve_reflection(RenderGraph &rg,
+                                               bool ssr_enabled) {
+    auto target_buffer = ssr_enabled ? _resolve_buffer_single_sample
+                                     : _view->rt_id(NamedRT_Reflection);
+    auto pipeline = ssr_enabled ? _resolve_ssr_reflection_pipeline.get()
+                                : _resolve_reflection_pipeline.get();
+
     rg.add_pass(
         [&](RenderGraphPassBuilder &builder) {
-            builder.compute_shader_read(_hit_buffer_id);
             builder.compute_shader_read(NamedRT_GBuffer0);
             builder.compute_shader_read(NamedRT_GBuffer1);
             builder.compute_shader_read(NamedRT_GBuffer2);
             builder.compute_shader_read(NamedRT_Depth);
-            builder.compute_shader_read(NamedRT_LinearColorHistory);
-            builder.compute_shader_write(_resolve_buffer_single_sample);
+            if (ssr_enabled) {
+                builder.compute_shader_read(NamedRT_LinearColorHistory);
+                builder.compute_shader_read(_hit_buffer_id);
+            }
+            builder.compute_shader_write(target_buffer);
         },
         [=](CommandBuffer *cmd) {
-            _resolve_reflection_pipeline->bind(cmd);
-            auto reflect_color_image =
-                _view->rt_manager()->get(_resolve_buffer_single_sample);
-            auto hit_buffer = _view->rt_manager()->get(_hit_buffer_id);
+            pipeline->bind(cmd);
+            auto reflect_color_image = _view->rt_manager()->get(target_buffer);
             auto cube_map = _view->environment_vk()->irradiance_cube_map_vk();
-
             auto dst_extent = reflect_color_image->info().extent;
 
             DescriptorEncoder desc{};
             desc.set_texture(0, 0, reflect_color_image.get());
-            desc.set_texture(0, 1, hit_buffer.get());
             desc.set_texture(
-                0, 2, _view->render_target(NamedRT_GBuffer0).get());
+                0, 1, _view->render_target(NamedRT_GBuffer0).get());
             desc.set_texture(
-                0, 3, _view->render_target(NamedRT_GBuffer1).get());
+                0, 2, _view->render_target(NamedRT_GBuffer1).get());
             desc.set_texture(
-                0, 4, _view->render_target(NamedRT_GBuffer2).get());
-            desc.set_texture(0, 5, _view->render_target(NamedRT_Depth).get());
-            desc.set_texture(0, 6, _view->context()->lut()->brdf_lut().get());
-            desc.set_texture(0, 7, cube_map.get());
-            desc.set_texture(
-                0, 8, _view->render_target(NamedRT_LinearColorHistory).get());
+                0, 3, _view->render_target(NamedRT_GBuffer2).get());
+            desc.set_texture(0, 4, _view->render_target(NamedRT_Depth).get());
+            desc.set_texture(0, 5, _view->context()->lut()->brdf_lut().get());
+            desc.set_texture(0, 6, cube_map.get());
+            if (ssr_enabled) {
+                desc.set_texture(
+                    0, 7, _view->rt_manager()->get(_hit_buffer_id).get());
+                desc.set_texture(
+                    0,
+                    8,
+                    _view->render_target(NamedRT_LinearColorHistory).get());
+            }
 
             struct Param {
                 int32_t width;
@@ -229,12 +242,32 @@ void ScreenSpaceReflection::resolve_reflection(RenderGraph &rg) {
                 static_cast<int32_t>(cube_map->info().mip_levels);
             desc.set_buffer_data(1, 0, param);
 
-            desc.commit(cmd, _resolve_reflection_pipeline.get());
+            desc.commit(cmd, pipeline);
 
-            _resolve_reflection_pipeline->local_size().dispatch(cmd,
-                                                                dst_extent);
+            pipeline->local_size().dispatch(cmd, dst_extent);
         });
+}
 
+void ScreenSpaceReflection::alloc_resolve_single_sample_buffer() {
+    auto info = TextureCreateInfo::sampled_2d(
+        VK_FORMAT_B10G11R11_UFLOAT_PACK32, 1, 1, 1);
+    info.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+
+    // Resolve at full resolution
+    _resolve_buffer_single_sample = _view->rt_manager()->alloc(info);
+}
+
+void ScreenSpaceReflection::render(RenderGraph &rg) {
+    if (_view->effect()->screen_space_reflection()->enabled()) {
+        trace_rays(rg);
+        resolve_reflection(rg, true);
+        temporal_filtering(rg);
+    } else {
+        resolve_reflection(rg, false);
+    }
+}
+
+void ScreenSpaceReflection::temporal_filtering(RenderGraph &rg) {
     rg.add_pass(
         [&](RenderGraphPassBuilder &builder) {
             builder.compute_shader_read(NamedRT_Depth);
@@ -280,14 +313,5 @@ void ScreenSpaceReflection::resolve_reflection(RenderGraph &rg) {
 
             _temporal_filter_pipeline->local_size().dispatch(cmd, dst_extent);
         });
-}
-
-void ScreenSpaceReflection::alloc_resolve_single_sample_buffer() {
-    auto info = TextureCreateInfo::sampled_2d(
-        VK_FORMAT_B10G11R11_UFLOAT_PACK32, 1, 1, 1);
-    info.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
-
-    // Resolve at full resolution
-    _resolve_buffer_single_sample = _view->rt_manager()->alloc(info);
 }
 } // namespace ars::render::vk

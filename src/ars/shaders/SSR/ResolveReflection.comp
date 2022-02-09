@@ -13,14 +13,17 @@ layout(set = 0,
        binding = 0,
        r11f_g11f_b10f) writeonly uniform image2D reflect_color_image;
 
-layout(set = 0, binding = 1) uniform sampler2D hit_buffer;
-layout(set = 0, binding = 2) uniform sampler2D gbuffer0_tex;
-layout(set = 0, binding = 3) uniform sampler2D gbuffer1_tex;
-layout(set = 0, binding = 4) uniform sampler2D gbuffer2_tex;
-layout(set = 0, binding = 5) uniform sampler2D depth_stencil_tex;
-layout(set = 0, binding = 6) uniform sampler2D brdf_lut;
-layout(set = 0, binding = 7) uniform samplerCube cube_map;
+layout(set = 0, binding = 1) uniform sampler2D gbuffer0_tex;
+layout(set = 0, binding = 2) uniform sampler2D gbuffer1_tex;
+layout(set = 0, binding = 3) uniform sampler2D gbuffer2_tex;
+layout(set = 0, binding = 4) uniform sampler2D depth_stencil_tex;
+layout(set = 0, binding = 5) uniform sampler2D brdf_lut;
+layout(set = 0, binding = 6) uniform samplerCube cube_map;
+
+#ifdef ENABLE_SSR
+layout(set = 0, binding = 7) uniform sampler2D hit_buffer;
 layout(set = 0, binding = 8) uniform sampler2D shaded_radiance_history_tex;
+#endif
 
 layout(set = 1, binding = 0) uniform Param {
     int width;
@@ -96,6 +99,7 @@ vec3 reproject_pos_ss(vec3 pos_vs) {
     return pos_ss;
 }
 
+#ifdef ENABLE_SSR
 void resolve_ssr_single_sample(vec2 hit_buffer_uv,
                                MetallicRoughnessPBR brdf,
                                ShadingPoint sp,
@@ -177,6 +181,7 @@ vec3 resolve_ssr_irradiance(MetallicRoughnessPBR brdf,
     fade = max(0.0, fade_acc / fade_weight_acc);
     return max(irradiance_acc / irradiance_weight_acc, 0.0);
 }
+#endif
 
 vec3 calculate_reflection(ivec2 index) {
     vec2 uv = index_to_uv(index, vec2(1.0 / width, 1.0 / height));
@@ -210,6 +215,7 @@ vec3 calculate_reflection(ivec2 index) {
                                         brdf.perceptual_roughness);
     vec3 prefiltered_glossy_indirect_radiance = fe * specular_env_irradiance;
 
+#ifdef ENABLE_SSR
     float ssr_fade = 0.0;
     vec3 ssr_irradiance = resolve_ssr_irradiance(brdf, sp, n_vs, ssr_fade);
     vec3 ssr_reflect_radiance = fe * PI * ssr_irradiance;
@@ -218,6 +224,9 @@ vec3 calculate_reflection(ivec2 index) {
         prefiltered_glossy_indirect_radiance, ssr_reflect_radiance, ssr_fade);
 
     return reflect_radiance;
+#else
+    return prefiltered_glossy_indirect_radiance;
+#endif
 }
 
 void main() {

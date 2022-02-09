@@ -48,8 +48,10 @@ struct ShaderLocalSize {
 
 class Shader {
   public:
-    static std::unique_ptr<Shader> find_precompiled(Context *context,
-                                                    const char *name);
+    static std::unique_ptr<Shader>
+    find_precompiled(Context *context,
+                     const char *name,
+                     const std::vector<const char *> &flags = {});
 
     static std::unique_ptr<Shader> from_spirv(Context *context,
                                               const char *name,
@@ -167,8 +169,10 @@ class ComputePipeline : public Pipeline {
   public:
     ComputePipeline(Context *context, const ComputePipelineInfo &info);
 
-    static std::unique_ptr<ComputePipeline> create(Context *context,
-                                                   const char *shader_name);
+    static std::unique_ptr<ComputePipeline>
+    create(Context *context,
+           const char *shader_name,
+           const std::vector<const char *> &flags = {});
 
     [[nodiscard]] ShaderLocalSize local_size() const;
 

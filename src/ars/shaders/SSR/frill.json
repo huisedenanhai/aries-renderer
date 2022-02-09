@@ -3,7 +3,12 @@
         "InitHiZ.comp",
         "PropagateHiZ.comp",
         "HiZTraceRay.comp",
-        "ResolveReflection.comp",
+        {
+            "file": "ResolveReflection.comp",
+            "multi_compile": [
+                "ENABLE_SSR"
+            ]
+        },
         "TemporalFiltering.comp"
     ]
 }

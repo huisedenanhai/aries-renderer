@@ -87,9 +87,12 @@ ShaderLocalSize Shader::local_size() const {
     return _local_size;
 }
 
-std::unique_ptr<Shader> Shader::find_precompiled(Context *context,
-                                                 const char *name) {
-    auto code = load_spirv_code(name, nullptr, 0);
+std::unique_ptr<Shader>
+Shader::find_precompiled(Context *context,
+                         const char *name,
+                         const std::vector<const char *> &flags) {
+    auto code = load_spirv_code(
+        name, const_cast<const char **>(flags.data()), flags.size());
     return from_spirv(context, name, code.data, code.size);
 }
 
@@ -456,8 +459,10 @@ ShaderLocalSize ComputePipeline::local_size() const {
 }
 
 std::unique_ptr<ComputePipeline>
-ComputePipeline::create(Context *context, const char *shader_name) {
-    auto shader = Shader::find_precompiled(context, shader_name);
+ComputePipeline::create(Context *context,
+                        const char *shader_name,
+                        const std::vector<const char *> &flags) {
+    auto shader = Shader::find_precompiled(context, shader_name, flags);
     ComputePipelineInfo info{};
     info.shader = shader.get();
     return std::make_unique<ComputePipeline>(context, info);

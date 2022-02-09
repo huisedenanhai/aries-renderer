@@ -64,17 +64,6 @@ void Renderer::add_inplace(RenderGraph &rg,
             DescriptorEncoder desc{};
             desc.set_texture(0, 0, target.get());
             desc.set_texture(0, 1, add_src.get());
-
-            struct Param {
-                int32_t width;
-                int32_t height;
-            };
-
-            Param param{};
-            param.width = static_cast<int32_t>(dst_extent.width);
-            param.height = static_cast<int32_t>(dst_extent.height);
-
-            desc.set_buffer_data(1, 0, param);
             desc.commit(cmd, _add_inplace_pipeline.get());
             _add_inplace_pipeline->local_size().dispatch(cmd, dst_extent);
         });

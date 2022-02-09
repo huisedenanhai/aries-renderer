@@ -49,17 +49,7 @@ void Lut::init_brdf_lut() {
 
         pipeline->bind(cmd);
 
-        struct Param {
-            int32_t width;
-            int32_t height;
-        };
         DescriptorEncoder desc{};
-
-        Param param{};
-        param.width = width;
-        param.height = height;
-
-        desc.set_buffer_data(1, 0, param);
         desc.set_texture(0, 0, _brdf_lut.get());
         desc.commit(cmd, pipeline.get());
 

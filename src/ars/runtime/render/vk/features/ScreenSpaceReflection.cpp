@@ -28,16 +28,6 @@ void GenerateHierarchyZ::init_hiz(CommandBuffer *cmd) {
     DescriptorEncoder desc{};
     desc.set_texture(0, 0, depth_buffer.get());
     desc.set_texture(0, 1, hiz_buffer.get(), 0);
-
-    struct Param {
-        int32_t width;
-        int32_t height;
-    };
-    Param param{};
-    param.width = static_cast<int32_t>(hiz_extent.width);
-    param.height = static_cast<int32_t>(hiz_extent.height);
-    desc.set_buffer_data(1, 0, param);
-
     desc.commit(cmd, _init_hiz_pipeline.get());
 
     _init_hiz_pipeline->local_size().dispatch(
@@ -50,9 +40,11 @@ void GenerateHierarchyZ::propagate_hiz(CommandBuffer *cmd) {
     auto &hiz_info = hiz_buffer->info();
 
     _propagate_hiz_pipeline->bind(cmd);
-    auto last_level_width = hiz_info.extent.width;
-    auto last_level_height = hiz_info.extent.height;
+    auto cur_level_width = hiz_info.extent.width;
+    auto cur_level_height = hiz_info.extent.height;
     for (int i = 1; i < hiz_info.mip_levels; i++) {
+        cur_level_width = calculate_next_mip_size(cur_level_width);
+        cur_level_height = calculate_next_mip_size(cur_level_height);
 
         // Wait for last level initialized
         VkImageMemoryBarrier barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
@@ -78,27 +70,10 @@ void GenerateHierarchyZ::propagate_hiz(CommandBuffer *cmd) {
         DescriptorEncoder desc{};
         desc.set_texture(0, 0, hiz_buffer.get(), i - 1);
         desc.set_texture(0, 1, hiz_buffer.get(), i);
-
-        struct Param {
-            int32_t last_level_width;
-            int32_t last_level_height;
-        };
-
-        auto cur_level_width = calculate_next_mip_size(last_level_width);
-        auto cur_level_height = calculate_next_mip_size(last_level_height);
-
-        Param param{};
-        param.last_level_width = static_cast<int32_t>(last_level_width);
-        param.last_level_height = static_cast<int32_t>(last_level_height);
-        desc.set_buffer_data(1, 0, param);
         desc.commit(cmd, _propagate_hiz_pipeline.get());
 
         _propagate_hiz_pipeline->local_size().dispatch(
             cmd, cur_level_width, cur_level_height, 1);
-
-        // Update size
-        last_level_width = cur_level_width;
-        last_level_height = cur_level_height;
     }
 }
 
@@ -112,12 +87,12 @@ void GenerateHierarchyZ::render(RenderGraph &rg) {
 }
 
 ScreenSpaceReflection::ScreenSpaceReflection(View *view) : _view(view) {
-    _hiz_trace_pipeline =
-        ComputePipeline::create(_view->context(), "SSR/HiZTraceRay.comp");
+    auto ctx = _view->context();
+    _hiz_trace_pipeline = ComputePipeline::create(ctx, "SSR/HiZTraceRay.comp");
     _resolve_reflection_pipeline =
-        ComputePipeline::create(_view->context(), "SSR/ResolveReflection.comp");
+        ComputePipeline::create(ctx, "SSR/ResolveReflection.comp");
     _temporal_filter_pipeline =
-        ComputePipeline::create(_view->context(), "SSR/TemporalFiltering.comp");
+        ComputePipeline::create(ctx, "SSR/TemporalFiltering.comp");
 
     alloc_hit_buffer();
     alloc_resolve_single_sample_buffer();
@@ -172,20 +147,6 @@ void ScreenSpaceReflection::trace_rays(RenderGraph &rg) {
             param.unbiased_sampling = _unbiased_sampling;
 
             desc.set_buffer_data(1, 0, param);
-
-            std::vector<glm::vec2> mip_sizes{};
-            mip_sizes.reserve(param.hiz_mip_count);
-
-            uint32_t mip_width = hiz_buffer->info().extent.width;
-            uint32_t mip_height = hiz_buffer->info().extent.height;
-            for (int i = 0; i < param.hiz_mip_count; i++) {
-                mip_sizes.emplace_back(mip_width, mip_height);
-                mip_width = calculate_next_mip_size(mip_width);
-                mip_height = calculate_next_mip_size(mip_height);
-            }
-
-            desc.set_buffer_data(
-                1, 1, mip_sizes.data(), mip_sizes.size() * sizeof(glm::vec2));
 
             desc.commit(cmd, _hiz_trace_pipeline.get());
 

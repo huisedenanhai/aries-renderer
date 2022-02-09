@@ -7,30 +7,27 @@ layout(local_size_x = 32, local_size_y = 32) in;
 layout(set = 0, binding = 0) uniform sampler2D last_level;
 layout(set = 0, binding = 1, r32f) writeonly uniform image2D cur_level;
 
-layout(set = 1, binding = 0) uniform Param {
-    int last_level_width;
-    int last_level_height;
-};
-
 void main() {
     ivec2 index = ivec2(gl_GlobalInvocationID.xy);
-    int cur_level_width = max(last_level_width / 2, 1);
-    int cur_level_height = max(last_level_height / 2, 1);
-    if (index.x >= cur_level_width || index.y >= cur_level_height) {
+    ivec2 cur_level_size = imageSize(cur_level);
+    ivec2 last_level_size = textureSize(last_level, 0);
+
+    if (index.x >= cur_level_size.x || index.y >= cur_level_size.y) {
         return;
     }
+
     ivec2 index_in_last_level = index * 2;
-    vec2 last_level_grid_size = 1.0 / vec2(last_level_width, last_level_height);
+    vec2 last_level_grid_size = 1.0 / last_level_size;
     vec2 last_level_uv = (index_in_last_level + 1) * last_level_grid_size;
 
     float max_depth01 =
         max_comp_value(textureGather(last_level, last_level_uv, 0));
 
     // For NPOT(none power of two) texture
-    bool pad_width = (cur_level_width * 2 < last_level_width) &&
-                     (index.x + 1 == cur_level_width);
-    bool pad_height = (cur_level_height * 2 < last_level_height) &&
-                      (index.y + 1 == cur_level_height);
+    bool pad_width = (cur_level_size.x * 2 < last_level_size.x) &&
+                     (index.x + 1 == cur_level_size.x);
+    bool pad_height = (cur_level_size.y * 2 < last_level_size.y) &&
+                      (index.y + 1 == cur_level_size.y);
 
     if (pad_width) {
         float pad_max_depth01 = max_comp_value(

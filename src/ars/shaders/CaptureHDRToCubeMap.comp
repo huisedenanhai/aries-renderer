@@ -7,20 +7,18 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 layout(set = 0, binding = 0) uniform sampler2D env_hdr_tex;
 layout(set = 0, binding = 1, r11f_g11f_b10f) uniform imageCube cube_map;
 
-layout(set = 0, binding = 2) uniform Param {
-    int size;
-};
-
-vec2 cube_index_to_env_uv(ivec3 index) {
+vec2 cube_index_to_env_uv(ivec3 index, int size) {
     vec3 d = cube_map_index_to_direction(index, size);
     return hdr_direction_to_uv(d);
 }
 
 void main() {
     ivec3 index = ivec3(gl_GlobalInvocationID.xyz);
+    int size = imageSize(cube_map).x;
     if (index.x >= size || index.y >= size) {
         return;
     }
-    vec2 uv = cube_index_to_env_uv(index);
+
+    vec2 uv = cube_index_to_env_uv(index, size);
     imageStore(cube_map, index, vec4(texture(env_hdr_tex, uv).rgb, 1.0));
 }

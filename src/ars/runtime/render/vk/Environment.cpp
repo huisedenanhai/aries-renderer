@@ -108,13 +108,12 @@ void Environment::set_irradiance_cube_map(
 
 void Environment::capture_env_cube_map(CommandBuffer *cmd,
                                        const Handle<Texture> &env_map) {
+    auto size = static_cast<int32_t>(env_map->info().extent.width);
     _capture_cube_map_pipeline->bind(cmd);
 
     DescriptorEncoder desc{};
     desc.set_texture(0, 0, hdr_texture_vk().get());
     desc.set_texture(0, 1, env_map.get());
-    auto size = static_cast<int32_t>(env_map->info().extent.width);
-    desc.set_buffer_data(0, 2, size);
     desc.commit(cmd, _capture_cube_map_pipeline.get());
 
     _capture_cube_map_pipeline->local_size().dispatch(cmd, size, size, 6);

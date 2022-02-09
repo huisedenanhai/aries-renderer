@@ -190,17 +190,11 @@ void OverlayRenderer::calculate_outline(CommandBuffer *cmd,
                                         const Handle<Texture> &dst_rt) {
     auto outline_id = _view->rt_manager()->get(_outline_id_rt);
     struct Param {
-        int width;
-        int height;
-        ARS_PADDING_FIELD(float);
-        ARS_PADDING_FIELD(float);
         glm::vec4 color[256];
     };
 
     auto extent = outline_id->info().extent;
     Param param{};
-    param.width = static_cast<int>(extent.width);
-    param.height = static_cast<int>(extent.height);
     assert(_outline_colors.size() == std::size(param.color));
     std::memcpy(param.color,
                 _outline_colors.data(),

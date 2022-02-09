@@ -26,10 +26,6 @@ layout(set = 1, binding = 0) uniform Param {
     float unbiased_sampling;
 };
 
-layout(set = 1, binding = 1, std430) buffer MipLevels {
-    vec2 mip_resolutions[];
-};
-
 // Select a border and offset it.
 // The border selection assumes the ray origin is inside the grid.
 vec2 offset_grid_border(vec3 dir, vec2 grid_size, vec2 border_offset) {
@@ -75,7 +71,7 @@ bool trace_ray_hiz(vec3 origin_ss,
     start_mip_level = min(start_mip_level, root_level);
     int level = start_mip_level;
 
-    vec2 start_mip_res = mip_resolutions[start_mip_level];
+    vec2 start_mip_res = textureSize(hiz_buffer, start_mip_level);
 
     vec3 origin_idx = vec3(origin_ss.xy * start_mip_res, origin_ss.z);
     vec3 dir_idx = vec3(dir_ss.xy * start_mip_res, dir_ss.z);
@@ -104,7 +100,7 @@ bool trace_ray_hiz(vec3 origin_ss,
         // hit_idx and dir_idx always stands for index in current level
         vec2 grid_index = floor(hit_idx.xy);
         vec3 grid_offset_idx = vec3(grid_index, 0.0);
-        vec2 max_mip_index = mip_resolutions[level] - 1;
+        vec2 max_mip_index = textureSize(hiz_buffer, level) - 1;
 
         float t = 0;
         bool has_hit = trace_ray_hit_grid(
@@ -144,7 +140,7 @@ bool trace_ray_dda(vec3 origin_ss,
                    vec3 dir_ss,
                    int mip_level,
                    out vec3 hit_ss) {
-    vec2 mip_res = mip_resolutions[mip_level];
+    vec2 mip_res = textureSize(hiz_buffer, mip_level);
     vec2 grid_size = 1.0 / mip_res;
     vec2 border_offset = sign(dir_ss.xy) * grid_size * 1e-3;
     vec2 grid_border = offset_grid_border(dir_ss, grid_size, border_offset);

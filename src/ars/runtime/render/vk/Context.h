@@ -64,7 +64,13 @@ class Queue {
     VkQueueFamilyProperties _family_properties{};
 };
 
-enum class DefaultTexture : uint32_t { White, Normal, WhiteCubeMap, Count };
+enum class DefaultTexture : uint32_t {
+    White,
+    Zero,
+    Normal,
+    WhiteCubeMap,
+    Count
+};
 
 struct ContextProperties {
     bool anisotropic_sampler_enabled = false;

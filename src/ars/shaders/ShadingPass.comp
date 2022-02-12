@@ -21,6 +21,7 @@ layout(set = 0, binding = 5) uniform sampler2D depth_stencil_tex;
 layout(set = 0, binding = 6) uniform sampler2D brdf_lut;
 layout(set = 0, binding = 7) uniform samplerCube cube_map;
 layout(set = 0, binding = 8) uniform sampler2D hdr_environment_tex;
+layout(set = 0, binding = 9) uniform sampler2D ssr_reflection;
 
 layout(set = 1, binding = 0) uniform Param {
     int width;
@@ -42,8 +43,25 @@ layout(set = 1, binding = 2) buffer DirectionalLights {
     DirectionalLight directional_lights[];
 };
 
-vec3 get_env_irradiance(vec3 v_ws, float lod) {
-    return env_randiance_factor * textureLod(cube_map, v_ws, lod).rgb * PI;
+vec3 get_env_filtered_radiance(vec3 v_ws, float lod) {
+    return env_randiance_factor * textureLod(cube_map, v_ws, lod).rgb;
+}
+
+vec3 get_diffuse_irradiance(vec3 n_ws) {
+    return get_env_filtered_radiance(n_ws, cube_map_mip_count - 1) * PI;
+}
+
+vec3 get_glossy_irradiance(ShadingPoint sp,
+                           vec3 n_ws,
+                           float perceptual_roughness) {
+    vec3 reflect_dir_ws = reflect(-sp.v_ws, n_ws);
+    vec3 filtered_radiance = get_env_filtered_radiance(
+        reflect_dir_ws, (cube_map_mip_count - 1) * perceptual_roughness);
+
+    vec4 ssr = texture(ssr_reflection, sp.screen_uv);
+    filtered_radiance = mix(filtered_radiance, ssr.rgb, ssr.a);
+
+    return filtered_radiance * PI;
 }
 
 vec3 get_env_radiance_from_hdr_tex(vec3 v_ws) {
@@ -93,12 +111,18 @@ vec3 shade_metallic_roughness_pbr(GBuffer gbuffer, ShadingPoint shading_point) {
 
     // Sample env irradiance
     vec3 n_ws = transform_vector(I_V, n_vs);
-    vec3 diffuse_env_irradiance =
-        brdf.occlusion * get_env_irradiance(n_ws, cube_map_mip_count - 1);
-    // Glossy indirect radiance is calculated in SSR/ResolveReflection.comp
+    vec3 diffuse_env_irradiance = brdf.occlusion * get_diffuse_irradiance(n_ws);
     vec3 diffuse_indirect_radiance = fd * diffuse_env_irradiance;
 
-    return direct_radiance + diffuse_indirect_radiance + gbuffer.emission;
+    float NoV = clamp01(dot(n_vs, v_vs));
+    vec3 fe = environment_BRDF(brdf, brdf_lut, NoV);
+    vec3 glossy_env_irradiance =
+        brdf.occlusion *
+        get_glossy_irradiance(shading_point, n_ws, brdf.perceptual_roughness);
+    vec3 glossy_indirect_radiance = fe * glossy_env_irradiance;
+
+    return direct_radiance + diffuse_indirect_radiance +
+           glossy_indirect_radiance + gbuffer.emission;
 }
 
 vec3 shade(GBuffer gbuffer, vec2 uv) {

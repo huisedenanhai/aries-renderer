@@ -949,6 +949,8 @@ Context::create_single_color_texture_2d(glm::vec4 color) {
 void Context::init_default_textures() {
     _default_textures[static_cast<uint32_t>(DefaultTexture::White)] =
         create_single_color_texture_2d({1.0f, 1.0f, 1.0f, 1.0f});
+    _default_textures[static_cast<uint32_t>(DefaultTexture::Zero)] =
+        create_single_color_texture_2d({0.0f, 0.0f, 0.0f, 0.0f});
     _default_textures[static_cast<uint32_t>(DefaultTexture::Normal)] =
         create_single_color_texture_2d({0.5f, 0.5f, 1.0f, 1.0f});
     _default_textures[static_cast<uint32_t>(DefaultTexture::WhiteCubeMap)] =

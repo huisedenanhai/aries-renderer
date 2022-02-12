@@ -7,7 +7,7 @@ layout(local_size_x = 32, local_size_y = 32) in;
 
 layout(set = 0,
        binding = 0,
-       r11f_g11f_b10f) writeonly uniform image2D filtered_color_image;
+       rgba16f) writeonly uniform image2D filtered_color_image;
 
 layout(set = 0, binding = 1) uniform sampler2D depth_stencil_tex;
 layout(set = 0, binding = 2) uniform sampler2D history_color_tex;
@@ -31,22 +31,21 @@ vec3 reproject_pos_ss(vec3 pos_vs) {
 
 void neighbor_clamp(vec2 uv,
                     vec2 inv_resolution,
-                    vec3 current_color,
-                    inout vec3 color) {
-    vec3 min_color = current_color;
-    vec3 max_color = current_color;
+                    vec4 current_color,
+                    inout vec4 color) {
+    vec4 min_color = current_color;
+    vec4 max_color = current_color;
     for (int i = -1; i < 2; i++) {
         for (int j = -1; j < 2; j++) {
-            vec3 neighbor =
-                texture(current_color_tex, uv + vec2(i, j) * inv_resolution)
-                    .rgb;
+            vec4 neighbor =
+                texture(current_color_tex, uv + vec2(i, j) * inv_resolution);
             min_color = min(min_color, neighbor);
             max_color = min(max_color, neighbor);
         }
     }
 
-    vec3 color_center = 0.5 * (min_color + max_color);
-    vec3 half_delta = 0.5 * (max_color - min_color);
+    vec4 color_center = 0.5 * (min_color + max_color);
+    vec4 half_delta = 0.5 * (max_color - min_color);
 
     float expand = 1.0;
     min_color = color_center - half_delta * expand;
@@ -56,16 +55,16 @@ void neighbor_clamp(vec2 uv,
     color = min(max_color, color);
 }
 
-vec3 calculate_filtered_color(ivec2 index) {
+vec4 calculate_filtered_color(ivec2 index) {
     vec2 inv_resolution = 1.0 / vec2(width, height);
     vec2 uv = index_to_uv(index, inv_resolution);
     float depth01 = texture(depth_stencil_tex, uv).r;
     vec3 pos_vs = reconstruct_position_from_ss(I_P, uv, depth01);
 
-    vec3 current_color = texture(current_color_tex, uv).rgb;
+    vec4 current_color = texture(current_color_tex, uv);
     vec3 history_pos_ss = reproject_pos_ss(pos_vs);
     if (point_inside_unit_rect(history_pos_ss.xy)) {
-        vec3 history_color = texture(history_color_tex, history_pos_ss.xy).rgb;
+        vec4 history_color = texture(history_color_tex, history_pos_ss.xy);
         // It flickers severely when input sample have too big variance :(
         // neighbor_clamp(uv, inv_resolution, current_color, history_color);
         return mix(history_color, current_color, blend_factor);
@@ -79,6 +78,6 @@ void main() {
         return;
     }
 
-    vec3 filtered_color = calculate_filtered_color(index);
-    imageStore(filtered_color_image, index, vec4(filtered_color, 1));
+    vec4 filtered_color = calculate_filtered_color(index);
+    imageStore(filtered_color_image, index, filtered_color);
 }

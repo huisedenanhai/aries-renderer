@@ -1,5 +1,6 @@
 #include "DeferredShading.h"
 #include "../Context.h"
+#include "../Effect.h"
 #include "../Environment.h"
 #include "../Lut.h"
 #include "../Profiler.h"
@@ -34,6 +35,17 @@ void DeferredShading::execute(CommandBuffer *cmd, NamedRT final_color_rt) {
     desc.set_texture(0, 6, _view->context()->lut()->brdf_lut().get());
     desc.set_texture(0, 7, env->irradiance_cube_map_vk().get());
     desc.set_texture(0, 8, env->hdr_texture_vk().get());
+
+    if (_view->effect()->screen_space_reflection()->enabled()) {
+        desc.set_texture(0, 9, _view->render_target(NamedRT_Reflection).get());
+    } else {
+        desc.set_texture(
+            0,
+            9,
+            upcast(
+                _view->context()->default_texture(DefaultTexture::Zero).get())
+                .get());
+    }
 
     struct ShadingParam {
         int32_t width;
@@ -123,17 +135,13 @@ void DeferredShading::render(RenderGraph &rg, NamedRT final_color_rt) {
     rg.add_pass(
         [&](RenderGraphPassBuilder &builder) {
             builder.compute_shader_write(final_color_rt);
-
-            NamedRT rts[5] = {
-                NamedRT_GBuffer0,
-                NamedRT_GBuffer1,
-                NamedRT_GBuffer2,
-                NamedRT_GBuffer3,
-                NamedRT_Depth,
-            };
-
-            for (auto &rt : rts) {
-                builder.compute_shader_read(rt);
+            builder.compute_shader_read(NamedRT_GBuffer0);
+            builder.compute_shader_read(NamedRT_GBuffer1);
+            builder.compute_shader_read(NamedRT_GBuffer2);
+            builder.compute_shader_read(NamedRT_GBuffer3);
+            builder.compute_shader_read(NamedRT_Depth);
+            if (_view->effect()->screen_space_reflection()->enabled()) {
+                builder.compute_shader_read(NamedRT_Reflection);
             }
         },
         [this, final_color_rt](CommandBuffer *cmd) {

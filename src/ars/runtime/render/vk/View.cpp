@@ -205,7 +205,7 @@ TextureCreateInfo View::rt_info(NamedRT name) const {
     case NamedRT_ReflectionHistory:
     case NamedRT_Reflection: {
         info = TextureCreateInfo::sampled_2d(
-            VK_FORMAT_B10G11R11_UFLOAT_PACK32, 1, 1, 1);
+            VK_FORMAT_R16G16B16A16_SFLOAT, 1, 1, 1);
         info.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
         break;
     }

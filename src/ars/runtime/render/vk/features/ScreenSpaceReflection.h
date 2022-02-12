@@ -29,7 +29,7 @@ class ScreenSpaceReflection {
 
   private:
     void trace_rays(RenderGraph &rg);
-    void resolve_reflection(RenderGraph &rg, bool ssr_enabled);
+    void resolve_reflection(RenderGraph &rg);
     void temporal_filtering(RenderGraph &rg);
 
     void alloc_hit_buffer();
@@ -39,7 +39,6 @@ class ScreenSpaceReflection {
     int32_t _frame_index = 0;
     std::unique_ptr<ComputePipeline> _hiz_trace_pipeline;
     std::unique_ptr<ComputePipeline> _resolve_reflection_pipeline;
-    std::unique_ptr<ComputePipeline> _resolve_ssr_reflection_pipeline;
     std::unique_ptr<ComputePipeline> _temporal_filter_pipeline;
     RenderTargetId _hit_buffer_id;
     RenderTargetId _resolve_buffer_single_sample;

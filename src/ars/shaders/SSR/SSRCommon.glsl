@@ -1,6 +1,6 @@
 #ifndef ARS_SSR_COMMON_GLSL
 #define ARS_SSR_COMMON_GLSL
 
-const float SSR_MIN_SAMPLING_ROUGHNESS = 0.05;
+const float SSR_MIN_SAMPLING_ROUGHNESS = 0.01;
 
 #endif

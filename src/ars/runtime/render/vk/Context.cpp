@@ -633,15 +633,13 @@ Context::create_texture_impl(const TextureInfo &info) {
 
 bool Context::begin_frame() {
     glfwPollEvents();
-    if (_profiler != nullptr) {
-        _profiler->flush();
-    }
     _queue->flush();
     _device->ResetCommandPool(_command_pool, 0);
     _descriptor_arena->reset();
     gc();
 
     if (_profiler != nullptr) {
+        _profiler->flush();
         _profiler->begin_frame();
     }
     return true;

@@ -17,7 +17,8 @@ A very coarse plan for development.
     + [ ] Dynamic GI
     + [ ] GPU Driven Pipeline
 2. Effect
-    + [ ] SSR
+    + [x] Stochastic Screen Space Reflection
+        + [ ] Fix precision issue of HiZ tracing
     + [ ] TAA
     + [ ] DOF
     + [ ] Dynamic Sky

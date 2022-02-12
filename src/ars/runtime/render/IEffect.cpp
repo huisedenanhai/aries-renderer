@@ -10,7 +10,13 @@ void IScreenSpaceReflectionEffect::register_type() {
                   &IScreenSpaceReflectionEffect::set_enabled)
         .property("sampling_bias",
                   &IScreenSpaceReflectionEffect::sampling_bias,
-                  &IScreenSpaceReflectionEffect::set_sampling_bias);
+                  &IScreenSpaceReflectionEffect::set_sampling_bias)
+        .property("thickness",
+                  &IScreenSpaceReflectionEffect::thickness,
+                  &IScreenSpaceReflectionEffect::set_thickness)
+        .property("border_fade",
+                  &IScreenSpaceReflectionEffect::border_fade,
+                  &IScreenSpaceReflectionEffect::set_border_fade);
 }
 
 void IEffect::register_type() {

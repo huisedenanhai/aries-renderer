@@ -11,6 +11,12 @@ class IScreenSpaceReflectionEffect {
     virtual float sampling_bias() = 0;
     virtual void set_sampling_bias(float bias) = 0;
 
+    virtual float border_fade() = 0;
+    virtual void set_border_fade(float fade) = 0;
+
+    virtual float thickness() = 0;
+    virtual void set_thickness(float thickness) = 0;
+
     static void register_type();
 };
 

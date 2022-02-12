@@ -24,4 +24,20 @@ float ScreenSpaceReflectionEffect::sampling_bias() {
 void ScreenSpaceReflectionEffect::set_sampling_bias(float bias) {
     _sampling_bias = bias;
 }
+
+float ScreenSpaceReflectionEffect::border_fade() {
+    return _border_fade;
+}
+
+void ScreenSpaceReflectionEffect::set_border_fade(float fade) {
+    _border_fade = fade;
+}
+
+float ScreenSpaceReflectionEffect::thickness() {
+    return _thickness;
+}
+
+void ScreenSpaceReflectionEffect::set_thickness(float thickness) {
+    _thickness = thickness;
+}
 } // namespace ars::render::vk

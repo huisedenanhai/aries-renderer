@@ -28,6 +28,9 @@ layout(set = 1, binding = 0) uniform Param {
     mat4 I_P;
     mat4 I_V;
     mat4 reproject_IV_VP;
+
+    float screen_border_fade_size;
+    float thickness;
 };
 
 #define RESOLVE_SAMPLE_COUNT 4
@@ -126,11 +129,11 @@ void resolve_ssr_single_sample(vec2 hit_buffer_uv,
 
     float back_face_fade = smoothstep(0, -0.1, dot(ray_dir_vs, hit_normal_vs));
 
-    float screen_border_fade_size = 0.1;
     float border_fade = fade_on_edge_01(hit_ss.x, screen_border_fade_size) *
                         fade_on_edge_01(hit_ss.y, screen_border_fade_size);
 
-    float thickness_fade = smoothstep(0.1, 0, distance(hit_vs, hit_surface_vs));
+    float thickness_fade =
+        smoothstep(thickness, 0, distance(hit_vs, hit_surface_vs));
 
     // Adjust brdf
     brdf.perceptual_roughness =

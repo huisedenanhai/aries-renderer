@@ -10,10 +10,16 @@ class ScreenSpaceReflectionEffect : public IScreenSpaceReflectionEffect {
     void set_enabled(bool enabled) override;
     float sampling_bias() override;
     void set_sampling_bias(float bias) override;
+    float border_fade() override;
+    void set_border_fade(float fade) override;
+    float thickness() override;
+    void set_thickness(float thickness) override;
 
   private:
     bool _enabled = false;
     float _sampling_bias = 0.1f;
+    float _thickness = 0.1f;
+    float _border_fade = 0.01f;
 };
 
 class Effect : public IEffect {

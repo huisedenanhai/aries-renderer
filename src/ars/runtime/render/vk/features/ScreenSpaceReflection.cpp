@@ -210,8 +210,13 @@ void ScreenSpaceReflection::resolve_reflection(RenderGraph &rg) {
                 glm::mat4 I_P;
                 glm::mat4 I_V;
                 glm::mat4 reproject_IV_VP;
+                float screen_border_fade_size;
+                float thickness;
+                ARS_PADDING_FIELD(int32_t);
+                ARS_PADDING_FIELD(int32_t);
             };
 
+            auto ssr = _view->effect()->screen_space_reflection();
             Param param{};
             param.width = static_cast<int32_t>(dst_extent.width);
             param.height = static_cast<int32_t>(dst_extent.height);
@@ -221,6 +226,8 @@ void ScreenSpaceReflection::resolve_reflection(RenderGraph &rg) {
             param.I_V = glm::inverse(_view->view_matrix());
             param.reproject_IV_VP = _view->last_frame_projection_matrix() *
                                     _view->last_frame_view_matrix() * param.I_V;
+            param.screen_border_fade_size = 0.5f * ssr->border_fade();
+            param.thickness = ssr->thickness();
             desc.set_buffer_data(1, 0, param);
 
             desc.commit(cmd, _resolve_reflection_pipeline.get());

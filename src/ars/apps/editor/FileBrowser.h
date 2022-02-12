@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <functional>
 
 namespace ars::editor {
 struct FileBrowserState {

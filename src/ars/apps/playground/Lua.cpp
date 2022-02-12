@@ -1,5 +1,6 @@
 #include <iostream>
 #include <lua/lua.hpp>
+#include <string>
 
 static int my_print(lua_State *L) {
     std::cout << "my_print: ";

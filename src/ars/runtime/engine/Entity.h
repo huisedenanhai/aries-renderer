@@ -130,7 +130,7 @@ class Entity final {
     template <typename Func> void visit_preorder(Func &&func) {
         func(this);
         for (auto child : _children) {
-            child->template visit_preorder(func);
+            child->visit_preorder(func);
         }
     }
 

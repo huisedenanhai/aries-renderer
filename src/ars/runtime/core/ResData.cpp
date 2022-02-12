@@ -208,7 +208,7 @@ std::istream &ResData::deserialize(std::istream &is) {
     if (std::memcmp(magic, MAGIC_NUMBER, 4) != 0) {
         ARS_LOG_ERROR("Invalid magic number for res data");
         reset();
-        is.seekg(-4, std::ios::seekdir::cur);
+        is.seekg(-4, is.cur);
         return is;
     }
     uint64_t meta_len{};

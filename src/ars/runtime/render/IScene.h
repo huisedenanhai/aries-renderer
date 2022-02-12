@@ -4,6 +4,7 @@
 #include "Common.h"
 #include <memory>
 #include <variant>
+#include <vector>
 
 // Aries uses right-hand coordinates, with Y points up, the same as the
 // convention of GLTF

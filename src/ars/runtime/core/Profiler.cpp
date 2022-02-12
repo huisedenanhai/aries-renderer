@@ -5,6 +5,7 @@
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
 
+#include <algorithm>
 #include <deque>
 #include <spdlog/fmt/fmt.h>
 #include <stack>

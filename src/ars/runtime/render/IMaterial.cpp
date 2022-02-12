@@ -108,6 +108,8 @@ shaderc_shader_kind get_shaderc_kind(ShaderKind kind) {
     case ShaderKind::Mesh:
         return shaderc_glsl_default_mesh_shader;
     }
+    // Make compiler happy
+    return shaderc_glsl_default_vertex_shader;
 }
 
 shaderc_optimization_level
@@ -120,6 +122,8 @@ get_shaderc_optimization_level(ShaderOptimizationLevel level) {
     case ShaderOptimizationLevel::Performance:
         return shaderc_optimization_level_performance;
     }
+    // Make compiler happy
+    return shaderc_optimization_level_zero;
 }
 } // namespace
 

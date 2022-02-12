@@ -39,3 +39,7 @@
     [[maybe_unused]] ty ARS_MACRO_CONCAT(_unused_field_, __LINE__)
 
 #define ARS_NAME_WITH_LINENO(n) ARS_MACRO_CONCAT(n, __LINE__)
+
+#ifdef _MSC_VER
+#define __PRETTY_FUNCTION__ __FUNCSIG__
+#endif

@@ -9,6 +9,7 @@
 
 #include <ars/runtime/core/misc/Macro.h>
 #include <memory>
+#include <string>
 
 namespace ars::render::vk {
 // By now in this project we only use a single allocator.

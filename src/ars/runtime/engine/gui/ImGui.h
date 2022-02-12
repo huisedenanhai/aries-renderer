@@ -4,6 +4,7 @@
 #include <ars/runtime/core/math/Transform.h>
 #include <glm/glm.hpp>
 #include <imgui/imgui.h>
+#include <optional>
 #include <rttr/type>
 #include <string>
 

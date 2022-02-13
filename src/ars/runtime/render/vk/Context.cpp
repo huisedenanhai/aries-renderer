@@ -990,4 +990,18 @@ void Context::init_profiler() {
         _profiler = std::make_unique<Profiler>(this);
     }
 }
+
+void Context::set_debug_name_internal(const std::string &name,
+                                      uint64_t object_handle,
+                                      VkObjectType object_type) {
+    if (!s_vulkan->validation_enabled()) {
+        return;
+    }
+    VkDebugUtilsObjectNameInfoEXT info{
+        VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT};
+    info.objectType = object_type;
+    info.objectHandle = object_handle;
+    info.pObjectName = name.c_str();
+    instance()->SetDebugUtilsObjectNameEXT(_device->device(), &info);
+}
 } // namespace ars::render::vk

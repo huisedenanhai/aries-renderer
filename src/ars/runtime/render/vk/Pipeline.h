@@ -113,6 +113,7 @@ class Pipeline {
     void init_layout(const PipelineLayoutInfo &pipeline_layout_info,
                      uint32_t push_constant_range_count,
                      VkPushConstantRange *push_constant_ranges);
+    void set_name(const std::string &name);
 
     Context *_context = nullptr;
 
@@ -131,6 +132,7 @@ create_attachment_blend_state(VkBlendFactor src_factor,
                               VkBlendFactor dst_factor);
 
 struct GraphicsPipelineInfo {
+    std::optional<std::string> name;
     std::vector<Shader *> shaders{};
     RenderPass *render_pass = nullptr;
     uint32_t subpass = 0;
@@ -157,6 +159,7 @@ class GraphicsPipeline : public Pipeline {
 };
 
 struct ComputePipelineInfo {
+    std::optional<std::string> name;
     Shader *shader = nullptr;
 
     // Push constant ranges can not be inferred from shader reflection data as

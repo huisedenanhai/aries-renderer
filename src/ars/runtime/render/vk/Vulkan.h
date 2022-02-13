@@ -177,4 +177,14 @@ constexpr VkAccessFlags VULKAN_ACCESS_READ_MASK =
     VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_NV |
     VK_ACCESS_FRAGMENT_SHADING_RATE_ATTACHMENT_READ_BIT_KHR;
 
+template <typename T> struct VulkanObjectType;
+
+template <>
+struct VulkanObjectType<VkPipeline>
+    : std::integral_constant<VkObjectType, VK_OBJECT_TYPE_PIPELINE> {};
+
+template <>
+struct VulkanObjectType<VkPipelineLayout>
+    : std::integral_constant<VkObjectType, VK_OBJECT_TYPE_PIPELINE_LAYOUT> {};
+
 } // namespace ars::render::vk

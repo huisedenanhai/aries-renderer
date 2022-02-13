@@ -183,6 +183,9 @@ GraphicsPipeline::GraphicsPipeline(Context *context,
     : Pipeline(context, VK_PIPELINE_BIND_POINT_GRAPHICS) {
     init_layout(info);
     init_pipeline(info);
+    if (info.name.has_value()) {
+        Pipeline::set_name(info.name.value());
+    }
 }
 
 Pipeline::~Pipeline() {
@@ -391,6 +394,11 @@ const PipelineLayoutInfo &Pipeline::pipeline_layout_info() const {
     return _pipeline_layout_info;
 }
 
+void Pipeline::set_name(const std::string &name) {
+    _context->set_debug_name(name, _pipeline);
+    _context->set_debug_name(fmt::format("{}.layout", name), _pipeline_layout);
+}
+
 VkPipelineColorBlendAttachmentState
 create_attachment_blend_state(VkBlendFactor src_factor,
                               VkBlendFactor dst_factor) {
@@ -426,6 +434,9 @@ ComputePipeline::ComputePipeline(Context *context,
     _local_size = info.shader->local_size();
     init_layout(info);
     init_pipeline(info);
+    if (info.name.has_value()) {
+        Pipeline::set_name(info.name.value());
+    }
 }
 
 void ComputePipeline::init_layout(const ComputePipelineInfo &info) {
@@ -465,6 +476,7 @@ ComputePipeline::create(Context *context,
     auto shader = Shader::find_precompiled(context, shader_name, flags);
     ComputePipelineInfo info{};
     info.shader = shader.get();
+    info.name = shader_name;
     return std::make_unique<ComputePipeline>(context, info);
 }
 

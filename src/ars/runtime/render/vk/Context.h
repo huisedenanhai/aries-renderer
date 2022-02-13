@@ -149,6 +149,17 @@ class Context : public IContext {
 
     [[nodiscard]] Profiler *profiler() const;
 
+    void set_debug_name_internal(const std::string &name,
+                                 uint64_t object_handle,
+                                 VkObjectType object_type);
+
+    template <typename T>
+    void set_debug_name(const std::string &name, T object_handle) {
+        set_debug_name_internal(name,
+                                reinterpret_cast<uint64_t>(object_handle),
+                                VulkanObjectType<T>::value);
+    }
+
   private:
     // This method init device if not
     std::tuple<GLFWwindow *, VkSurfaceKHR>

@@ -189,12 +189,12 @@ void OpaqueGeometry::render(RenderGraph &rg) {
         [this](RenderGraphPassBuilder &builder) {
             for (auto rt : geometry_pass_rt_names()) {
                 if (rt != NamedRT_Depth) {
-                    builder.write(
+                    builder.access(
                         rt,
                         VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
                         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
                 } else {
-                    builder.write(
+                    builder.access(
                         rt,
                         VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
                         VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |

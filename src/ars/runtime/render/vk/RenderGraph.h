@@ -48,8 +48,7 @@ class RenderGraphPass : public IRenderGraphPass {
   private:
     friend RenderGraphPassBuilder;
 
-    std::vector<PassDependency> _src_dependencies{};
-    std::vector<PassDependency> _dst_dependencies{};
+    std::vector<PassDependency> _dependencies{};
     std::function<void(CommandBuffer *)> _execute_action{};
 };
 
@@ -81,46 +80,36 @@ struct RenderGraphPassBuilder {
   public:
     RenderGraphPassBuilder(View *view, RenderGraphPass *pass);
 
-    PassDependencyBuilder &src_dependencies();
-    PassDependencyBuilder &dst_dependencies();
-
     template <typename Tex>
     RenderGraphPassBuilder &compute_shader_read(Tex &&rt) {
-        return read(std::forward<Tex>(rt),
-                    VK_ACCESS_SHADER_READ_BIT,
-                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+        return access(std::forward<Tex>(rt),
+                      VK_ACCESS_SHADER_READ_BIT,
+                      VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
     }
 
     template <typename Tex>
     RenderGraphPassBuilder &compute_shader_write(Tex &&rt) {
-        return write(std::forward<Tex>(rt),
-                     VK_ACCESS_SHADER_WRITE_BIT,
-                     VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+        return access(std::forward<Tex>(rt),
+                      VK_ACCESS_SHADER_WRITE_BIT,
+                      VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
     }
 
     template <typename Tex>
     RenderGraphPassBuilder &compute_shader_read_write(Tex &&rt) {
-        return write(std::forward<Tex>(rt),
-                     VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
-                     VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+        return access(std::forward<Tex>(rt),
+                      VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
+                      VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
     }
 
-    template <typename... Args> RenderGraphPassBuilder &read(Args &&...args) {
-        src_dependencies().add(std::forward<Args>(args)...);
-        return *this;
-    }
-
-    template <typename... Args> RenderGraphPassBuilder &write(Args &&...args) {
-        src_dependencies().add(std::forward<Args>(args)...);
-        dst_dependencies().add(std::forward<Args>(args)...);
+    template <typename... Args> RenderGraphPassBuilder &access(Args &&...args) {
+        _deps_builder.add(std::forward<Args>(args)...);
         return *this;
     }
 
   private:
     View *_view = nullptr;
     RenderGraphPass *_pass = nullptr;
-    PassDependencyBuilder _src_deps_builder;
-    PassDependencyBuilder _dst_deps_builder;
+    PassDependencyBuilder _deps_builder;
 };
 
 struct RenderGraph {

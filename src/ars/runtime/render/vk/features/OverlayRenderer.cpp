@@ -50,13 +50,13 @@ void OverlayRenderer::render(RenderGraph &rg, NamedRT dst_rt_name) {
         ensure_outline_rts();
         rg.add_pass(
             [&](RenderGraphPassBuilder &builder) {
-                builder.write(_outline_depth_rt,
-                              VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
-                                  VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT,
-                              VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT);
-                builder.write(_outline_id_rt,
-                              VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-                              VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+                builder.access(_outline_depth_rt,
+                               VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
+                                   VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT,
+                               VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT);
+                builder.access(_outline_id_rt,
+                               VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                               VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
             },
             [=](CommandBuffer *cmd) { render_object_ids(cmd); });
 
@@ -71,15 +71,15 @@ void OverlayRenderer::render(RenderGraph &rg, NamedRT dst_rt_name) {
     if (rd_forward) {
         rg.add_pass(
             [&](RenderGraphPassBuilder &builder) {
-                builder.write(dst_rt,
-                              VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
-                                  VK_ACCESS_COLOR_ATTACHMENT_READ_BIT,
-                              VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+                builder.access(dst_rt,
+                               VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+                                   VK_ACCESS_COLOR_ATTACHMENT_READ_BIT,
+                               VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
                 // Outline and billboard are all rendered transparently and does
                 // not write depth
-                builder.read(NamedRT_Depth,
-                             VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT,
-                             VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT);
+                builder.access(NamedRT_Depth,
+                               VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT,
+                               VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT);
             },
             [=](CommandBuffer *cmd) {
                 auto depth_rt = _view->render_target(NamedRT_Depth);

@@ -416,10 +416,10 @@ void Texture::init() {
 void Texture::generate_mipmap(const Handle<Texture> &tex, RenderGraph &rg) {
     rg.add_pass(
         [&](RenderGraphPassBuilder &builder) {
-            builder.write(tex,
-                          VK_ACCESS_TRANSFER_WRITE_BIT |
-                              VK_ACCESS_TRANSFER_READ_BIT,
-                          VK_PIPELINE_STAGE_TRANSFER_BIT);
+            builder.access(tex,
+                           VK_ACCESS_TRANSFER_WRITE_BIT |
+                               VK_ACCESS_TRANSFER_READ_BIT,
+                           VK_PIPELINE_STAGE_TRANSFER_BIT);
         },
         [=](CommandBuffer *cmd) {
             // Externally synchronized

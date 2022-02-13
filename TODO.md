@@ -19,6 +19,7 @@ A very coarse plan for development.
 2. Effect
     + [x] Stochastic Screen Space Reflection
         + [ ] Fix precision issue of HiZ tracing
+        + [ ] Less ghosting
     + [ ] TAA
     + [ ] DOF
     + [ ] Dynamic Sky
@@ -39,5 +40,6 @@ A very coarse plan for development.
 
 ## Editing
 
++ [ ] Make scene editing workflow clear
 + [ ] Built-in support GLTF as scene file, which can be an extended version. no need to make a wheel
 + [ ] Built-in support for KTX

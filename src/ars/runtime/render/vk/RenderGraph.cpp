@@ -108,11 +108,18 @@ void RenderGraph::add_pass_internal(std::unique_ptr<IRenderGraphPass> pass) {
 RenderGraph::RenderGraph(View *view) : _view(view) {}
 
 std::vector<PassDependency> RenderGraphPass::src_dependencies() {
-    return _src_dependencies;
+    return _dependencies;
 }
 
 std::vector<PassDependency> RenderGraphPass::dst_dependencies() {
-    return _dst_dependencies;
+    std::vector<PassDependency> deps{};
+    deps.reserve(_dependencies.size());
+    for (auto &d : deps) {
+        if (d.access_mask & VULKAN_ACCESS_WRITE_MASK) {
+            deps.push_back(d);
+        }
+    }
+    return deps;
 }
 
 void RenderGraphPass::execute(CommandBuffer *cmd) {
@@ -126,17 +133,7 @@ RenderGraphPass::RenderGraphPass(std::function<void(CommandBuffer *)> action)
 
 RenderGraphPassBuilder::RenderGraphPassBuilder(View *view,
                                                RenderGraphPass *pass)
-    : _view(view), _pass(pass),
-      _src_deps_builder(view, &pass->_src_dependencies),
-      _dst_deps_builder(view, &pass->_dst_dependencies) {}
-
-PassDependencyBuilder &RenderGraphPassBuilder::src_dependencies() {
-    return _src_deps_builder;
-}
-
-PassDependencyBuilder &RenderGraphPassBuilder::dst_dependencies() {
-    return _dst_deps_builder;
-}
+    : _view(view), _pass(pass), _deps_builder(view, &pass->_dependencies) {}
 
 PassDependencyBuilder::PassDependencyBuilder(View *view,
                                              std::vector<PassDependency> *deps)

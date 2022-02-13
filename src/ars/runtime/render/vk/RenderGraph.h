@@ -20,36 +20,22 @@ struct PassDependency {
                         const std::vector<PassDependency> &dst_deps);
 };
 
-class IRenderGraphPass {
-  public:
-    virtual ~IRenderGraphPass() = default;
-
-    [[nodiscard]] virtual std::vector<PassDependency> src_dependencies() {
-        return {};
-    }
-
-    [[nodiscard]] virtual std::vector<PassDependency> dst_dependencies() {
-        return {};
-    }
-
-    virtual void execute(CommandBuffer *cmd) = 0;
-};
-
 struct RenderGraphPassBuilder;
 
-class RenderGraphPass : public IRenderGraphPass {
+// Pass will be culled if
+// 1. has no side effect
+// 2. write not used by later passes or execute_action is nullptr
+// A pass should be marked has side effect if it writes something other than
+// given rt
+class RenderGraphPass {
   public:
-    explicit RenderGraphPass(
-        std::function<void(CommandBuffer *)> execute_action);
-    std::vector<PassDependency> src_dependencies() override;
-    std::vector<PassDependency> dst_dependencies() override;
-    void execute(CommandBuffer *cmd) override;
+    std::vector<PassDependency> src_dependencies() const;
+    std::vector<PassDependency> dst_dependencies() const;
+    void execute(CommandBuffer *cmd) const;
 
-  private:
-    friend RenderGraphPassBuilder;
-
-    std::vector<PassDependency> _dependencies{};
-    std::function<void(CommandBuffer *)> _execute_action{};
+    std::vector<PassDependency> dependencies{};
+    std::function<void(CommandBuffer *)> execute_action{};
+    bool has_side_effect = false;
 };
 
 struct PassDependencyBuilder {
@@ -106,6 +92,8 @@ struct RenderGraphPassBuilder {
         return *this;
     }
 
+    void has_side_effect(bool side_effect);
+
   private:
     View *_view = nullptr;
     RenderGraphPass *_pass = nullptr;
@@ -118,18 +106,25 @@ struct RenderGraph {
 
     void compile();
     void execute();
-    void add_pass_internal(std::unique_ptr<IRenderGraphPass> pass);
 
     template <typename SetUp, typename Exec>
     void add_pass(SetUp &&set_up, Exec &&exec) {
-        auto pass = std::make_unique<RenderGraphPass>(exec);
-        RenderGraphPassBuilder builder(_view, pass.get());
+        auto pass = alloc_pass();
+        RenderGraphPassBuilder builder(_view, pass);
         set_up(builder);
-        add_pass_internal(std::move(pass));
+        pass->execute_action = exec;
     }
 
   private:
+    RenderGraphPass *alloc_pass();
+
     View *_view = nullptr;
-    std::vector<std::unique_ptr<IRenderGraphPass>> _passes{};
+
+    struct PassInfo {
+        RenderGraphPass pass{};
+        bool active = false;
+    };
+
+    std::vector<PassInfo> _passes{};
 };
 } // namespace ars::render::vk

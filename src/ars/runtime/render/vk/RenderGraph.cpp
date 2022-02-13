@@ -84,36 +84,79 @@ void PassDependency::barrier(CommandBuffer *cmd,
 void RenderGraph::execute() {
     _view->context()->queue()->submit_once([&](CommandBuffer *cmd) {
         ARS_PROFILER_SAMPLE_VK(cmd, "Render Graph Execute", 0xFF772183);
-        for (int i = 0; i < _passes.size(); i++) {
-            if (i > 0) {
+        RenderGraphPass *last_pass = nullptr;
+        for (auto &pass_info : _passes) {
+            if (!pass_info.active) {
+                continue;
+            }
+            auto cur_pass = &pass_info.pass;
+            if (last_pass) {
                 // TODO optimize barrier
                 PassDependency::barrier(cmd,
-                                        _passes[i - 1]->dst_dependencies(),
-                                        _passes[i]->src_dependencies());
+                                        last_pass->dst_dependencies(),
+                                        cur_pass->src_dependencies());
             }
-            _passes[i]->execute(cmd);
+            cur_pass->execute(cmd);
+            last_pass = cur_pass;
         }
     });
 }
 
 void RenderGraph::compile() {
     ARS_PROFILER_SAMPLE("Render Graph Compile", 0xFF125512);
-    // TODO culling, virtual resource management, automatic scheduling
-}
 
-void RenderGraph::add_pass_internal(std::unique_ptr<IRenderGraphPass> pass) {
-    _passes.emplace_back(std::move(pass));
+    // Culling
+    std::set<Texture *> alive{};
+    auto rt_manager = _view->rt_manager();
+    for (auto rt : rt_manager->persist_render_targets()) {
+        alive.insert(rt_manager->get(rt).get());
+    }
+
+    for (int i = static_cast<int>(_passes.size()) - 1; i >= 0; i--) {
+        auto &info = _passes[i];
+        auto &pass = info.pass;
+
+        info.active = false;
+        if (pass.has_side_effect) {
+            info.active = true;
+        }
+
+        // Kill all writes
+        for (auto &d : pass.dependencies) {
+            if (!(d.access_mask & VULKAN_ACCESS_WRITE_MASK)) {
+                continue;
+            }
+            auto it = alive.find(d.texture.get());
+            if (it != alive.end()) {
+                info.active = true;
+                alive.erase(it);
+            }
+        }
+        // Gen all reads
+        for (auto &d : pass.dependencies) {
+            if (!(d.access_mask & VULKAN_ACCESS_READ_MASK)) {
+                continue;
+            }
+            alive.insert(d.texture.get());
+        }
+    }
+    // TODO virtual resource management, automatic scheduling
 }
 
 RenderGraph::RenderGraph(View *view) : _view(view) {}
 
-std::vector<PassDependency> RenderGraphPass::src_dependencies() {
-    return _dependencies;
+RenderGraphPass *RenderGraph::alloc_pass() {
+    _passes.emplace_back();
+    return &_passes.back().pass;
 }
 
-std::vector<PassDependency> RenderGraphPass::dst_dependencies() {
+std::vector<PassDependency> RenderGraphPass::src_dependencies() const {
+    return dependencies;
+}
+
+std::vector<PassDependency> RenderGraphPass::dst_dependencies() const {
     std::vector<PassDependency> deps{};
-    deps.reserve(_dependencies.size());
+    deps.reserve(dependencies.size());
     for (auto &d : deps) {
         if (d.access_mask & VULKAN_ACCESS_WRITE_MASK) {
             deps.push_back(d);
@@ -122,18 +165,19 @@ std::vector<PassDependency> RenderGraphPass::dst_dependencies() {
     return deps;
 }
 
-void RenderGraphPass::execute(CommandBuffer *cmd) {
-    if (_execute_action) {
-        _execute_action(cmd);
+void RenderGraphPass::execute(CommandBuffer *cmd) const {
+    if (execute_action) {
+        execute_action(cmd);
     }
 }
 
-RenderGraphPass::RenderGraphPass(std::function<void(CommandBuffer *)> action)
-    : _execute_action(std::move(action)) {}
-
 RenderGraphPassBuilder::RenderGraphPassBuilder(View *view,
                                                RenderGraphPass *pass)
-    : _view(view), _pass(pass), _deps_builder(view, &pass->_dependencies) {}
+    : _view(view), _pass(pass), _deps_builder(view, &pass->dependencies) {}
+
+void RenderGraphPassBuilder::has_side_effect(bool side_effect) {
+    _pass->has_side_effect = side_effect;
+}
 
 PassDependencyBuilder::PassDependencyBuilder(View *view,
                                              std::vector<PassDependency> *deps)

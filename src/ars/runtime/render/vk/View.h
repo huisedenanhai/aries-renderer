@@ -76,7 +76,7 @@ class View : public IView {
     [[nodiscard]] Handle<Texture> render_target(NamedRT name) const;
     [[nodiscard]] RenderTargetManager *rt_manager() const;
     [[nodiscard]] RenderTargetId rt_id(NamedRT name) const;
-    [[nodiscard]] TextureCreateInfo rt_info(NamedRT name) const;
+    [[nodiscard]] RenderTargetInfo rt_info(NamedRT name) const;
     [[nodiscard]] std::unique_ptr<RenderPass> create_single_pass_render_pass(
         NamedRT *colors, uint32_t color_count, NamedRT depth_stencil) const;
 

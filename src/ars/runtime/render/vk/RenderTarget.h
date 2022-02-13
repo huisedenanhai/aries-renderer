@@ -9,14 +9,23 @@
 namespace ars::render::vk {
 class Context;
 
+struct RenderTargetInfo {
+    TextureCreateInfo texture;
+
+    // If a render target is marked persist, its content is guaranteed to be
+    // valid in next frame unless the screen is rescaled
+    bool persist = false;
+};
+
 class RenderTargetManager {
   private:
     using ScaleFunc = std::function<VkExtent2D(VkExtent2D)>;
     struct RTState {
-        Handle<Texture> texture;
+        Handle<Texture> texture{};
     };
 
-    using Container = SoA<TextureCreateInfo, ScaleFunc, RTState>;
+    using Container =
+        SoA<RenderTargetInfo, ScaleFunc, RTState, RenderTargetInfo>;
 
   public:
     using Id = Container::Id;
@@ -24,6 +33,7 @@ class RenderTargetManager {
     explicit RenderTargetManager(Context *context);
 
     [[nodiscard]] Handle<Texture> get(const Id &id) const;
+    [[nodiscard]] std::vector<Id> persist_render_targets() const;
 
     void update(VkExtent2D reference_size);
 
@@ -31,7 +41,8 @@ class RenderTargetManager {
     // calculated by reference size of RenderTargetManager and scale function of
     // this render target.
     Id alloc(const TextureCreateInfo &info, float scale = 1.0f);
-    Id alloc(const TextureCreateInfo &info, ScaleFunc func);
+    Id alloc(const RenderTargetInfo &info, float scale = 1.0f);
+    Id alloc(const RenderTargetInfo &info, ScaleFunc func);
 
     // All RTs will be automatically freed when RenderTargetManager is destroyed
     void free(const Id &id);

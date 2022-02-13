@@ -158,7 +158,7 @@ void ScreenSpaceReflection::trace_rays(RenderGraph &rg) {
 }
 
 void ScreenSpaceReflection::alloc_hit_buffer() {
-    TextureCreateInfo info =
+    auto info =
         TextureCreateInfo::sampled_2d(VK_FORMAT_R16G16B16A16_SFLOAT,
                                       1,
                                       1,

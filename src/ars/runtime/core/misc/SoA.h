@@ -137,7 +137,7 @@ template <typename... Ts> struct SoA {
         return get_array<T>()[soa_index];
     }
 
-    template <typename Func> void for_each_id(Func &&func) {
+    template <typename Func> void for_each_id(Func &&func) const {
         auto count = size();
         for (size_t i = 0; i < count; i++) {
             auto id = Id(get_inverse_id()[i].value);

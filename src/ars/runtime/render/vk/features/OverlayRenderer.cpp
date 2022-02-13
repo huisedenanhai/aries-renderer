@@ -134,16 +134,16 @@ void OverlayRenderer::init_forward_render_pass() {
     auto color_info = _view->rt_info(NamedRT_PostProcessing0);
     auto depth_info = _view->rt_info(NamedRT_Depth);
     RenderPassAttachmentInfo color_attach{};
-    color_attach.format = color_info.format;
-    color_attach.samples = color_info.samples;
+    color_attach.format = color_info.texture.format;
+    color_attach.samples = color_info.texture.samples;
     color_attach.initial_layout = VK_IMAGE_LAYOUT_GENERAL;
     color_attach.final_layout = VK_IMAGE_LAYOUT_GENERAL;
     color_attach.load_op = VK_ATTACHMENT_LOAD_OP_LOAD;
     color_attach.store_op = VK_ATTACHMENT_STORE_OP_STORE;
 
     RenderPassAttachmentInfo depth_attach{};
-    depth_attach.format = depth_info.format;
-    depth_attach.samples = depth_info.samples;
+    depth_attach.format = depth_info.texture.format;
+    depth_attach.samples = depth_info.texture.samples;
     depth_attach.initial_layout = VK_IMAGE_LAYOUT_GENERAL;
     depth_attach.final_layout = VK_IMAGE_LAYOUT_GENERAL;
     depth_attach.load_op = VK_ATTACHMENT_LOAD_OP_LOAD;

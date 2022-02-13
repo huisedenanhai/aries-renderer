@@ -73,6 +73,10 @@ template <typename... Ts> struct SoA {
             return !(*this == rhs);
         }
 
+        bool operator<(const Id &rhs) const {
+            return _value < rhs._value;
+        }
+
         [[nodiscard]] uint64_t value() const {
             return _value;
         }

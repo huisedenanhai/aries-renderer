@@ -2,6 +2,7 @@
 
 #include "Texture.h"
 #include "View.h"
+#include <set>
 #include <vector>
 
 namespace ars::render::vk {
@@ -104,6 +105,12 @@ struct RenderGraph {
   public:
     explicit RenderGraph(View *view);
 
+    // Mark render target as output, any pass that writes to it will not be
+    // culled.
+    // Use this method to mark the final rt for present and rts used in the next
+    // frame.
+    void output(RenderTargetId id);
+    void output(NamedRT rt);
     void compile();
     void execute();
 
@@ -125,6 +132,7 @@ struct RenderGraph {
         bool active = false;
     };
 
+    std::set<RenderTargetId> _output_rts{};
     std::vector<PassInfo> _passes{};
 };
 } // namespace ars::render::vk

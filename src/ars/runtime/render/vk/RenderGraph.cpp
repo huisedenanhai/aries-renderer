@@ -108,7 +108,7 @@ void RenderGraph::compile() {
     // Culling
     std::set<Texture *> alive{};
     auto rt_manager = _view->rt_manager();
-    for (auto rt : rt_manager->persist_render_targets()) {
+    for (auto rt : _output_rts) {
         alive.insert(rt_manager->get(rt).get());
     }
 
@@ -132,12 +132,14 @@ void RenderGraph::compile() {
                 alive.erase(it);
             }
         }
-        // Gen all reads
-        for (auto &d : pass.dependencies) {
-            if (!(d.access_mask & VULKAN_ACCESS_READ_MASK)) {
-                continue;
+        if (info.active) {
+            // Gen all reads
+            for (auto &d : pass.dependencies) {
+                if (!(d.access_mask & VULKAN_ACCESS_READ_MASK)) {
+                    continue;
+                }
+                alive.insert(d.texture.get());
             }
-            alive.insert(d.texture.get());
         }
     }
     // TODO virtual resource management, automatic scheduling
@@ -148,6 +150,14 @@ RenderGraph::RenderGraph(View *view) : _view(view) {}
 RenderGraphPass *RenderGraph::alloc_pass() {
     _passes.emplace_back();
     return &_passes.back().pass;
+}
+
+void RenderGraph::output(RenderTargetId id) {
+    _output_rts.insert(id);
+}
+
+void RenderGraph::output(NamedRT rt) {
+    output(_view->rt_id(rt));
 }
 
 std::vector<PassDependency> RenderGraphPass::src_dependencies() const {

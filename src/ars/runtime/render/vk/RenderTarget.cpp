@@ -20,8 +20,8 @@ void RenderTargetManager::free(const RenderTargetManager::Id &id) {
     _render_targets.free(id);
 }
 
-RenderTargetManager::Id RenderTargetManager::alloc(const RenderTargetInfo &info,
-                                                   float scale) {
+RenderTargetManager::Id
+RenderTargetManager::alloc(const TextureCreateInfo &info, float scale) {
     return alloc(info, [scale](VkExtent2D reference_extent) {
         return VkExtent2D{
             static_cast<uint32_t>(static_cast<float>(reference_extent.width) *
@@ -33,11 +33,11 @@ RenderTargetManager::Id RenderTargetManager::alloc(const RenderTargetInfo &info,
 }
 
 RenderTargetManager::Id
-RenderTargetManager::alloc(const RenderTargetInfo &info,
+RenderTargetManager::alloc(const TextureCreateInfo &info,
                            RenderTargetManager::ScaleFunc func) {
     auto id = _render_targets.alloc();
 
-    _render_targets.get<RenderTargetInfo>(id) = info;
+    _render_targets.get<TextureCreateInfo>(id) = info;
     _render_targets.get<ScaleFunc>(id) = std::move(func);
     update_rt(id);
     return id;
@@ -52,7 +52,7 @@ void RenderTargetManager::update_rt(const RenderTargetManager::Id &id) {
     desired_size.width = std::max(desired_size.width, 1u);
     desired_size.height = std::max(desired_size.height, 1u);
 
-    auto tex_info = _render_targets.get<RenderTargetInfo>(id).texture;
+    auto tex_info = _render_targets.get<TextureCreateInfo>(id);
     tex_info.extent.width = desired_size.width;
     tex_info.extent.height = desired_size.height;
     tex_info.extent.depth = 1;
@@ -61,25 +61,5 @@ void RenderTargetManager::update_rt(const RenderTargetManager::Id &id) {
         desired_size.height != rt->info().extent.height) {
         rt = _context->create_texture(tex_info);
     }
-}
-
-RenderTargetManager::Id
-RenderTargetManager::alloc(const TextureCreateInfo &info, float scale) {
-    RenderTargetInfo rt_info{};
-    rt_info.texture = info;
-    return alloc(rt_info, scale);
-}
-
-std::vector<RenderTargetManager::Id>
-RenderTargetManager::persist_render_targets() const {
-    std::vector<Id> rts{};
-    rts.reserve(_render_targets.size());
-    _render_targets.for_each_id([&](Id id) {
-        if (_render_targets.get<RenderTargetInfo>(id).persist) {
-            rts.push_back(id);
-        }
-    });
-
-    return rts;
 }
 } // namespace ars::render::vk

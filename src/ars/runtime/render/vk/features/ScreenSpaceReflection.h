@@ -36,6 +36,7 @@ class ScreenSpaceReflection {
     void alloc_resolve_single_sample_buffer();
 
     View *_view = nullptr;
+    bool _reflection_history_valid = false;
     int32_t _frame_index = 0;
     std::unique_ptr<ComputePipeline> _hiz_trace_pipeline;
     std::unique_ptr<ComputePipeline> _resolve_reflection_pipeline;

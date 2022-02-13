@@ -247,9 +247,15 @@ void ScreenSpaceReflection::alloc_resolve_single_sample_buffer() {
 }
 
 void ScreenSpaceReflection::render(RenderGraph &rg) {
-    trace_rays(rg);
-    resolve_reflection(rg);
-    temporal_filtering(rg);
+    auto ssr = _view->effect()->screen_space_reflection();
+    if (ssr->enabled()) {
+        trace_rays(rg);
+        resolve_reflection(rg);
+        temporal_filtering(rg);
+        _reflection_history_valid = true;
+    } else {
+        _reflection_history_valid = false;
+    }
 }
 
 void ScreenSpaceReflection::temporal_filtering(RenderGraph &rg) {
@@ -287,7 +293,7 @@ void ScreenSpaceReflection::temporal_filtering(RenderGraph &rg) {
             Param param{};
             param.width = static_cast<int32_t>(dst_extent.width);
             param.height = static_cast<int32_t>(dst_extent.height);
-            param.blend_factor = _frame_index == 0 ? 1 : 0.05f;
+            param.blend_factor = _reflection_history_valid ? 0.05f : 1.0f;
             param.I_P = glm::inverse(_view->projection_matrix());
             param.reproject_IV_VP = _view->last_frame_projection_matrix() *
                                     _view->last_frame_view_matrix() *

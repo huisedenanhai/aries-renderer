@@ -64,7 +64,7 @@ void OverlayRenderer::render(RenderGraph &rg, NamedRT dst_rt_name) {
         rg.add_pass(
             [&](RenderGraphPassBuilder &builder) {
                 builder.compute_shader_read(_outline_id_rt);
-                builder.compute_shader_write(dst_rt);
+                builder.compute_shader_read_write(dst_rt);
             },
             [=](CommandBuffer *cmd) { calculate_outline(cmd, dst_rt); });
     }

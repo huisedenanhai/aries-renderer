@@ -1,5 +1,6 @@
 #include "OverlayRenderer.h"
 #include "../Context.h"
+#include "../Profiler.h"
 #include "../Scene.h"
 #include "Drawer.h"
 
@@ -82,6 +83,7 @@ void OverlayRenderer::render(RenderGraph &rg, NamedRT dst_rt_name) {
                                VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT);
             },
             [=](CommandBuffer *cmd) {
+                ARS_PROFILER_SAMPLE_VK(cmd, "Overlay Forward", 0xFF891742);
                 auto depth_rt = _view->render_target(NamedRT_Depth);
                 auto rp_exec = _overlay_forward_pass->begin(
                     cmd, {dst_rt, depth_rt}, VK_SUBPASS_CONTENTS_INLINE);
@@ -94,8 +96,12 @@ void OverlayRenderer::render(RenderGraph &rg, NamedRT dst_rt_name) {
 
 void OverlayRenderer::ensure_outline_rts() {
     if (!_outline_id_rt.valid()) {
-        TextureCreateInfo info =
-            TextureCreateInfo::sampled_2d(ID_COLOR_ATTACHMENT_FORMAT, 1, 1, 1);
+        TextureCreateInfo info = TextureCreateInfo::sampled_2d(
+            ID_COLOR_ATTACHMENT_FORMAT,
+            1,
+            1,
+            1,
+            VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
         info.usage =
             VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
         info.mag_filter = VK_FILTER_NEAREST;
@@ -188,6 +194,7 @@ void OverlayRenderer::init_billboard_pipeline() {
 
 void OverlayRenderer::calculate_outline(CommandBuffer *cmd,
                                         const Handle<Texture> &dst_rt) {
+    ARS_PROFILER_SAMPLE_VK(cmd, "Calculate Outline", 0xFF857191);
     auto outline_id = _view->rt_manager()->get(_outline_id_rt);
     struct Param {
         glm::vec4 color[256];
@@ -387,6 +394,7 @@ bool OverlayRenderer::need_forward_pass() const {
 }
 
 void OverlayRenderer::render_object_ids(CommandBuffer *cmd) {
+    ARS_PROFILER_SAMPLE_VK(cmd, "Outline Object ID", 0xFF173752);
     auto rt_manager = _view->rt_manager();
 
     auto p_matrix = _view->projection_matrix();

@@ -90,11 +90,15 @@ void RenderGraph::execute() {
                 continue;
             }
             auto cur_pass = &pass_info.pass;
+            // TODO optimize barrier
             if (last_pass) {
-                // TODO optimize barrier
                 PassDependency::barrier(cmd,
                                         last_pass->dst_dependencies(),
                                         cur_pass->src_dependencies());
+            } else {
+                // Perform layout transformation for those uninitialized write
+                // deps
+                PassDependency::barrier(cmd, {}, cur_pass->src_dependencies());
             }
             cur_pass->execute(cmd);
             last_pass = cur_pass;

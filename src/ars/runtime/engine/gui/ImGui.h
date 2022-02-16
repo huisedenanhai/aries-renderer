@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ars/runtime/core/Reflect.h>
 #include <ars/runtime/core/Res.h>
 #include <ars/runtime/core/math/Transform.h>
 #include <glm/glm.hpp>
@@ -22,16 +23,6 @@ bool input_rotation(const char *label, glm::quat &q);
 bool input_xform(const char *label, math::XformTRS<float> &xform);
 bool input_res(const char *label, std::shared_ptr<IRes> &v);
 bool input_instance(rttr::instance instance);
-
-enum class PropertyDisplay {
-    // Works for vec3, vec4
-    Color
-};
-
-enum class PropertyAttribute {
-    // Should be PropertyDisplay
-    Display
-};
 
 bool input_variant(
     const char *label,

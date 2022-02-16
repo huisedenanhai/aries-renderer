@@ -40,7 +40,8 @@ void IBackground::register_type() {
 
     rttr::registration::class_<IBackground>("ars::render::IBackground")
         .RTTR_MEMBER_PROPERTY(IBackground, mode)
-        .RTTR_MEMBER_PROPERTY(IBackground, color)
+        .RTTR_MEMBER_PROPERTY(IBackground, color)( //
+            rttr::metadata(PropertyAttribute::Display, PropertyDisplay::Color))
         .RTTR_MEMBER_PROPERTY(IBackground, strength)
         .RTTR_MEMBER_PROPERTY(IBackground, sky);
 }

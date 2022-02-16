@@ -26,6 +26,7 @@ class MyComponent : public engine::IComponent {
         engine::register_component<MyComponent>("MyComponent")
             .property("data", &MyComponent::data)
             .property("my_int", &MyComponent::my_int)
+            .property("my_uint32", &MyComponent::my_uint32)
             .property("my_float", &MyComponent::my_float)
             .property("my_vec2", &MyComponent::my_vec2)
             .property("my_vec3", &MyComponent::my_vec3)
@@ -34,7 +35,7 @@ class MyComponent : public engine::IComponent {
             .property("my_xform", &MyComponent::my_xform)
             .property("my_strings", &MyComponent::my_strings)
             .property("my_colors", &MyComponent::my_colors)(rttr::metadata(
-                gui::PropertyAttribute::Display, gui::PropertyDisplay::Color))
+                PropertyAttribute::Display, PropertyDisplay::Color))
             .property("my_struct", &MyComponent::my_struct)
             .property("my_struct_vec", &MyComponent::my_struct_vec);
 
@@ -72,6 +73,7 @@ class MyComponent : public engine::IComponent {
 
     std::string data{};
     int my_int = 12;
+    uint32_t my_uint32 = 77;
     float my_float = 24.0f;
     glm::vec2 my_vec2{};
     glm::vec3 my_vec3{};

@@ -146,8 +146,7 @@ bool input_variant_type(const char *label,
         auto &value = v.template get_value<T>();
         changed = func(label, value);
         return true;
-    } else if (type.is_wrapper() &&
-               type.get_wrapped_type() == rttr::type::get<T>()) {
+    } else if (type.is_wrapper() && type.get_wrapped_type() == target_type) {
         // Very strange the rttr returns const & to the wrapped value :(
         // https://github.com/rttrorg/rttr/issues/167
         auto &value = const_cast<T &>(v.template get_wrapped_value<T>());
@@ -156,6 +155,69 @@ bool input_variant_type(const char *label,
     }
     return false;
 }
+
+namespace {
+bool input_enum_variant(const char *label, rttr::variant &v, bool &changed) {
+    auto type = v.get_type();
+    if (!type.is_enumeration()) {
+        return false;
+    }
+
+    auto enum_type = type.get_enumeration();
+    auto names = enum_type.get_names();
+    auto cur_name = enum_type.value_to_name(v).to_string();
+    if (ImGui::BeginCombo(label, cur_name.c_str())) {
+        for (auto &n : names) {
+            bool is_selected = n == cur_name;
+            if (ImGui::Selectable(n.to_string().c_str(), is_selected)) {
+                v = enum_type.name_to_value(n);
+                changed = true;
+            }
+            if (is_selected) {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
+
+    return true;
+}
+
+template <typename Int>
+bool input_integer_variant_t(const char *label,
+                             rttr::variant &v,
+                             bool &changed) {
+    return input_variant_type<Int>(
+        label, v, changed, [&](const char *label, Int &v) {
+            int iv = static_cast<int>(v);
+            if (ImGui::InputInt(label, &iv)) {
+                // Do no change when input a negative value to unsigned int
+                if (std::is_unsigned_v<Int> && iv < 0) {
+                    return false;
+                }
+                v = static_cast<Int>(iv);
+                return true;
+            }
+            return false;
+        });
+}
+
+bool input_integer_variant(const char *label, rttr::variant &v, bool &changed) {
+    return input_integer_variant_t<int>(label, v, changed) ||
+           input_integer_variant_t<unsigned int>(label, v, changed) ||
+           input_integer_variant_t<short>(label, v, changed) ||
+           input_integer_variant_t<unsigned short>(label, v, changed) ||
+           input_integer_variant_t<size_t>(label, v, changed) ||
+           input_integer_variant_t<int8_t>(label, v, changed) ||
+           input_integer_variant_t<int16_t>(label, v, changed) ||
+           input_integer_variant_t<int32_t>(label, v, changed) ||
+           input_integer_variant_t<int64_t>(label, v, changed) ||
+           input_integer_variant_t<uint8_t>(label, v, changed) ||
+           input_integer_variant_t<uint16_t>(label, v, changed) ||
+           input_integer_variant_t<uint32_t>(label, v, changed) ||
+           input_integer_variant_t<uint64_t>(label, v, changed);
+}
+} // namespace
 
 bool input_variant(const char *label,
                    rttr::variant &v,
@@ -179,10 +241,7 @@ bool input_variant(const char *label,
         return changed;
     }
 
-    if (input_variant_type<int>(
-            label, v, changed, [&](const char *label, int &v) {
-                return ImGui::InputInt(label, &v);
-            })) {
+    if (input_integer_variant(label, v, changed)) {
         return changed;
     }
 
@@ -197,6 +256,7 @@ bool input_variant(const char *label,
             display == PropertyDisplay::Color ? input_color3 : input_vec3)) {
         return changed;
     }
+
     if (input_variant_type<glm::vec4>(
             label,
             v,
@@ -204,15 +264,22 @@ bool input_variant(const char *label,
             display == PropertyDisplay::Color ? input_color4 : input_vec4)) {
         return changed;
     }
+
     if (input_variant_type<glm::quat>(label, v, changed, input_rotation)) {
         return changed;
     }
+
     if (input_variant_type<math::XformTRS<float>>(
             label, v, changed, input_xform)) {
         return changed;
     }
+
     if (input_variant_type<std::shared_ptr<IRes>>(
             label, v, changed, input_res)) {
+        return changed;
+    }
+
+    if (input_enum_variant(label, v, changed)) {
         return changed;
     }
 

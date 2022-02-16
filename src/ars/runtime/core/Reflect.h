@@ -2,6 +2,20 @@
 
 #include <rttr/rttr_enable.h>
 
+namespace ars {
+
+enum class PropertyDisplay {
+    // Works for vec3, vec4
+    Color
+};
+
+enum class PropertyAttribute {
+    // Should be PropertyDisplay
+    Display
+};
+
+} // namespace ars
+
 // Almost the same as RTTR_ENABLE, fix warning on some compiler with 'override'
 #define RTTR_DERIVE(...)                                                       \
   public:                                                                      \

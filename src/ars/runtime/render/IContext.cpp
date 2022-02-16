@@ -12,6 +12,10 @@ std::unique_ptr<ApplicationInfo> s_application_info{};
 void register_types() {
     IEffect::register_type();
     IScreenSpaceReflectionEffect::register_type();
+    IBackground::register_type();
+    ISky::register_type();
+    IPanoramaSky::register_type();
+    IPhysicalSky::register_type();
 }
 } // namespace
 

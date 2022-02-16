@@ -3,8 +3,8 @@ aries_target_sources(render PRIVATE
         Profiler.h
         Effect.cpp
         Effect.h
-        Environment.cpp
-        Environment.h
+        Sky.cpp
+        Sky.h
         Lut.cpp
         Lut.h
         RenderGraph.cpp

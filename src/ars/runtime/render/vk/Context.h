@@ -94,7 +94,8 @@ class Context : public IContext {
     create_texture_impl(const TextureInfo &info) override;
     std::shared_ptr<IMesh> create_mesh(const MeshInfo &info) override;
     IMaterialPrototype *material_prototype(MaterialType type) override;
-    std::shared_ptr<IEnvironment> create_environment() override;
+    std::shared_ptr<IPanoramaSky> create_panorama_sky() override;
+    std::shared_ptr<IPhysicalSky> create_physical_sky() override;
     [[nodiscard]] Instance *instance() const;
     [[nodiscard]] Device *device() const;
     [[nodiscard]] VulkanMemoryAllocator *vma() const;

@@ -125,6 +125,7 @@ class CommandBuffer : public volk::CommandBuffer {
 template <typename T> struct Handle {
   public:
     Handle() = default;
+    Handle(std::nullptr_t) : _ptr(nullptr) {}
 
     [[nodiscard]] T *get() const {
         return _ptr.get();
@@ -140,6 +141,14 @@ template <typename T> struct Handle {
 
     bool operator!=(std::nullptr_t) const {
         return _ptr != nullptr;
+    }
+
+    bool operator==(const Handle &rhs) const {
+        return _ptr == rhs._ptr;
+    }
+
+    bool operator!=(const Handle &rhs) const {
+        return _ptr != rhs._ptr;
     }
 
   private:

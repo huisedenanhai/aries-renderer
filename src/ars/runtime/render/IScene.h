@@ -13,7 +13,6 @@ class IEffect;
 class IMesh;
 class ITexture;
 class IMaterial;
-class IEnvironment;
 class IScene;
 
 // Map scissor NDC region range [-1, 1]
@@ -176,10 +175,6 @@ class IView {
                                                   uint32_t height) = 0;
 
     virtual IOverlay *overlay() = 0;
-
-    virtual std::shared_ptr<IEnvironment> environment() = 0;
-    virtual void
-    set_environment(const std::shared_ptr<IEnvironment> &environment) = 0;
 
     // Not null
     virtual IEffect *effect() = 0;

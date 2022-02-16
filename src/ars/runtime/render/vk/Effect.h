@@ -4,6 +4,10 @@
 #include <memory>
 
 namespace ars::render::vk {
+class View;
+class SkyData;
+class PanoramaSky;
+
 class ScreenSpaceReflectionEffect : public IScreenSpaceReflectionEffect {
   public:
     bool enabled() override;
@@ -22,13 +26,43 @@ class ScreenSpaceReflectionEffect : public IScreenSpaceReflectionEffect {
     float _border_fade = 0.01f;
 };
 
+class Background : public IBackground {
+  public:
+    explicit Background(View *view);
+
+    BackgroundMode mode() override;
+    void set_mode(BackgroundMode mode) override;
+    glm::vec3 color() override;
+    void set_color(glm::vec3 radiance) override;
+    float strength() override;
+    void set_strength(float strength) override;
+    std::shared_ptr<ISky> sky() override;
+    void set_sky(std::shared_ptr<ISky> sky) override;
+
+    // Not null
+    SkyData *sky_data();
+    glm::vec3 radiance();
+
+  private:
+    View *_view{};
+    BackgroundMode _mode = BackgroundMode::Sky;
+    glm::vec3 _color = glm::vec3(0.1f);
+    float _strength = 1.0f;
+    std::shared_ptr<ISky> _sky{};
+    std::shared_ptr<PanoramaSky> _default_sky{};
+};
+
 class Effect : public IEffect {
   public:
-    Effect();
+    explicit Effect(View *view);
 
     IScreenSpaceReflectionEffect *screen_space_reflection() override;
+    ScreenSpaceReflectionEffect *screen_space_reflection_vk();
+    IBackground *background() override;
+    Background *background_vk();
 
   private:
     std::unique_ptr<ScreenSpaceReflectionEffect> _ssr_effect{};
+    std::unique_ptr<Background> _background{};
 };
 } // namespace ars::render::vk

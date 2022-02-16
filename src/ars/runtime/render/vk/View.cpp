@@ -1,12 +1,12 @@
 #include "View.h"
 #include "Context.h"
 #include "Effect.h"
-#include "Environment.h"
 #include "Material.h"
 #include "Mesh.h"
 #include "Pipeline.h"
 #include "Profiler.h"
 #include "Scene.h"
+#include "Sky.h"
 #include "features/Drawer.h"
 #include "features/OverlayRenderer.h"
 #include "features/Renderer.h"
@@ -56,7 +56,7 @@ View::View(Scene *scene, const Extent2D &size) : _scene(scene), _size(size) {
     _renderer = std::make_unique<Renderer>(this);
     _overlay_renderer = std::make_unique<OverlayRenderer>(this);
     _drawer = std::make_unique<Drawer>(this);
-    _effect = std::make_unique<Effect>();
+    _effect = std::make_unique<Effect>(this);
 }
 
 math::XformTRS<float> View::xform() {
@@ -263,23 +263,8 @@ OverlayRenderer *View::vk_overlay() const {
     return _overlay_renderer.get();
 }
 
-std::shared_ptr<IEnvironment> View::environment() {
-    return environment_vk();
-}
-
-void View::set_environment(const std::shared_ptr<IEnvironment> &environment) {
-    _environment = std::dynamic_pointer_cast<Environment>(environment);
-}
-
-std::shared_ptr<Environment> View::environment_vk() {
-    if (_environment == nullptr) {
-        set_environment(_scene->context()->create_environment());
-    }
-    return _environment;
-}
-
 IEffect *View::effect() {
-    return _effect.get();
+    return effect_vk();
 }
 
 void View::debug_gui() {
@@ -317,5 +302,9 @@ glm::mat4 View::last_frame_view_matrix() {
         return glm::inverse(_last_frame_xform->matrix_no_scale());
     }
     return view_matrix();
+}
+
+Effect *View::effect_vk() {
+    return _effect.get();
 }
 } // namespace ars::render::vk

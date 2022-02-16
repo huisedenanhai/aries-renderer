@@ -61,12 +61,9 @@ class View : public IView {
                                           uint32_t height) override;
     IOverlay *overlay() override;
 
-    std::shared_ptr<IEnvironment> environment() override;
-    void
-    set_environment(const std::shared_ptr<IEnvironment> &environment) override;
-    std::shared_ptr<Environment> environment_vk();
-
     IEffect *effect() override;
+    Effect *effect_vk();
+
     void debug_gui() override;
     OverlayRenderer *vk_overlay() const;
 
@@ -104,7 +101,6 @@ class View : public IView {
     std::unique_ptr<Renderer> _renderer{};
     std::unique_ptr<OverlayRenderer> _overlay_renderer{};
     std::unique_ptr<Drawer> _drawer{};
-    std::shared_ptr<Environment> _environment{};
     std::unique_ptr<Effect> _effect{};
 
     std::optional<glm::mat4> _last_frame_projection_matrix;

@@ -11,7 +11,8 @@ class IWindow;
 class ITexture;
 class IScene;
 class IMesh;
-class IEnvironment;
+class IPanoramaSky;
+class IPhysicalSky;
 
 struct TextureInfo;
 struct MeshInfo;
@@ -65,7 +66,8 @@ class IContext {
     // supported
     virtual IMaterialPrototype *material_prototype(MaterialType type) = 0;
 
-    virtual std::shared_ptr<IEnvironment> create_environment() = 0;
+    virtual std::shared_ptr<IPanoramaSky> create_panorama_sky() = 0;
+    virtual std::shared_ptr<IPhysicalSky> create_physical_sky() = 0;
 
     // Call this method when a frame begins. If this method returns false,
     // the backend refuse to begin a new frame and no render work should be

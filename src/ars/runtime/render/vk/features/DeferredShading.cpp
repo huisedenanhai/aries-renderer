@@ -1,10 +1,10 @@
 #include "DeferredShading.h"
 #include "../Context.h"
 #include "../Effect.h"
-#include "../Environment.h"
 #include "../Lut.h"
 #include "../Profiler.h"
 #include "../Scene.h"
+#include "../Sky.h"
 
 namespace ars::render::vk {
 void DeferredShading::init_pipeline() {
@@ -20,7 +20,8 @@ void DeferredShading::execute(CommandBuffer *cmd, NamedRT final_color_rt) {
 
     auto final_color = _view->render_target(final_color_rt);
     auto final_color_extent = final_color->info().extent;
-    auto env = _view->environment_vk();
+    auto background = _view->effect_vk()->background_vk();
+    auto sky = background->sky_data();
 
     _pipeline->bind(cmd);
 
@@ -33,8 +34,8 @@ void DeferredShading::execute(CommandBuffer *cmd, NamedRT final_color_rt) {
     desc.set_texture(0, 4, _view->render_target(NamedRT_GBuffer3).get());
     desc.set_texture(0, 5, _view->render_target(NamedRT_Depth).get());
     desc.set_texture(0, 6, _view->context()->lut()->brdf_lut().get());
-    desc.set_texture(0, 7, env->irradiance_cube_map_vk().get());
-    desc.set_texture(0, 8, env->hdr_texture_vk().get());
+    desc.set_texture(0, 7, sky->irradiance_cube_map().get());
+    desc.set_texture(0, 8, sky->panorama().get());
 
     if (_view->effect()->screen_space_reflection()->enabled()) {
         desc.set_texture(0, 9, _view->render_target(NamedRT_Reflection).get());
@@ -65,9 +66,9 @@ void DeferredShading::execute(CommandBuffer *cmd, NamedRT final_color_rt) {
         static_cast<int32_t>(_view->vk_scene()->point_lights.size());
     param.directional_light_count =
         static_cast<int32_t>(_view->vk_scene()->directional_lights.size());
-    param.env_radiance_factor = env->radiance();
+    param.env_radiance_factor = background->radiance();
     param.cube_map_mip_count =
-        static_cast<int32_t>(env->irradiance_cube_map()->mip_levels());
+        static_cast<int32_t>(sky->irradiance_cube_map()->info().mip_levels);
 
     auto v_matrix = _view->view_matrix();
     auto p_matrix = _view->projection_matrix();
@@ -143,6 +144,10 @@ void DeferredShading::render(RenderGraph &rg, NamedRT final_color_rt) {
             if (_view->effect()->screen_space_reflection()->enabled()) {
                 builder.compute_shader_read(NamedRT_Reflection);
             }
+            builder.compute_shader_read(_view->effect_vk()
+                                            ->background_vk()
+                                            ->sky_data()
+                                            ->irradiance_cube_map());
         },
         [this, final_color_rt](CommandBuffer *cmd) {
             execute(cmd, final_color_rt);

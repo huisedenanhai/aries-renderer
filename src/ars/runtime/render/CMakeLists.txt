@@ -2,8 +2,6 @@ add_library(render
         Common.h
         IEffect.cpp
         IEffect.h
-        IEnvironment.cpp
-        IEnvironment.h
         IWindow.cpp
         IWindow.h
         IContext.cpp

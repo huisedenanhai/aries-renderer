@@ -18,3 +18,12 @@
     using base_class_list = TYPE_LIST(__VA_ARGS__);                            \
                                                                                \
   private:
+
+// Utility macros to make you type less
+#define RTTR_MEMBER_PROPERTY(ty, prop)                                         \
+    property(#prop, &ty::prop, &ty::set_##prop)
+
+#define RTTR_MEMBER_PROPERTY_READONLY(ty, prop)                                \
+    property_readonly(#prop, &ty::prop)
+
+#define RTTR_ENUM_VALUE(ty, v) rttr::value(#v, ty::v)

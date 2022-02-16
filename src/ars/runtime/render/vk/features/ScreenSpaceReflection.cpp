@@ -1,9 +1,9 @@
 #include "ScreenSpaceReflection.h"
 #include "../Context.h"
 #include "../Effect.h"
-#include "../Environment.h"
 #include "../Lut.h"
 #include "../Profiler.h"
+#include "../Sky.h"
 
 namespace ars::render::vk {
 void GenerateHierarchyZ::execute(CommandBuffer *cmd) {
@@ -186,7 +186,6 @@ void ScreenSpaceReflection::resolve_reflection(RenderGraph &rg) {
             _resolve_reflection_pipeline->bind(cmd);
             auto reflect_color_image =
                 _view->rt_manager()->get(_resolve_buffer_single_sample);
-            auto cube_map = _view->environment_vk()->irradiance_cube_map_vk();
             auto dst_extent = reflect_color_image->info().extent;
 
             DescriptorEncoder desc{};

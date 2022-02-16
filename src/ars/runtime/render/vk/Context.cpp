@@ -1,10 +1,10 @@
 #include "Context.h"
-#include "Environment.h"
 #include "Lut.h"
 #include "Material.h"
 #include "Mesh.h"
 #include "Profiler.h"
 #include "Scene.h"
+#include "Sky.h"
 #include "Swapchain.h"
 #include <GLFW/glfw3.h>
 #include <algorithm>
@@ -976,10 +976,6 @@ Context::create_single_color_cube_map(glm::vec4 color) {
     return tex;
 }
 
-std::shared_ptr<IEnvironment> Context::create_environment() {
-    return std::make_shared<Environment>(this);
-}
-
 Profiler *Context::profiler() const {
     return _profiler.get();
 }
@@ -1003,5 +999,13 @@ void Context::set_debug_name_internal(const std::string &name,
     info.objectHandle = object_handle;
     info.pObjectName = name.c_str();
     instance()->SetDebugUtilsObjectNameEXT(_device->device(), &info);
+}
+
+std::shared_ptr<IPanoramaSky> Context::create_panorama_sky() {
+    return std::make_shared<PanoramaSky>(this);
+}
+
+std::shared_ptr<IPhysicalSky> Context::create_physical_sky() {
+    return std::make_shared<PhysicalSky>(this);
 }
 } // namespace ars::render::vk

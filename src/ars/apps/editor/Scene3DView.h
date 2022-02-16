@@ -22,8 +22,6 @@ struct Scene3DViewState {
     bool show_ground_wire_grid = true;
     float ground_wire_grid_spacing = 0.1f;
     glm::vec4 ground_wire_grid_color{0.2f, 0.2f, 0.2f, 0.9f};
-
-    float env_radiance_strength = 1.0f;
 };
 
 void focus_camera(Scene3DViewState &state,

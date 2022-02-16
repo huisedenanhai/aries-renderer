@@ -1,5 +1,7 @@
 #include "Renderer.h"
+#include "../Effect.h"
 #include "../Profiler.h"
+#include "../Sky.h"
 #include "DeferredShading.h"
 #include "OpaqueGeometry.h"
 #include "QuerySelection.h"
@@ -10,6 +12,7 @@ namespace ars::render::vk {
 NamedRT Renderer::render(RenderGraph &rg) {
     ARS_PROFILER_SAMPLE("Build Render Graph", 0xFF772641);
 
+    _view->effect_vk()->background_vk()->sky_data()->update_cache(rg);
     _opaque_geometry->render(rg);
     _generate_hierarchy_z->render(rg);
     _screen_space_reflection->render(rg);

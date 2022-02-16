@@ -9,7 +9,6 @@
 #include <ars/runtime/engine/components/RenderSystem.h>
 #include <ars/runtime/engine/gui/ImGui.h>
 #include <ars/runtime/render/IEffect.h>
-#include <ars/runtime/render/IEnvironment.h>
 #include <ars/runtime/render/IScene.h>
 #include <ars/runtime/render/ITexture.h>
 #include <ars/runtime/render/IWindow.h>
@@ -145,7 +144,35 @@ class Application : public ars::engine::IApplication {
         }
 
         // load_test_mesh();
+        // test_load_cube_map();
 
+        std::shared_ptr<ITexture> hdr_tex{};
+        {
+            auto hdr_file = "Environments/studio_garden_2k.hdr";
+            // auto hdr_file = "Environments/skybox_room.hdr";
+            // auto hdr_file = "Environments/studio_small_08_2k.hdr";
+            // auto hdr_file = "Environments/dreifaltigkeitsberg_2k.hdr";
+            int w, h, c;
+            auto data = stbi_loadf(hdr_file, &w, &h, &c, 4);
+            ARS_DEFER([&]() { stbi_image_free(data); });
+            auto info =
+                TextureInfo::create_2d(Format::R32G32B32A32_SFLOAT, w, h);
+            hdr_tex = ctx->create_texture(info);
+            hdr_tex->set_data(
+                data, w * h * 4 * sizeof(float), 0, 0, 0, 0, 0, w, h, 1);
+            hdr_tex->generate_mipmap();
+        }
+
+        auto sky = ctx->create_panorama_sky();
+        sky->set_panorama(hdr_tex);
+        sky->set_irradiance_cube_map_size(256);
+        auto background = _view->effect()->background();
+        background->set_sky(sky);
+        background->set_color({1.0f, 1.0f, 1.0f});
+    }
+
+    static void test_load_cube_map() {
+        auto ctx = ars::engine::render_context();
         // Test create cube map
         auto cube_map = ctx->create_texture(
             TextureInfo::create_cube_map(Format::R8G8B8A8_SRGB, 256));
@@ -172,29 +199,6 @@ class Application : public ars::engine::IApplication {
                                1);
         }
         cube_map->generate_mipmap();
-
-        std::shared_ptr<ITexture> hdr_tex{};
-        {
-            auto hdr_file = "Environments/studio_garden_2k.hdr";
-            // auto hdr_file = "Environments/skybox_room.hdr";
-            // auto hdr_file = "Environments/studio_small_08_2k.hdr";
-            // auto hdr_file = "Environments/dreifaltigkeitsberg_2k.hdr";
-            int w, h, c;
-            auto data = stbi_loadf(hdr_file, &w, &h, &c, 4);
-            ARS_DEFER([&]() { stbi_image_free(data); });
-            auto info =
-                TextureInfo::create_2d(Format::R32G32B32A32_SFLOAT, w, h);
-            hdr_tex = ctx->create_texture(info);
-            hdr_tex->set_data(
-                data, w * h * 4 * sizeof(float), 0, 0, 0, 0, 0, w, h, 1);
-            hdr_tex->generate_mipmap();
-        }
-
-        auto env = _view->environment();
-        env->set_hdr_texture(hdr_tex);
-        env->alloc_irradiance_cube_map(256);
-        env->set_radiance({1.0f, 1.0f, 1.0f});
-        env->update_irradiance_cube_map();
     }
 
     void load_test_mesh() {

@@ -6,7 +6,9 @@ namespace ars {
 
 enum class PropertyDisplay {
     // Works for vec3, vec4
-    Color
+    Color,
+    // Hide value in inspector
+    None
 };
 
 enum class PropertyAttribute {

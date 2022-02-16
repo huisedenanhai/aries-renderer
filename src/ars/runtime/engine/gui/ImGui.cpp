@@ -104,26 +104,30 @@ bool input_xform(const char *label, math::XformTRS<float> &xform) {
     return dirty;
 }
 
-bool input_instance(rttr::instance instance) {
-    auto ty = instance.get_derived_type();
-    if (ty.is_wrapper()) {
-        ty = ty.get_wrapped_type();
-    }
+bool input_instance(const rttr::instance &instance) {
+    auto inst = instance.get_type().get_raw_type().is_wrapper()
+                    ? instance.get_wrapped_instance()
+                    : instance;
+    auto ty = inst.get_derived_type();
     bool changed = false;
 
     for (auto &prop : ty.get_properties()) {
-        changed = input_property(instance, prop) || changed;
+        changed = input_property(inst, prop) || changed;
     }
 
     return changed;
 }
 
-bool input_property(rttr::instance instance, rttr::property property) {
+bool input_property(const rttr::instance &instance, rttr::property property) {
     std::optional<PropertyDisplay> display{};
     auto display_attr = property.get_metadata(PropertyAttribute::Display);
     if (display_attr.is_valid() &&
         display_attr.can_convert<PropertyDisplay>()) {
         display = display_attr.get_value<PropertyDisplay>();
+    }
+
+    if (display.has_value() && display.value() == PropertyDisplay::None) {
+        return false;
     }
 
     auto name = property.get_name().to_string();

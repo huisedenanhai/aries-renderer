@@ -22,14 +22,14 @@ bool input_color4(const char *label, glm::vec4 &v);
 bool input_rotation(const char *label, glm::quat &q);
 bool input_xform(const char *label, math::XformTRS<float> &xform);
 bool input_res(const char *label, std::shared_ptr<IRes> &v);
-bool input_instance(rttr::instance instance);
+bool input_instance(const rttr::instance &instance);
 
 bool input_variant(
     const char *label,
     rttr::variant &v,
     const std::optional<PropertyDisplay> &display = std::nullopt);
 
-bool input_property(rttr::instance instance, rttr::property property);
+bool input_property(const rttr::instance &instance, rttr::property property);
 
 template <typename T, typename Id>
 bool begin_selectable_tree_node(

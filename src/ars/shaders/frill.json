@@ -17,14 +17,13 @@
     "BillboardObjectId.frag",
     "VertexColor.vert",
     "VertexColor.frag",
-    "CaptureHDRToCubeMap.comp",
-    "PrefilterCubeMap.comp",
     "AddInplace.comp"
   ],
   "includes": [
     "include"
   ],
   "subdirectories": [
-    "SSR"
+    "SSR",
+    "IBL"
   ]
 }

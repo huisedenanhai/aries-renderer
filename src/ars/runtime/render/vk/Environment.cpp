@@ -41,9 +41,9 @@ void Environment::alloc_irradiance_cube_map(uint32_t resolution) {
 
 Environment::Environment(Context *context) : _context(context) {
     _prefilter_env_pipeline =
-        ComputePipeline::create(context, "PrefilterCubeMap.comp");
+        ComputePipeline::create(context, "IBL/PrefilterCubeMap.comp");
     _capture_cube_map_pipeline =
-        ComputePipeline::create(context, "CaptureHDRToCubeMap.comp");
+        ComputePipeline::create(context, "IBL/CaptureHDRToCubeMap.comp");
 }
 
 void Environment::update_irradiance_cube_map() {

@@ -1,0 +1,6 @@
+{
+    "sources": [
+        "CaptureHDRToCubeMap.comp",
+        "PrefilterCubeMap.comp"
+    ]
+}

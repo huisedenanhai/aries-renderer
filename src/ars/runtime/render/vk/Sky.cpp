@@ -1,6 +1,7 @@
 #include "Sky.h"
 #include "Context.h"
 #include "Pipeline.h"
+#include "Profiler.h"
 #include "RenderGraph.h"
 
 namespace ars::render::vk {
@@ -154,6 +155,7 @@ void SkyData::update_cache(RenderGraph &rg) {
             builder.compute_shader_write(_tmp_env_map);
         },
         [=](CommandBuffer *cmd) {
+            ARS_PROFILER_SAMPLE_VK(cmd, "Capture Env Cube Map", 0xFF017411);
             capture_env_cube_map(cmd, _panorama_texture, _tmp_env_map);
         });
 
@@ -165,6 +167,7 @@ void SkyData::update_cache(RenderGraph &rg) {
             builder.compute_shader_write(_irradiance_cube_map);
         },
         [=](CommandBuffer *cmd) {
+            ARS_PROFILER_SAMPLE_VK(cmd, "Prefilter Irradiance", 0xFF87411A);
             prefilter_irradiance(cmd, _tmp_env_map, _irradiance_cube_map);
         });
 }

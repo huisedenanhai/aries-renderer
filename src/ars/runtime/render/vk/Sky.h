@@ -8,6 +8,24 @@ class Context;
 class ComputePipeline;
 struct RenderGraph;
 
+class ImageBasedLighting {
+  public:
+    explicit ImageBasedLighting(Context *context);
+    ~ImageBasedLighting();
+
+    void capture_panorama_to_cube_map(CommandBuffer *cmd,
+                                      const Handle<Texture> &panorama_tex,
+                                      const Handle<Texture> &env_cube_map);
+    void prefilter_irradiance(CommandBuffer *cmd,
+                              const Handle<Texture> &env_cube_map,
+                              const Handle<Texture> &irradiance_cube_map);
+
+  private:
+    Context *_context = nullptr;
+    std::unique_ptr<ComputePipeline> _prefilter_env_pipeline{};
+    std::unique_ptr<ComputePipeline> _capture_cube_map_pipeline{};
+};
+
 class SkyData {
   public:
     explicit SkyData(Context *context);
@@ -21,18 +39,16 @@ class SkyData {
     void update_cache(RenderGraph &rg);
     bool cache_dirty();
 
+    glm::vec3 color() const;
+    void set_color(glm::vec3 color);
+    float strength() const;
+    void set_strength(float strength);
+    glm::vec3 radiance() const;
+
   private:
     void ensure_irradiance_cube_map();
-    void capture_env_cube_map(CommandBuffer *cmd,
-                              const Handle<Texture> &panorama_tex,
-                              const Handle<Texture> &env_map);
-    void prefilter_irradiance(CommandBuffer *cmd,
-                              const Handle<Texture> &env_map,
-                              const Handle<Texture> &irradiance_map);
 
     Context *_context = nullptr;
-    std::unique_ptr<ComputePipeline> _prefilter_env_pipeline{};
-    std::unique_ptr<ComputePipeline> _capture_cube_map_pipeline{};
     // Trivially average filtered environment map for calculate prefiltered
     // irradiance
     Handle<Texture> _tmp_env_map{};
@@ -40,7 +56,24 @@ class SkyData {
     uint32_t _irradiance_cube_map_size = 64;
     Handle<Texture> _panorama_texture{};
     bool _panorama_dirty = false;
+
+    glm::vec3 _color{1.0f, 1.0f, 1.0f};
+    float _strength = 1.0f;
 };
+
+#define ARS_SKY_BASE_FORWARD_COLOR_METHOD()                                    \
+    glm::vec3 color() override {                                               \
+        return data()->color();                                                \
+    }                                                                          \
+    void set_color(glm::vec3 color) override {                                 \
+        data()->set_color(color);                                              \
+    }                                                                          \
+    float strength() override {                                                \
+        return data()->strength();                                             \
+    }                                                                          \
+    void set_strength(float strength) override {                               \
+        data()->set_strength(strength);                                        \
+    }
 
 class SkyBase {
   public:
@@ -55,6 +88,9 @@ class PanoramaSky : public IPanoramaSky, public SkyBase {
   public:
     explicit PanoramaSky(Context *context);
     ~PanoramaSky();
+
+    ARS_SKY_BASE_FORWARD_COLOR_METHOD();
+
     std::shared_ptr<ITexture> panorama() override;
     void set_panorama(std::shared_ptr<ITexture> hdr) override;
     uint32_t irradiance_cube_map_size() override;
@@ -70,6 +106,8 @@ std::shared_ptr<PanoramaSky> upcast(const std::shared_ptr<IPanoramaSky> &sky);
 class PhysicalSky : public IPhysicalSky, public SkyBase {
   public:
     explicit PhysicalSky(Context *context);
+
+    ARS_SKY_BASE_FORWARD_COLOR_METHOD();
 
   private:
     Context *_context = nullptr;

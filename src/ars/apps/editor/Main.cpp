@@ -5,6 +5,7 @@
 #include <ars/runtime/engine/Entity.Editor.h>
 #include <ars/runtime/engine/Entity.h>
 #include <ars/runtime/engine/components/RenderSystem.h>
+#include <ars/runtime/render/IEffect.h>
 #include <ars/runtime/render/res/Model.h>
 #include <ars/runtime/render/res/Texture.h>
 #include <imgui/imgui.h>
@@ -76,6 +77,11 @@ class Editor : public engine::IApplication {
             _3d_view_state.focus_distance = 2.0f;
 
             _view->overlay()->set_light_gizmo(_light_bulb_icon, 0.1f);
+
+            auto background = _view->effect()->background();
+            auto sky = ctx->create_panorama_sky();
+            sky->set_color({0.1f, 0.1f, 0.1f});
+            background->set_sky(sky);
 
             if (path.has_value()) {
                 auto ext = path->extension();

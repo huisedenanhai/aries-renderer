@@ -20,6 +20,7 @@ class Swapchain;
 class Context;
 class MaterialPrototypeRegistry;
 class Profiler;
+class ImageBasedLighting;
 
 void init_vulkan_backend(const ApplicationInfo &app_info);
 void destroy_vulkan_backend();
@@ -147,6 +148,7 @@ class Context : public IContext {
     void unregister_swapchain(Swapchain *swapchain);
 
     [[nodiscard]] Lut *lut() const;
+    [[nodiscard]] ImageBasedLighting *ibl() const;
 
     [[nodiscard]] Profiler *profiler() const;
 
@@ -212,6 +214,7 @@ class Context : public IContext {
         _default_textures{};
 
     std::unique_ptr<Lut> _lut{};
+    std::unique_ptr<ImageBasedLighting> _ibl{};
     std::unique_ptr<Profiler> _profiler{};
 };
 

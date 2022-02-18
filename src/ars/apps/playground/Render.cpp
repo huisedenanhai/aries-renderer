@@ -168,7 +168,6 @@ class Application : public ars::engine::IApplication {
         sky->set_irradiance_cube_map_size(256);
         auto background = _view->effect()->background();
         background->set_sky(sky);
-        background->set_color({1.0f, 1.0f, 1.0f});
     }
 
     static void test_load_cube_map() {

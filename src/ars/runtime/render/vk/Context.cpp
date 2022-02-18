@@ -576,6 +576,7 @@ Context::Context(const WindowInfo *info,
     init_default_textures();
     _material_prototypes = std::make_unique<MaterialPrototypeRegistry>(this);
     _lut = std::make_unique<Lut>(this);
+    _ibl = std::make_unique<ImageBasedLighting>(this);
     Context::init_profiler();
 }
 
@@ -1007,5 +1008,9 @@ std::shared_ptr<IPanoramaSky> Context::create_panorama_sky() {
 
 std::shared_ptr<IPhysicalSky> Context::create_physical_sky() {
     return std::make_shared<PhysicalSky>(this);
+}
+
+ImageBasedLighting *Context::ibl() const {
+    return _ibl.get();
 }
 } // namespace ars::render::vk

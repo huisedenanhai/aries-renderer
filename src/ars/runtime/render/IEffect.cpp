@@ -19,7 +19,10 @@ void IEffect::register_type() {
 }
 
 void ISky::register_type() {
-    rttr::registration::class_<ISky>("ars::render::ISky");
+    rttr::registration::class_<ISky>("ars::render::ISky")
+        .RTTR_MEMBER_PROPERTY(ISky, color)( //
+            rttr::metadata(PropertyAttribute::Display, PropertyDisplay::Color))
+        .RTTR_MEMBER_PROPERTY(ISky, strength);
 }
 
 void IPanoramaSky::register_type() {

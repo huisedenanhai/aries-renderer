@@ -98,6 +98,8 @@ SkyData *Background::sky_data() {
 
 Background::Background(View *view) : _view(view) {
     _default_sky = upcast(_view->context()->create_panorama_sky());
+    // Default sky is black
+    _default_sky->set_strength(0.0f);
 }
 
 glm::vec3 Background::radiance() {

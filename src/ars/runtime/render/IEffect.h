@@ -29,6 +29,12 @@ class ISky {
     RTTR_ENABLE();
 
   public:
+    virtual glm::vec3 color() = 0;
+    virtual void set_color(glm::vec3 radiance) = 0;
+
+    virtual float strength() = 0;
+    virtual void set_strength(float strength) = 0;
+
     static void register_type();
 };
 

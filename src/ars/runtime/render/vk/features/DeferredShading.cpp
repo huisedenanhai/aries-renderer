@@ -66,7 +66,7 @@ void DeferredShading::execute(CommandBuffer *cmd, NamedRT final_color_rt) {
         static_cast<int32_t>(_view->vk_scene()->point_lights.size());
     param.directional_light_count =
         static_cast<int32_t>(_view->vk_scene()->directional_lights.size());
-    param.env_radiance_factor = background->radiance();
+    param.env_radiance_factor = sky->radiance();
     param.cube_map_mip_count =
         static_cast<int32_t>(sky->irradiance_cube_map()->info().mip_levels);
 

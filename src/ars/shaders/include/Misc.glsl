@@ -40,9 +40,18 @@ vec3 cube_map_index_to_direction(ivec3 index, int size) {
     return normalize(dirs[index.z]);
 }
 
-vec2 hdr_direction_to_uv(vec3 dir) {
-    vec2 angle = vec2(atan(dir.z, dir.x), -asin(dir.y));
-    return vec2(0.5, 1.0) / PI * angle + 0.5;
+vec2 panorama_direction_to_uv(vec3 dir) {
+    vec2 angle = vec2(atan(dir.z, dir.x), asin(dir.y));
+    return vec2(0.5, -1.0) / PI * angle + 0.5;
+}
+
+vec3 panorama_uv_to_direction(vec2 uv) {
+    vec2 angle = PI * vec2(2.0, -1.0) * (uv - 0.5);
+    float sin_phi = sin(angle.y);
+    float cos_phi = cos(angle.y);
+    float sin_theta = sin(angle.x);
+    float cos_theta = cos(angle.x);
+    return vec3(cos_theta * cos_phi, sin_phi, sin_theta * cos_phi);
 }
 
 void construct_TBN_with_normal(vec3 n, out vec3 t, out vec3 b) {

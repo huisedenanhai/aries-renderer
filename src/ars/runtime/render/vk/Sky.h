@@ -36,6 +36,7 @@ class SkyData {
     uint32_t irradiance_cube_map_size() const;
     void set_irradiance_cube_map_size(uint32_t resolution);
     Handle<Texture> irradiance_cube_map();
+    void mark_panorama_dirty(bool dirty = true);
     void update_cache(RenderGraph &rg);
     bool cache_dirty();
 
@@ -78,7 +79,9 @@ class SkyData {
 class SkyBase {
   public:
     explicit SkyBase(Context *context);
-    virtual SkyData *data();
+    virtual ~SkyBase() = default;
+    SkyData *data();
+    virtual void render(RenderGraph &rg);
 
   private:
     std::unique_ptr<SkyData> _data = nullptr;
@@ -87,7 +90,7 @@ class SkyBase {
 class PanoramaSky : public IPanoramaSky, public SkyBase {
   public:
     explicit PanoramaSky(Context *context);
-    ~PanoramaSky();
+    ~PanoramaSky() override;
 
     ARS_SKY_BASE_FORWARD_COLOR_METHOD();
 
@@ -106,11 +109,15 @@ std::shared_ptr<PanoramaSky> upcast(const std::shared_ptr<IPanoramaSky> &sky);
 class PhysicalSky : public IPhysicalSky, public SkyBase {
   public:
     explicit PhysicalSky(Context *context);
+    ~PhysicalSky() override;
 
     ARS_SKY_BASE_FORWARD_COLOR_METHOD();
 
+    void render(RenderGraph &rg) override;
+
   private:
     Context *_context = nullptr;
+    std::unique_ptr<ComputePipeline> _physical_panorama_pipeline{};
 };
 
 std::shared_ptr<PhysicalSky> upcast(const std::shared_ptr<IPhysicalSky> &sky);

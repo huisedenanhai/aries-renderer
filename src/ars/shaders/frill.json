@@ -24,6 +24,7 @@
   ],
   "subdirectories": [
     "SSR",
-    "IBL"
+    "IBL",
+    "Atmosphere"
   ]
 }

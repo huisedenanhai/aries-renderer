@@ -21,7 +21,7 @@ void DeferredShading::execute(CommandBuffer *cmd, NamedRT final_color_rt) {
     auto final_color = _view->render_target(final_color_rt);
     auto final_color_extent = final_color->info().extent;
     auto background = _view->effect_vk()->background_vk();
-    auto sky = background->sky_data();
+    auto sky = background->sky_vk()->data();
     auto ctx = _view->context();
 
     _pipeline->bind(cmd);
@@ -156,7 +156,8 @@ void DeferredShading::render(RenderGraph &rg, NamedRT final_color_rt) {
             }
             builder.compute_shader_read(_view->effect_vk()
                                             ->background_vk()
-                                            ->sky_data()
+                                            ->sky_vk()
+                                            ->data()
                                             ->irradiance_cube_map());
         },
         [this, final_color_rt](CommandBuffer *cmd) {

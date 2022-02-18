@@ -11,7 +11,7 @@ layout(set = 0,
 
 vec2 cube_index_to_env_uv(ivec3 index, int size) {
     vec3 d = cube_map_index_to_direction(index, size);
-    return hdr_direction_to_uv(d);
+    return panorama_direction_to_uv(d);
 }
 
 void main() {

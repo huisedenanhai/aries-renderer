@@ -5,7 +5,7 @@
 
 namespace ars::render::vk {
 class View;
-class SkyData;
+class SkyBase;
 class PanoramaSky;
 
 class ScreenSpaceReflectionEffect : public IScreenSpaceReflectionEffect {
@@ -40,7 +40,7 @@ class Background : public IBackground {
     void set_sky(std::shared_ptr<ISky> sky) override;
 
     // Not null
-    SkyData *sky_data();
+    SkyBase *sky_vk();
     glm::vec3 radiance();
 
   private:

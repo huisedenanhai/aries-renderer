@@ -89,11 +89,11 @@ void Background::set_sky(std::shared_ptr<ISky> sky) {
     _sky = sky;
 }
 
-SkyData *Background::sky_data() {
+SkyBase *Background::sky_vk() {
     if (_sky == nullptr) {
-        return _default_sky->data();
+        return _default_sky.get();
     }
-    return upcast(_sky)->data();
+    return upcast(_sky).get();
 }
 
 Background::Background(View *view) : _view(view) {

@@ -191,7 +191,43 @@ void SkyData::update_cache(RenderGraph &rg) {
 PanoramaSky::~PanoramaSky() = default;
 
 PhysicalSky::PhysicalSky(Context *context)
-    : _context(context), SkyBase(context) {}
+    : _context(context), SkyBase(context) {
+    _physical_panorama_pipeline = ComputePipeline::create(
+        _context, "Atmosphere/PhysicalSkyPanorama.comp");
+
+    data()->set_irradiance_cube_map_size(64);
+
+    auto panorama_info =
+        TextureCreateInfo::sampled_2d(VK_FORMAT_B10G11R11_UFLOAT_PACK32,
+                                      256,
+                                      128,
+                                      1,
+                                      VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+    panorama_info.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+    data()->set_panorama(_context->create_texture(panorama_info));
+}
+
+void PhysicalSky::render(RenderGraph &rg) {
+    auto panorama = data()->panorama();
+    rg.add_pass(
+        [&](RenderGraphPassBuilder &builder) {
+            builder.compute_shader_write(panorama);
+        },
+        [=](CommandBuffer *cmd) {
+            _physical_panorama_pipeline->bind(cmd);
+
+            DescriptorEncoder desc{};
+            desc.set_texture(0, 0, panorama.get());
+            desc.commit(cmd, _physical_panorama_pipeline.get());
+
+            _physical_panorama_pipeline->local_size().dispatch(
+                cmd, panorama->info().extent);
+        });
+    data()->mark_panorama_dirty();
+    data()->update_cache(rg);
+}
+
+PhysicalSky::~PhysicalSky() = default;
 
 SkyData::SkyData(Context *context) : _context(context) {}
 
@@ -233,6 +269,10 @@ glm::vec3 SkyData::radiance() const {
     return color() * strength();
 }
 
+void SkyData::mark_panorama_dirty(bool dirty) {
+    _panorama_dirty = dirty;
+}
+
 SkyData::~SkyData() = default;
 
 SkyData *SkyBase::data() {
@@ -241,6 +281,10 @@ SkyData *SkyBase::data() {
 
 SkyBase::SkyBase(Context *context) {
     _data = std::make_unique<SkyData>(context);
+}
+
+void SkyBase::render(RenderGraph &rg) {
+    data()->update_cache(rg);
 }
 
 std::shared_ptr<PanoramaSky> upcast(const std::shared_ptr<IPanoramaSky> &sky) {

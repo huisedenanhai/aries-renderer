@@ -278,12 +278,12 @@ bool input_variant(const char *label,
         return changed;
     }
 
-    if (input_variant_type<std::shared_ptr<IRes>>(
-            label, v, changed, input_res)) {
+    if (input_enum_variant(label, v, changed)) {
         return changed;
     }
 
-    if (input_enum_variant(label, v, changed)) {
+    if (input_variant_type<std::shared_ptr<IRes>>(
+            label, v, changed, input_res)) {
         return changed;
     }
 

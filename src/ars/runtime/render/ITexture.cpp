@@ -1,6 +1,7 @@
 #include "ITexture.h"
 #include <algorithm>
 #include <cmath>
+#include <rttr/registration>
 
 namespace ars::render {
 ITexture::ITexture(const TextureInfo &info) : _info(info) {}
@@ -57,8 +58,8 @@ WrapMode ITexture::wrap_w() const {
     return _info.wrap_w;
 }
 
-std::string ITexture::res_type() const {
-    return RES_TYPE_NAME_TEXTURE;
+void ITexture::register_type() {
+    rttr::registration::class_<ITexture>("ars::render::ITexture");
 }
 
 uint32_t calculate_mip_levels(uint32_t width, uint32_t height, uint32_t depth) {

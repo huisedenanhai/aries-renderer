@@ -1,4 +1,6 @@
 add_library(core
+        Core.cpp
+        Core.h
         Profiler.cpp
         Profiler.h
         Reflect.h

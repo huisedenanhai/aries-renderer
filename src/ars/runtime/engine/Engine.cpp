@@ -1,14 +1,15 @@
 #include "Engine.h"
-#include "ars/runtime/core/Profiler.h"
-#include "ars/runtime/render/res/Material.h"
-#include "ars/runtime/render/res/Mesh.h"
-#include "ars/runtime/render/res/Texture.h"
 #include "components/RenderSystem.h"
+#include <ars/runtime/core/Core.h>
 #include <ars/runtime/core/Log.h>
+#include <ars/runtime/core/Profiler.h>
 #include <ars/runtime/core/ResData.h>
 #include <ars/runtime/core/Serde.h>
 #include <ars/runtime/render/IContext.h>
 #include <ars/runtime/render/IWindow.h>
+#include <ars/runtime/render/res/Material.h>
+#include <ars/runtime/render/res/Mesh.h>
+#include <ars/runtime/render/res/Texture.h>
 #include <cassert>
 #include <chrono>
 #include <set>
@@ -83,9 +84,7 @@ class Engine {
     }
 
     void run() {
-        // Init profiler before renderer. The renderer decides whether to init
-        // backend specific profiler
-        init_profiler();
+        init_core();
         init_render();
         init_resources();
         RenderSystem::register_components();
@@ -132,6 +131,7 @@ class Engine {
 
         destroy_render();
         destroy_profiler();
+        destroy_core();
     }
 
     [[nodiscard]] render::IContext *render_context() const {
@@ -181,18 +181,13 @@ class Engine {
         _resources = std::make_unique<Resources>();
         auto ctx = _render_context.get();
         auto res = _resources.get();
-        res->register_res_loader(
-            ars::render::RES_TYPE_NAME_TEXTURE,
+        res->register_loader<render::ITexture>(
             ars::make_loader([ctx](const ars::ResData &data) {
                 return load_texture(ctx, data);
             }));
-        res->register_res_loader(
-            ars::render::RES_TYPE_NAME_MESH,
-            ars::make_loader([ctx](const ars::ResData &data) {
-                return load_mesh(ctx, data);
-            }));
-        res->register_res_loader(
-            ars::render::RES_TYPE_NAME_MATERIAL,
+        res->register_loader<render::IMesh>(ars::make_loader(
+            [ctx](const ars::ResData &data) { return load_mesh(ctx, data); }));
+        res->register_loader<render::IMaterial>(
             ars::make_loader([ctx, res](const ars::ResData &data) {
                 return load_material(ctx, res, data);
             }));

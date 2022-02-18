@@ -51,6 +51,10 @@ struct ResData {
 
     void save(const std::filesystem::path &path) const;
     void load(const std::filesystem::path &path);
+
+    template <typename T> bool is_type() const {
+        return ty == rttr::type::get<T>().get_name();
+    }
 };
 
 // Add preferred extension '.ares' to the path
@@ -107,8 +111,14 @@ class Resources {
     void mount(const std::string &path,
                const std::shared_ptr<IDataProvider> &provider);
 
-    void register_res_loader(const std::string &ty,
-                             const std::shared_ptr<IResLoader> &loader);
+    void register_loader_by_name(const std::string &ty,
+                                 const std::shared_ptr<IResLoader> &loader);
+
+    template <typename T>
+    void register_loader(const std::shared_ptr<IResLoader> &loader) {
+        register_loader_by_name(
+            rttr::type::get<T>().get_name().template to_string(), loader);
+    }
 
     // Should not append .ares extension in path
     std::shared_ptr<IRes> load_res(const std::string &path);

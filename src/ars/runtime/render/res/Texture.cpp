@@ -77,7 +77,7 @@ std::shared_ptr<ITexture> load_texture(IContext *context,
 }
 
 std::shared_ptr<ITexture> load_texture(IContext *context, const ResData &data) {
-    if (data.ty != RES_TYPE_NAME_TEXTURE) {
+    if (!data.is_type<ITexture>()) {
         ARS_LOG_ERROR("Failed to load texture: invalid data type");
         return nullptr;
     }

@@ -7,7 +7,7 @@
 namespace ars::render {
 std::shared_ptr<IMaterial>
 load_material(IContext *context, Resources *res, const ResData &data) {
-    if (data.ty != RES_TYPE_NAME_MATERIAL) {
+    if (!data.is_type<IMaterial>()) {
         ARS_LOG_ERROR("Failed to load material: invalid data type");
         return nullptr;
     }

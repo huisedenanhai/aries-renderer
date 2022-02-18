@@ -1,5 +1,6 @@
 #include "IMaterial.h"
 #include <ars/runtime/core/Log.h>
+#include <rttr/registration>
 #include <shaderc/shaderc.hpp>
 
 namespace ars::render {
@@ -43,8 +44,8 @@ std::optional<MaterialPropertyVariant> IMaterial::get_variant(int id) {
     return std::nullopt;
 }
 
-std::string IMaterial::res_type() const {
-    return RES_TYPE_NAME_MATERIAL;
+void IMaterial::register_type() {
+    rttr::registration::class_<IMaterial>("ars::render::IMaterial");
 }
 
 MaterialPropertyInfo::MaterialPropertyInfo(const char *name,

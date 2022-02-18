@@ -3,7 +3,7 @@
 
 namespace ars::render {
 std::shared_ptr<IMesh> load_mesh(IContext *context, const ResData &data) {
-    if (data.ty != RES_TYPE_NAME_MESH) {
+    if (!data.is_type<IMesh>()) {
         ARS_LOG_ERROR("Failed to load mesh: invalid data type");
         return nullptr;
     }

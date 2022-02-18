@@ -1,5 +1,7 @@
 #include "IContext.h"
 #include "IEffect.h"
+#include "IMaterial.h"
+#include "IMesh.h"
 #include "vk/Context.h"
 #include "vk/Swapchain.h"
 #include <algorithm>
@@ -16,6 +18,9 @@ void register_types() {
     ISky::register_type();
     IPanoramaSky::register_type();
     IPhysicalSky::register_type();
+    ITexture::register_type();
+    IMesh::register_type();
+    IMaterial::register_type();
 }
 } // namespace
 

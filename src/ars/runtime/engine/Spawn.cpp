@@ -123,12 +123,8 @@ void SpawnData::to(Entity *root_entity) const {
     }
 }
 
-std::string SpawnData::res_type() const {
-    return RES_TYPE_NAME_SPAWN_DATA;
-}
-
 std::shared_ptr<SpawnData> load_spawn_data(const ResData &data) {
-    if (data.ty != RES_TYPE_NAME_SPAWN_DATA) {
+    if (!data.is_type<SpawnData>()) {
         ARS_LOG_ERROR("Failed to load spawn data: invalid data type");
         return nullptr;
     }

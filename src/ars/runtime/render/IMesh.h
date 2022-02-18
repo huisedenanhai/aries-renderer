@@ -12,15 +12,11 @@ struct MeshInfo {
     size_t triangle_capacity = 0;
 };
 
-constexpr const char *RES_TYPE_NAME_MESH = "ars::render::IMesh";
-
 class IMesh : public IRes {
     RTTR_DERIVE(IRes);
 
   public:
     explicit IMesh(const MeshInfo &info);
-
-    std::string res_type() const override;
 
     // Capacity can not be changed after initialization.
     [[nodiscard]] size_t vertex_capacity() const;
@@ -49,6 +45,8 @@ class IMesh : public IRes {
 
     virtual math::AABB<float> aabb() = 0;
     virtual void set_aabb(const math::AABB<float> &aabb) = 0;
+
+    static void register_type();
 
   protected:
     MeshInfo _info{};

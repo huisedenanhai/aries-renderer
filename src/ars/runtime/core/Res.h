@@ -20,7 +20,9 @@ class IRes {
     [[nodiscard]] std::string path() const;
     void set_path(const std::string &path);
 
-    virtual std::string res_type() const = 0;
+//    virtual std::string res_type() const = 0;
+
+    static void register_type();
 
   private:
     // The full path of the resources

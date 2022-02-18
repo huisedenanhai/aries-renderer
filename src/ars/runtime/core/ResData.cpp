@@ -82,8 +82,8 @@ void Resources::mount(const std::string &path,
     _data_providers[canonical_res_path(path)] = provider;
 }
 
-void Resources::register_res_loader(const std::string &ty,
-                                    const std::shared_ptr<IResLoader> &loader) {
+void Resources::register_loader_by_name(
+    const std::string &ty, const std::shared_ptr<IResLoader> &loader) {
     _res_loaders[ty] = loader;
 }
 

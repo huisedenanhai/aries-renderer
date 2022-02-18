@@ -22,6 +22,7 @@ void DeferredShading::execute(CommandBuffer *cmd, NamedRT final_color_rt) {
     auto final_color_extent = final_color->info().extent;
     auto background = _view->effect_vk()->background_vk();
     auto sky = background->sky_data();
+    auto ctx = _view->context();
 
     _pipeline->bind(cmd);
 
@@ -33,9 +34,16 @@ void DeferredShading::execute(CommandBuffer *cmd, NamedRT final_color_rt) {
     desc.set_texture(0, 3, _view->render_target(NamedRT_GBuffer2).get());
     desc.set_texture(0, 4, _view->render_target(NamedRT_GBuffer3).get());
     desc.set_texture(0, 5, _view->render_target(NamedRT_Depth).get());
-    desc.set_texture(0, 6, _view->context()->lut()->brdf_lut().get());
+    desc.set_texture(0, 6, ctx->lut()->brdf_lut().get());
     desc.set_texture(0, 7, sky->irradiance_cube_map().get());
-    desc.set_texture(0, 8, sky->panorama().get());
+    if (background->mode() == BackgroundMode::Sky) {
+        desc.set_texture(0, 8, sky->panorama().get());
+    } else {
+        desc.set_texture(
+            0,
+            8,
+            upcast(ctx->default_texture(DefaultTexture::White).get()).get());
+    }
 
     if (_view->effect()->screen_space_reflection()->enabled()) {
         desc.set_texture(0, 9, _view->render_target(NamedRT_Reflection).get());
@@ -43,9 +51,7 @@ void DeferredShading::execute(CommandBuffer *cmd, NamedRT final_color_rt) {
         desc.set_texture(
             0,
             9,
-            upcast(
-                _view->context()->default_texture(DefaultTexture::Zero).get())
-                .get());
+            upcast(ctx->default_texture(DefaultTexture::Zero).get()).get());
     }
 
     struct ShadingParam {
@@ -57,6 +63,7 @@ void DeferredShading::execute(CommandBuffer *cmd, NamedRT final_color_rt) {
         glm::mat4 I_V;
         glm::vec3 env_radiance_factor;
         int32_t cube_map_mip_count;
+        glm::vec3 background_factor;
     };
 
     ShadingParam param{};
@@ -69,6 +76,11 @@ void DeferredShading::execute(CommandBuffer *cmd, NamedRT final_color_rt) {
     param.env_radiance_factor = sky->radiance();
     param.cube_map_mip_count =
         static_cast<int32_t>(sky->irradiance_cube_map()->info().mip_levels);
+    if (background->mode() == BackgroundMode::Sky) {
+        param.background_factor = sky->radiance();
+    } else {
+        param.background_factor = background->radiance();
+    }
 
     auto v_matrix = _view->view_matrix();
     auto p_matrix = _view->projection_matrix();

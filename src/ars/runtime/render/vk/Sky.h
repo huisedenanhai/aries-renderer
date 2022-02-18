@@ -18,7 +18,9 @@ class ImageBasedLighting {
                                       const Handle<Texture> &env_cube_map);
     void prefilter_irradiance(CommandBuffer *cmd,
                               const Handle<Texture> &env_cube_map,
-                              const Handle<Texture> &irradiance_cube_map);
+                              const Handle<Texture> &irradiance_cube_map,
+                              int sample_count,
+                              float bias);
 
   private:
     Context *_context = nullptr;
@@ -36,7 +38,8 @@ class SkyData {
     uint32_t irradiance_cube_map_size() const;
     void set_irradiance_cube_map_size(uint32_t resolution);
     Handle<Texture> irradiance_cube_map();
-    void mark_panorama_dirty(bool dirty = true);
+
+    void mark_dirty(bool dirty = true);
     void update_cache(RenderGraph &rg);
     bool cache_dirty();
 
@@ -45,6 +48,10 @@ class SkyData {
     float strength() const;
     void set_strength(float strength);
     glm::vec3 radiance() const;
+    float prefilter_bias() const;
+    void set_prefilter_bias(float bias);
+    int32_t prefilter_sample_count() const;
+    void set_prefilter_sample_count(int32_t sample_count);
 
   private:
     void ensure_irradiance_cube_map();
@@ -56,7 +63,10 @@ class SkyData {
     Handle<Texture> _irradiance_cube_map{};
     uint32_t _irradiance_cube_map_size = 64;
     Handle<Texture> _panorama_texture{};
-    bool _panorama_dirty = false;
+    bool _dirty = false;
+
+    float _prefilter_bias = 3.0f;
+    int32_t _prefilter_sample_count = 256;
 
     glm::vec3 _color{1.0f, 1.0f, 1.0f};
     float _strength = 1.0f;

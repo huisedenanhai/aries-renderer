@@ -13,7 +13,10 @@ Handle<Texture> SkyData::irradiance_cube_map() {
 }
 
 PanoramaSky::PanoramaSky(Context *context)
-    : _context(context), SkyBase(context) {}
+    : _context(context), SkyBase(context) {
+    data()->set_prefilter_bias(3.0);
+    data()->set_prefilter_sample_count(256);
+}
 
 std::shared_ptr<ITexture> PanoramaSky::panorama() {
     return _panorama;
@@ -53,7 +56,9 @@ void ImageBasedLighting::capture_panorama_to_cube_map(
 void ImageBasedLighting::prefilter_irradiance(
     CommandBuffer *cmd,
     const Handle<Texture> &env_cube_map,
-    const Handle<Texture> &irradiance_cube_map) {
+    const Handle<Texture> &irradiance_cube_map,
+    int sample_count,
+    float bias) {
     assert(env_cube_map != nullptr);
     assert(irradiance_cube_map != nullptr);
 
@@ -73,6 +78,8 @@ void ImageBasedLighting::prefilter_irradiance(
             float roughness;
             int32_t mip_level;
             int32_t radiance_base_resolution;
+            float bias;
+            int32_t sample_count;
         };
 
         Param param{};
@@ -82,6 +89,8 @@ void ImageBasedLighting::prefilter_irradiance(
         param.mip_level = i;
         param.radiance_base_resolution =
             static_cast<int32_t>(env_cube_map->info().extent.width);
+        param.bias = bias;
+        param.sample_count = sample_count;
 
         DescriptorEncoder desc{};
         desc.set_buffer_data(1, 0, param);
@@ -120,12 +129,12 @@ void SkyData::set_panorama(const Handle<Texture> &hdr) {
         _panorama_texture = nullptr;
         _irradiance_cube_map = nullptr;
         _tmp_env_map = nullptr;
-        _panorama_dirty = false;
+        _dirty = false;
         return;
     }
 
     _panorama_texture = hdr;
-    _panorama_dirty = true;
+    _dirty = true;
 }
 
 uint32_t SkyData::irradiance_cube_map_size() const {
@@ -160,7 +169,7 @@ void SkyData::update_cache(RenderGraph &rg) {
     }
 
     ensure_irradiance_cube_map();
-    _panorama_dirty = false;
+    _dirty = false;
 
     auto ibl = _context->ibl();
     assert(_panorama_texture != nullptr);
@@ -184,7 +193,11 @@ void SkyData::update_cache(RenderGraph &rg) {
         },
         [=](CommandBuffer *cmd) {
             ARS_PROFILER_SAMPLE_VK(cmd, "Prefilter Irradiance", 0xFF87411A);
-            ibl->prefilter_irradiance(cmd, _tmp_env_map, _irradiance_cube_map);
+            ibl->prefilter_irradiance(cmd,
+                                      _tmp_env_map,
+                                      _irradiance_cube_map,
+                                      _prefilter_sample_count,
+                                      _prefilter_bias);
         });
 }
 
@@ -205,6 +218,7 @@ PhysicalSky::PhysicalSky(Context *context)
                                       VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
     panorama_info.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
     data()->set_panorama(_context->create_texture(panorama_info));
+    data()->set_prefilter_sample_count(64);
 }
 
 void PhysicalSky::render(RenderGraph &rg) {
@@ -223,7 +237,7 @@ void PhysicalSky::render(RenderGraph &rg) {
             _physical_panorama_pipeline->local_size().dispatch(
                 cmd, panorama->info().extent);
         });
-    data()->mark_panorama_dirty();
+    data()->mark_dirty();
     data()->update_cache(rg);
 }
 
@@ -237,7 +251,7 @@ bool SkyData::cache_dirty() {
         assert(_irradiance_cube_map == nullptr);
         return false;
     }
-    if (_panorama_dirty) {
+    if (_dirty) {
         return true;
     }
     // The panorama texture does not change, but irradiance cube map not
@@ -269,8 +283,26 @@ glm::vec3 SkyData::radiance() const {
     return color() * strength();
 }
 
-void SkyData::mark_panorama_dirty(bool dirty) {
-    _panorama_dirty = dirty;
+void SkyData::mark_dirty(bool dirty) {
+    _dirty = dirty;
+}
+
+float SkyData::prefilter_bias() const {
+    return _prefilter_bias;
+}
+
+void SkyData::set_prefilter_bias(float bias) {
+    _prefilter_bias = bias;
+    _dirty = true;
+}
+
+int32_t SkyData::prefilter_sample_count() const {
+    return _prefilter_sample_count;
+}
+
+void SkyData::set_prefilter_sample_count(int32_t sample_count) {
+    _prefilter_sample_count = sample_count;
+    _dirty = true;
 }
 
 SkyData::~SkyData() = default;

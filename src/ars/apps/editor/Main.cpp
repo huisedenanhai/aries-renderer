@@ -79,8 +79,7 @@ class Editor : public engine::IApplication {
             _view->overlay()->set_light_gizmo(_light_bulb_icon, 0.1f);
 
             auto background = _view->effect()->background();
-            auto sky = ctx->create_panorama_sky();
-            sky->set_color({0.1f, 0.1f, 0.1f});
+            auto sky = ctx->create_physical_sky();
             background->set_sky(sky);
 
             if (path.has_value()) {

@@ -13,6 +13,8 @@ layout(set = 1, binding = 0) uniform Param {
     float perceptual_roughness;
     int mip_level;
     int radiance_base_resolution;
+    float bias;
+    int sample_count;
 };
 
 layout(set = 1,
@@ -32,8 +34,6 @@ void main() {
     float weight = 0.0;
 
     float roughness = square(perceptual_roughness);
-
-    int sample_count = 256;
 
     uint seed = tea(4, index.x, index.y + index.z);
     // Add a random offset to gloden ratio sequence to make noise less
@@ -60,7 +60,7 @@ void main() {
                     ? 0.0
                     : 0.5 * log2(6.0 * square(radiance_base_resolution) /
                                  (4.0 * PI * sample_count * pdf)) +
-                          3.0;
+                          bias;
             env_mip_level = max(env_mip_level, 0.0);
 
             acc += textureLod(radiance_cube_map, dir, env_mip_level).rgb * r.y;

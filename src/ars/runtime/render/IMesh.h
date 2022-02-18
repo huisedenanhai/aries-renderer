@@ -15,6 +15,8 @@ struct MeshInfo {
 constexpr const char *RES_TYPE_NAME_MESH = "ars::render::IMesh";
 
 class IMesh : public IRes {
+    RTTR_DERIVE(IRes);
+
   public:
     explicit IMesh(const MeshInfo &info);
 

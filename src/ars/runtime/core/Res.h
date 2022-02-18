@@ -1,5 +1,6 @@
 #pragma once
 
+#include <rttr/rttr_enable.h>
 #include <string>
 
 // Inherit IRes to implement resources
@@ -11,6 +12,8 @@
 namespace ars {
 // Resources path should all use '/' as separator.
 class IRes {
+    RTTR_ENABLE();
+
   public:
     virtual ~IRes() = default;
 

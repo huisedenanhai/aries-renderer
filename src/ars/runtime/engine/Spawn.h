@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ars/runtime/core/Reflect.h>
 #include <ars/runtime/core/Res.h>
 #include <ars/runtime/core/ResData.h>
 #include <ars/runtime/core/math/Transform.h>
@@ -30,6 +31,9 @@ struct EntityData {
 constexpr const char *RES_TYPE_NAME_SPAWN_DATA = "ars::engine::SpawnData";
 
 struct SpawnData : public IRes {
+    RTTR_DERIVE(IRes);
+
+  public:
     std::string res_type() const override;
 
     std::vector<EntityData> entities{};

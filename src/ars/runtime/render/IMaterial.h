@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ars/runtime/core/Reflect.h>
 #include <ars/runtime/core/Res.h>
 #include <functional>
 #include <glm/glm.hpp>
@@ -138,6 +139,8 @@ class IMaterialPrototype {
 // type mismatches, setter will do nothing and getter will return default
 // value.
 class IMaterial : public IRes {
+    RTTR_DERIVE(IRes);
+
   public:
     explicit IMaterial(IMaterialPrototype *prototype);
 

@@ -2,6 +2,7 @@
 
 #include "Common.h"
 #include "IWindow.h"
+#include <ars/runtime/core/Reflect.h>
 #include <ars/runtime/core/Res.h>
 #include <memory>
 
@@ -56,6 +57,8 @@ class ITextureHandle {
 };
 
 class ITexture : public IRes {
+    RTTR_DERIVE(IRes);
+
   public:
     explicit ITexture(const TextureInfo &info);
 

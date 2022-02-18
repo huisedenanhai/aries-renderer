@@ -29,6 +29,8 @@ class ISky {
     RTTR_ENABLE();
 
   public:
+    virtual ~ISky() = default;
+   
     virtual glm::vec3 color() = 0;
     virtual void set_color(glm::vec3 radiance) = 0;
 

@@ -36,22 +36,19 @@ void DeferredShading::execute(CommandBuffer *cmd, NamedRT final_color_rt) {
     desc.set_texture(0, 5, _view->render_target(NamedRT_Depth).get());
     desc.set_texture(0, 6, ctx->lut()->brdf_lut().get());
     desc.set_texture(0, 7, sky->irradiance_cube_map().get());
+
     if (background->mode() == BackgroundMode::Sky) {
         desc.set_texture(0, 8, sky->panorama().get());
     } else {
         desc.set_texture(
-            0,
-            8,
-            upcast(ctx->default_texture(DefaultTexture::White).get()).get());
+            0, 8, ctx->default_texture_vk(DefaultTexture::White).get());
     }
 
     if (_view->effect()->screen_space_reflection()->enabled()) {
         desc.set_texture(0, 9, _view->render_target(NamedRT_Reflection).get());
     } else {
         desc.set_texture(
-            0,
-            9,
-            upcast(ctx->default_texture(DefaultTexture::Zero).get()).get());
+            0, 9, ctx->default_texture_vk(DefaultTexture::Zero).get());
     }
 
     struct ShadingParam {
@@ -76,6 +73,7 @@ void DeferredShading::execute(CommandBuffer *cmd, NamedRT final_color_rt) {
     param.env_radiance_factor = sky->radiance();
     param.cube_map_mip_count =
         static_cast<int32_t>(sky->irradiance_cube_map()->info().mip_levels);
+
     if (background->mode() == BackgroundMode::Sky) {
         param.background_factor = sky->radiance();
     } else {

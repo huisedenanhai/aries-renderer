@@ -111,8 +111,8 @@ void resolve_ssr_single_sample(vec2 hit_buffer_uv,
 
     fade_weight_acc += 1;
 
-    // No hit
-    if (hit_pdf == 0) {
+    // No hit or hit background
+    if (hit_pdf == 0 || hit_ss.z == 0) {
         return;
     }
 

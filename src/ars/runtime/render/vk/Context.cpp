@@ -1013,4 +1013,8 @@ std::shared_ptr<IPhysicalSky> Context::create_physical_sky() {
 ImageBasedLighting *Context::ibl() const {
     return _ibl.get();
 }
+
+Handle<Texture> Context::default_texture_vk(DefaultTexture tex) {
+    return upcast(default_texture(tex).get());
+}
 } // namespace ars::render::vk

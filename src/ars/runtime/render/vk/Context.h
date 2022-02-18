@@ -124,6 +124,7 @@ class Context : public IContext {
     void end_frame() override;
 
     std::shared_ptr<ITexture> default_texture(DefaultTexture tex);
+    Handle<Texture> default_texture_vk(DefaultTexture tex);
 
     std::shared_ptr<ITexture> create_single_color_texture_2d(glm::vec4 color);
     std::shared_ptr<ITexture> create_single_color_cube_map(glm::vec4 color);

@@ -7,8 +7,7 @@
 namespace ars::render::vk {
 Handle<Texture> SkyData::irradiance_cube_map() {
     if (_irradiance_cube_map == nullptr) {
-        return upcast(
-            _context->default_texture(DefaultTexture::WhiteCubeMap).get());
+        return _context->default_texture_vk(DefaultTexture::WhiteCubeMap);
     }
     return _irradiance_cube_map;
 }
@@ -106,7 +105,7 @@ ImageBasedLighting::~ImageBasedLighting() = default;
 
 Handle<Texture> SkyData::panorama() {
     if (_panorama_texture == nullptr) {
-        return upcast(_context->default_texture(DefaultTexture::White).get());
+        return _context->default_texture_vk(DefaultTexture::White);
     }
     return _panorama_texture;
 }

@@ -27,26 +27,34 @@ std::shared_ptr<ITexture> load_texture(IContext *context,
     using namespace std::chrono;
     auto start = high_resolution_clock::now();
     int width, height, channels;
+    void *data = nullptr;
+    size_t data_size = 0;
+    Format format{};
 
     auto path_str = path.string();
-    // Only loads image as R8G8B8A8_SRGB for simplicity. Other formats may not
-    // be supported on some devices.
-    unsigned char *data =
-        stbi_load(path_str.c_str(), &width, &height, &channels, 4);
-    channels = 4;
+    if (path.extension() == ".hdr") {
+        data = stbi_loadf(path_str.c_str(), &width, &height, &channels, 4);
+        data_size = width * height * 4 * sizeof(float);
+        format = Format::R32G32B32A32_SFLOAT;
+    } else {
+        // Only loads image as R8G8B8A8_SRGB for simplicity. Other formats may
+        // not be supported on some devices.
+        data = stbi_load(path_str.c_str(), &width, &height, &channels, 4);
+        data_size = width * height * 4;
+        format = get_8_bit_texture_format(4, true);
+    }
 
     if (!data) {
         ARS_LOG_CRITICAL("Failed to load image {}", path.string());
         return nullptr;
     }
 
-    auto texture = context->create_texture(TextureInfo::create_2d(
-        get_8_bit_texture_format(channels, true), width, height));
+    auto texture =
+        context->create_texture(TextureInfo::create_2d(format, width, height));
 
     auto mid = high_resolution_clock::now();
 
-    texture->set_data(
-        data, width * height * channels, 0, 0, 0, 0, 0, width, height, 1);
+    texture->set_data(data, data_size, 0, 0, 0, 0, 0, width, height, 1);
     texture->generate_mipmap();
 
     stbi_image_free(data);

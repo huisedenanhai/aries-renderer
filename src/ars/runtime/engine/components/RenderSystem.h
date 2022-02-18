@@ -11,6 +11,8 @@ struct RenderSystem {
   public:
     explicit RenderSystem(render::IContext *context);
 
+    static void register_components();
+
     void update();
     [[nodiscard]] render::IScene *render_scene() const;
 

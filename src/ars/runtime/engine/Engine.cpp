@@ -3,12 +3,11 @@
 #include "ars/runtime/render/res/Material.h"
 #include "ars/runtime/render/res/Mesh.h"
 #include "ars/runtime/render/res/Texture.h"
-#include "components/Components.h"
+#include "components/RenderSystem.h"
 #include <ars/runtime/core/Log.h>
 #include <ars/runtime/core/ResData.h>
 #include <ars/runtime/core/Serde.h>
 #include <ars/runtime/render/IContext.h>
-#include <ars/runtime/render/IScene.h>
 #include <ars/runtime/render/IWindow.h>
 #include <cassert>
 #include <chrono>
@@ -89,7 +88,7 @@ class Engine {
         init_profiler();
         init_render();
         init_resources();
-        register_components();
+        RenderSystem::register_components();
 
         _application->init(_main_window.get());
         _application->start();

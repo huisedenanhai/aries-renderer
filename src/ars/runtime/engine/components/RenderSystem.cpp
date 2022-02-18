@@ -1,10 +1,16 @@
 #include "RenderSystem.h"
-#include "../gui/ImGui.h"
 #include <ars/runtime/core/Log.h>
 #include <ars/runtime/render/IMaterial.h>
 #include <ars/runtime/render/IMesh.h>
 
 namespace ars::engine {
+void RenderSystem::register_components() {
+    MeshRenderer::register_component();
+    PointLight::register_component();
+    DirectionalLight::register_component();
+    Camera::register_component();
+}
+
 void MeshRenderer::register_component() {
     rttr::registration::class_<PrimitiveHandle>(
         "ars::engine::MeshRenderer::PrimitiveHandle")
@@ -101,7 +107,6 @@ void MeshRenderer::set_primitive_handles(std::vector<PrimitiveHandle> handles) {
 }
 
 void PointLight::register_component() {
-    using namespace gui;
     engine::register_component<PointLight>("ars::engine::PointLight")
         .property("color", &PointLight::color, &PointLight::set_color)(
             rttr::metadata(PropertyAttribute::Display, PropertyDisplay::Color))
@@ -151,7 +156,6 @@ void PointLight::set_intensity(float intensity) {
 }
 
 void DirectionalLight::register_component() {
-    using namespace gui;
     engine::register_component<DirectionalLight>(
         "ars::engine::DirectionalLight")
         .property(

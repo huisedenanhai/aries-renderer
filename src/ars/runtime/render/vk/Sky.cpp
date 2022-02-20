@@ -241,6 +241,7 @@ void PhysicalSky::init_atmosphere_settings_buffer() {
                                 VMA_MEMORY_USAGE_CPU_TO_GPU);
 
     // Initialize with earth data
+    // Length unit is km
     AtmosphereSettings atmosphere{};
     atmosphere.bottom_radius = 6360.0f;
     atmosphere.top_radius = 6460.0f;

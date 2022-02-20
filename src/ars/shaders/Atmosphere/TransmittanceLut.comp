@@ -11,7 +11,7 @@ layout(set = 1, binding = 0) uniform Param {
 };
 
 vec3 ray_march_transmittance(float r, float mu) {
-    float sample_count = 128;
+    int sample_count = 40;
     float dist = distance_to_atmosphere_top(atmosphere, r, mu);
     float dt = dist / sample_count;
     vec3 trans = vec3(1.0);

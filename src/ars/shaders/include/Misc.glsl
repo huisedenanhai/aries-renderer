@@ -15,6 +15,10 @@ vec3 safe_normalize(vec3 v) {
     return dot(v, v) == 0 ? v : normalize(v);
 }
 
+float safe_sqrt(float v) {
+    return sqrt(max(v, 0.0));
+}
+
 // Convert a integral index in texture space to equivalent UV
 vec2 index_to_uv(vec2 index, vec2 inv_resolution) {
     // Notice the offset 0.5

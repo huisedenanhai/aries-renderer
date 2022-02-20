@@ -203,22 +203,28 @@ void SkyData::update_cache(RenderGraph &rg) {
 
 PanoramaSky::~PanoramaSky() = default;
 
+namespace {
+struct AtmosphereSettings {
+    float bottom_radius;
+    float top_radius;
+    float mie_scattering;
+    float mie_absorption;
+    glm::vec3 rayleigh_scattering;
+    float rayleigh_altitude;
+    glm::vec3 ozone_absorption;
+    float mie_altitude;
+    float ozone_altitude;
+    float ozone_thickness;
+};
+} // namespace
+
 PhysicalSky::PhysicalSky(Context *context)
     : _context(context), SkyBase(context) {
     _physical_panorama_pipeline = ComputePipeline::create(
         _context, "Atmosphere/PhysicalSkyPanorama.comp");
 
-    data()->set_irradiance_cube_map_size(64);
-
-    auto panorama_info =
-        TextureCreateInfo::sampled_2d(VK_FORMAT_B10G11R11_UFLOAT_PACK32,
-                                      256,
-                                      128,
-                                      1,
-                                      VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
-    panorama_info.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
-    data()->set_panorama(_context->create_texture(panorama_info));
-    data()->set_prefilter_sample_count(64);
+    init_atmosphere_settings_buffer();
+    init_textures();
 }
 
 void PhysicalSky::render(RenderGraph &rg) {
@@ -239,6 +245,41 @@ void PhysicalSky::render(RenderGraph &rg) {
         });
     data()->mark_dirty();
     data()->update_cache(rg);
+}
+
+void PhysicalSky::init_atmosphere_settings_buffer() {
+    _atmosphere_settings_buffer =
+        _context->create_buffer(sizeof(AtmosphereSettings),
+                                VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                                VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+    AtmosphereSettings atmosphere{};
+    atmosphere.bottom_radius = 6360.0f;
+    atmosphere.top_radius = 6460.0f;
+    atmosphere.mie_scattering = 3.996e-3f;
+    atmosphere.mie_absorption = 4.40e-3f;
+    atmosphere.rayleigh_scattering = glm::vec3(5.802, 13.558, 33.1) * 1.0e-3f;
+    atmosphere.rayleigh_altitude = 8.0f;
+    atmosphere.ozone_absorption = glm::vec3(0.650, 1.881, 0.085) * 1.0e-3f;
+    atmosphere.mie_altitude = 1.2f;
+    atmosphere.ozone_altitude = 25.0f;
+    atmosphere.ozone_thickness = 30.0f;
+
+    _atmosphere_settings_buffer->set_data(&atmosphere, 0, 1);
+}
+
+void PhysicalSky::init_textures() {
+    data()->set_irradiance_cube_map_size(64);
+
+    auto panorama_info =
+        TextureCreateInfo::sampled_2d(VK_FORMAT_B10G11R11_UFLOAT_PACK32,
+                                      256,
+                                      128,
+                                      1,
+                                      VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+    panorama_info.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+    data()->set_panorama(_context->create_texture(panorama_info));
+    data()->set_prefilter_sample_count(64);
 }
 
 PhysicalSky::~PhysicalSky() = default;

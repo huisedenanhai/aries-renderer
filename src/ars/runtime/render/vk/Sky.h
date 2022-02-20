@@ -6,6 +6,7 @@
 namespace ars::render::vk {
 class Context;
 class ComputePipeline;
+class Buffer;
 struct RenderGraph;
 
 class ImageBasedLighting {
@@ -126,8 +127,12 @@ class PhysicalSky : public IPhysicalSky, public SkyBase {
     void render(RenderGraph &rg) override;
 
   private:
+    void init_atmosphere_settings_buffer();
+    void init_textures();
+
     Context *_context = nullptr;
     std::unique_ptr<ComputePipeline> _physical_panorama_pipeline{};
+    Handle<Buffer> _atmosphere_settings_buffer{};
 };
 
 std::shared_ptr<PhysicalSky> upcast(const std::shared_ptr<IPhysicalSky> &sky);

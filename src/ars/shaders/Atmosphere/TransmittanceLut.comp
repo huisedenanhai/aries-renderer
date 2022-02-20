@@ -1,0 +1,39 @@
+#version 450 core
+
+#include "AtmosphereCommon.glsl"
+
+layout(local_size_x = 32, local_size_y = 32) in;
+
+layout(set = 0, binding = 0, rgb10_a2) uniform image2D transmittance_lut;
+
+layout(set = 1, binding = 0) uniform Param {
+    Atmosphere atmosphere;
+};
+
+vec3 ray_march_transmittance(float r, float mu) {
+    float sample_count = 128;
+    float dist = distance_to_atmosphere_top(atmosphere, r, mu);
+    float dt = dist / sample_count;
+    vec3 trans = vec3(1.0);
+    for (int i = 0; i < sample_count; i++) {
+        float t = (i + 0.5) * dt;
+        float ray_r = atmosphere_ray_sample_point_r(r, mu, t);
+        vec3 extinction = atmosphere_extinction(atmosphere, ray_r);
+        trans *= exp(-extinction * dt);
+    }
+    return trans;
+}
+
+void main() {
+    ivec2 index = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(transmittance_lut);
+    if (index.x >= size.x || index.y >= size.y) {
+        return;
+    }
+
+    vec2 uv = index_to_uv(index, 1.0 / size);
+    vec2 rmu = transmittance_lut_uv_to_r_mu(atmosphere, uv);
+    vec3 trans = ray_march_transmittance(rmu.x, rmu.y);
+
+    imageStore(transmittance_lut, index, vec4(trans, 1.0));
+}

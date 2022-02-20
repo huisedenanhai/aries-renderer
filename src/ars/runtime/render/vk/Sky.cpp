@@ -215,34 +215,21 @@ struct AtmosphereSettings {
     float mie_altitude;
     float ozone_altitude;
     float ozone_thickness;
+    float ground_albedo;
 };
 } // namespace
 
 PhysicalSky::PhysicalSky(Context *context)
     : _context(context), SkyBase(context) {
-    _physical_panorama_pipeline = ComputePipeline::create(
-        _context, "Atmosphere/PhysicalSkyPanorama.comp");
-
+    init_pipelines();
     init_atmosphere_settings_buffer();
     init_textures();
 }
 
 void PhysicalSky::render(RenderGraph &rg) {
-    auto panorama = data()->panorama();
-    rg.add_pass(
-        [&](RenderGraphPassBuilder &builder) {
-            builder.compute_shader_write(panorama);
-        },
-        [=](CommandBuffer *cmd) {
-            _physical_panorama_pipeline->bind(cmd);
+    update_transmittance_lut(rg);
+    update_sky_view(rg);
 
-            DescriptorEncoder desc{};
-            desc.set_texture(0, 0, panorama.get());
-            desc.commit(cmd, _physical_panorama_pipeline.get());
-
-            _physical_panorama_pipeline->local_size().dispatch(
-                cmd, panorama->info().extent);
-        });
     data()->mark_dirty();
     data()->update_cache(rg);
 }
@@ -253,6 +240,7 @@ void PhysicalSky::init_atmosphere_settings_buffer() {
                                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                                 VMA_MEMORY_USAGE_CPU_TO_GPU);
 
+    // Initialize with earth data
     AtmosphereSettings atmosphere{};
     atmosphere.bottom_radius = 6360.0f;
     atmosphere.top_radius = 6460.0f;
@@ -264,6 +252,7 @@ void PhysicalSky::init_atmosphere_settings_buffer() {
     atmosphere.mie_altitude = 1.2f;
     atmosphere.ozone_altitude = 25.0f;
     atmosphere.ozone_thickness = 30.0f;
+    atmosphere.ground_albedo = 0.3f;
 
     _atmosphere_settings_buffer->set_data(&atmosphere, 0, 1);
 }
@@ -278,8 +267,62 @@ void PhysicalSky::init_textures() {
                                       1,
                                       VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
     panorama_info.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+
     data()->set_panorama(_context->create_texture(panorama_info));
     data()->set_prefilter_sample_count(64);
+
+    auto trans_lut_info =
+        TextureCreateInfo::sampled_2d(VK_FORMAT_A2B10G10R10_UNORM_PACK32,
+                                      256,
+                                      64,
+                                      1,
+                                      VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER);
+    trans_lut_info.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+    _transmittance_lut = _context->create_texture(trans_lut_info);
+}
+
+void PhysicalSky::update_transmittance_lut(RenderGraph &rg) {
+    rg.add_pass(
+        [&](RenderGraphPassBuilder &builder) {
+            builder.compute_shader_write(_transmittance_lut);
+        },
+        [=](CommandBuffer *cmd) {
+            _transmittance_lut_pipeline->bind(cmd);
+
+            DescriptorEncoder desc{};
+            desc.set_texture(0, 0, _transmittance_lut.get());
+            desc.set_buffer(1, 0, _atmosphere_settings_buffer.get());
+            desc.commit(cmd, _transmittance_lut_pipeline.get());
+
+            _transmittance_lut_pipeline->local_size().dispatch(
+                cmd, _transmittance_lut->info().extent);
+        });
+}
+
+void PhysicalSky::init_pipelines() {
+    _physical_panorama_pipeline = ComputePipeline::create(
+        _context, "Atmosphere/PhysicalSkyPanorama.comp");
+    _transmittance_lut_pipeline =
+        ComputePipeline::create(_context, "Atmosphere/TransmittanceLut.comp");
+}
+
+void PhysicalSky::update_sky_view(RenderGraph &rg) {
+    auto panorama = data()->panorama();
+    rg.add_pass(
+        [&](RenderGraphPassBuilder &builder) {
+            builder.compute_shader_read(_transmittance_lut);
+            builder.compute_shader_write(panorama);
+        },
+        [=](CommandBuffer *cmd) {
+            _physical_panorama_pipeline->bind(cmd);
+
+            DescriptorEncoder desc{};
+            desc.set_texture(0, 0, panorama.get());
+            desc.commit(cmd, _physical_panorama_pipeline.get());
+
+            _physical_panorama_pipeline->local_size().dispatch(
+                cmd, panorama->info().extent);
+        });
 }
 
 PhysicalSky::~PhysicalSky() = default;

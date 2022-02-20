@@ -127,12 +127,17 @@ class PhysicalSky : public IPhysicalSky, public SkyBase {
     void render(RenderGraph &rg) override;
 
   private:
+    void init_pipelines();
     void init_atmosphere_settings_buffer();
     void init_textures();
+    void update_transmittance_lut(RenderGraph &rg);
+    void update_sky_view(RenderGraph &rg);
 
     Context *_context = nullptr;
     std::unique_ptr<ComputePipeline> _physical_panorama_pipeline{};
+    std::unique_ptr<ComputePipeline> _transmittance_lut_pipeline{};
     Handle<Buffer> _atmosphere_settings_buffer{};
+    Handle<Texture> _transmittance_lut{};
 };
 
 std::shared_ptr<PhysicalSky> upcast(const std::shared_ptr<IPhysicalSky> &sky);

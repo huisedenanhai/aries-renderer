@@ -17,12 +17,17 @@ struct Atmosphere {
     float mie_altitude;
     float ozone_altitude;
     float ozone_thickness;
+    float ground_albedo;
 };
 
 // mu = dot(up, v_forward)
 float distance_to_atmosphere_top(Atmosphere atm, float r, float mu) {
     float d = sqrt(square(atm.top_radius) + square(r) * (square(mu) - 1.0));
     return max(0.0, d - r * mu);
+}
+
+float atmosphere_ray_sample_point_r(float r, float mu, float t) {
+    return sqrt(r * r + t * t + 2.0 * r * t * mu);
 }
 
 vec2 transmittance_lut_uv_to_r_mu(Atmosphere atm, vec2 uv) {

@@ -53,8 +53,6 @@ void main() {
             // https://chetanjags.wordpress.com/2015/08/26/image-based-lighting/
             // and
             // https://developer.nvidia.com/gpugems/gpugems3/part-iii-rendering/chapter-20-gpu-based-importance-sampling
-
-            // TODO make bias adjustable
             float env_mip_level =
                 roughness == 0.0
                     ? 0.0

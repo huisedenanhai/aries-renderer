@@ -40,6 +40,8 @@ void ray_march_sample(float origin_r,
         vec2 ray_p = ray_origin + ray_dir * t;
         float r = length(ray_p);
         float mu = dot(normalize(ray_p), sun_dir);
+        // The transmittance lut already take planet shadow into account.
+        // Occluded rays will read border value 0.0 of lut
         vec3 s = texture(transmittance_lut,
                          transmittance_lut_r_mu_to_uv(atmosphere, r, mu))
                      .rgb;
@@ -65,6 +67,8 @@ void ray_march_sample(float origin_r,
                              mu))
                      .rgb;
         float brdf = atmosphere.ground_albedo / PI;
+        // There should be no need to clamp mu to positive, those negative mu
+        // will make sampled s == 0.0, due to lut encoding and address mode.
         L_in += trans * brdf * mu * s;
     }
 }

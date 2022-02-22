@@ -21,9 +21,11 @@ struct Atmosphere {
 };
 
 // mu = dot(up, v_forward)
+// Assume there is a hit
 float distance_to_atmosphere_top(Atmosphere atm, float r, float mu) {
-    float d = sqrt(square(atm.top_radius) + square(r) * (square(mu) - 1.0));
-    return max(0.0, d - r * mu);
+    float dist;
+    bool hit = ray_hit_sphere(atm.top_radius, r, mu, dist);
+    return max(0.0, dist);
 }
 
 float atmosphere_ray_sample_point_r(float r, float mu, float t) {
@@ -45,7 +47,7 @@ vec2 transmittance_lut_uv_to_r_mu(Atmosphere atm, vec2 uv) {
 
 vec2 transmittance_lut_r_mu_to_uv(Atmosphere atm, float r, float mu) {
     float h = sqrt(square(atm.top_radius) - square(atm.bottom_radius));
-    float rho = sqrt(square(r) - square(atm.bottom_radius));
+    float rho = safe_sqrt(square(r) - square(atm.bottom_radius));
     float x = rho / h;
 
     float d = distance_to_atmosphere_top(atm, r, mu);
@@ -72,6 +74,12 @@ float ozone_density(Atmosphere atm, float r) {
                1.0 - abs(h - atm.ozone_altitude) / (0.5 * atm.ozone_thickness));
 }
 
+vec3 atmosphere_extinction_scatter(Atmosphere atm, float r) {
+    float r_d = rayleigh_density(atm, r);
+    float m_d = mie_density(atm, r);
+    return atm.rayleigh_scattering * r_d + atm.mie_scattering * m_d;
+}
+
 vec3 atmosphere_extinction(Atmosphere atm, float r) {
     float r_d = rayleigh_density(atm, r);
     float m_d = mie_density(atm, r);
@@ -79,6 +87,18 @@ vec3 atmosphere_extinction(Atmosphere atm, float r) {
     return atm.rayleigh_scattering * r_d +
            (atm.mie_absorption + atm.mie_scattering) * m_d +
            atm.ozone_absorption * o_d;
+}
+
+vec2 multi_scattering_lut_uv_to_r_mu(Atmosphere atm, vec2 uv) {
+    float r = uv.x * (atm.top_radius - atm.bottom_radius) + atm.bottom_radius;
+    float mu = 2.0 * uv.y - 1.0;
+    return vec2(r, mu);
+}
+
+vec2 multi_scattering_lut_r_mu_to_uv(Atmosphere atm, float r, float mu) {
+    float x = (r - atm.bottom_radius) / (atm.top_radius - atm.bottom_radius);
+    float y = 0.5 + 0.5 * mu;
+    return vec2(x, y);
 }
 
 #endif

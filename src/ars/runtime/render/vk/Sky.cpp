@@ -228,6 +228,7 @@ PhysicalSky::PhysicalSky(Context *context)
 
 void PhysicalSky::render(RenderGraph &rg) {
     update_transmittance_lut(rg);
+    update_multi_scattering_lut(rg);
     update_sky_view(rg);
 
     data()->mark_dirty();
@@ -280,6 +281,15 @@ void PhysicalSky::init_textures() {
                                       VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER);
     trans_lut_info.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
     _transmittance_lut = _context->create_texture(trans_lut_info);
+
+    auto multi_scatter_lut_info =
+        TextureCreateInfo::sampled_2d(VK_FORMAT_R16G16B16A16_SFLOAT,
+                                      32,
+                                      32,
+                                      1,
+                                      VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+    multi_scatter_lut_info.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+    _multi_scattering_lut = _context->create_texture(multi_scatter_lut_info);
 }
 
 void PhysicalSky::update_transmittance_lut(RenderGraph &rg) {
@@ -305,6 +315,8 @@ void PhysicalSky::init_pipelines() {
         _context, "Atmosphere/PhysicalSkyPanorama.comp");
     _transmittance_lut_pipeline =
         ComputePipeline::create(_context, "Atmosphere/TransmittanceLut.comp");
+    _multi_scattering_lut_pipeline =
+        ComputePipeline::create(_context, "Atmosphere/MultiScatteringLut.comp");
 }
 
 void PhysicalSky::update_sky_view(RenderGraph &rg) {
@@ -312,6 +324,7 @@ void PhysicalSky::update_sky_view(RenderGraph &rg) {
     rg.add_pass(
         [&](RenderGraphPassBuilder &builder) {
             builder.compute_shader_read(_transmittance_lut);
+            builder.compute_shader_read(_multi_scattering_lut);
             builder.compute_shader_write(panorama);
         },
         [=](CommandBuffer *cmd) {
@@ -323,6 +336,26 @@ void PhysicalSky::update_sky_view(RenderGraph &rg) {
 
             _physical_panorama_pipeline->local_size().dispatch(
                 cmd, panorama->info().extent);
+        });
+}
+
+void PhysicalSky::update_multi_scattering_lut(RenderGraph &rg) {
+    rg.add_pass(
+        [&](RenderGraphPassBuilder &builder) {
+            builder.compute_shader_read(_transmittance_lut);
+            builder.compute_shader_write(_multi_scattering_lut);
+        },
+        [=](CommandBuffer *cmd) {
+            _multi_scattering_lut_pipeline->bind(cmd);
+
+            DescriptorEncoder desc{};
+            desc.set_texture(0, 0, _multi_scattering_lut.get());
+            desc.set_texture(0, 1, _transmittance_lut.get());
+            desc.set_buffer(1, 0, _atmosphere_settings_buffer.get());
+            desc.commit(cmd, _multi_scattering_lut_pipeline.get());
+
+            _multi_scattering_lut_pipeline->local_size().dispatch(
+                cmd, _multi_scattering_lut->info().extent);
         });
 }
 

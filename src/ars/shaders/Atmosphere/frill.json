@@ -1,6 +1,7 @@
 {
     "sources": [
         "PhysicalSkyPanorama.comp",
-        "TransmittanceLut.comp"
+        "TransmittanceLut.comp",
+        "MultiScatteringLut.comp"
     ]
 }

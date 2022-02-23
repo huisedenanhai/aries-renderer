@@ -1,5 +1,6 @@
 #include "Sky.h"
 #include "Context.h"
+#include "Effect.h"
 #include "Pipeline.h"
 #include "Profiler.h"
 #include "RenderGraph.h"
@@ -228,7 +229,7 @@ PhysicalSky::PhysicalSky(Context *context)
     init_textures();
 }
 
-void PhysicalSky::render(View *view, RenderGraph &rg) {
+void PhysicalSky::update(View *view, RenderGraph &rg) {
     update_transmittance_lut(rg);
     update_multi_scattering_lut(rg);
     update_sky_view(view, rg);
@@ -462,10 +463,68 @@ SkyData *SkyBase::data() {
 
 SkyBase::SkyBase(Context *context) {
     _data = std::make_unique<SkyData>(context);
+    _shade_background_panorama_pipeline =
+        ComputePipeline::create(context, "Shading/BackgroundPanorama.comp");
 }
 
-void SkyBase::render(View *view, RenderGraph &rg) {
+void SkyBase::update(View *view, RenderGraph &rg) {
     data()->update_cache(rg);
+}
+
+void SkyBase::render_background(View *view, RenderGraph &rg) {
+    auto background = view->effect_vk()->background_vk();
+    rg.add_pass(
+        [&](RenderGraphPassBuilder &builder) {
+            builder.compute_shader_read_write(NamedRT_LinearColor);
+            builder.compute_shader_read(NamedRT_Depth);
+
+            if (background->mode() == BackgroundMode::Sky) {
+                builder.compute_shader_read(data()->panorama());
+            }
+        },
+        [=](CommandBuffer *cmd) {
+            auto background = view->effect_vk()->background_vk();
+            auto final_rt = view->render_target(NamedRT_LinearColor);
+            auto ctx = view->context();
+
+            _shade_background_panorama_pipeline->bind(cmd);
+
+            DescriptorEncoder desc{};
+            desc.set_texture(0, 0, final_rt.get());
+            desc.set_texture(0, 1, view->render_target(NamedRT_Depth).get());
+
+            if (background->mode() == BackgroundMode::Sky) {
+                desc.set_texture(0, 2, data()->panorama().get());
+            } else {
+                desc.set_texture(
+                    0, 2, ctx->default_texture_vk(DefaultTexture::White).get());
+            }
+
+            struct Param {
+                glm::mat4 I_P;
+                glm::mat4 I_V;
+                glm::vec3 background_factor;
+            };
+
+            Param param{};
+            if (background->mode() == BackgroundMode::Sky) {
+                param.background_factor = data()->radiance();
+            } else {
+                param.background_factor = background->radiance();
+            }
+
+            auto v_matrix = view->view_matrix();
+            auto p_matrix = view->projection_matrix();
+
+            param.I_P = glm::inverse(p_matrix);
+            param.I_V = glm::inverse(v_matrix);
+            desc.set_buffer_data(1, 0, param);
+
+            desc.commit(cmd, _shade_background_panorama_pipeline.get());
+
+            _shade_background_panorama_pipeline->local_size().dispatch(
+                cmd, final_rt->info().extent);
+        });
 }
 
 std::shared_ptr<PanoramaSky> upcast(const std::shared_ptr<IPanoramaSky> &sky) {

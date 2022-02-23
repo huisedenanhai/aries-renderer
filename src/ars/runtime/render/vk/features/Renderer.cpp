@@ -12,11 +12,14 @@ namespace ars::render::vk {
 NamedRT Renderer::render(RenderGraph &rg) {
     ARS_PROFILER_SAMPLE("Build Render Graph", 0xFF772641);
 
-    _view->effect_vk()->background_vk()->sky_vk()->render(_view, rg);
+    auto sky = _view->effect_vk()->background_vk()->sky_vk();
+
+    sky->update(_view, rg);
     _opaque_geometry->render(rg);
     _generate_hierarchy_z->render(rg);
     _screen_space_reflection->render(rg);
-    _deferred_shading->render(rg, NamedRT_LinearColor);
+    _deferred_shading->render(rg);
+    sky->render_background(_view, rg);
 
     Texture::generate_mipmap(_view->render_target(NamedRT_LinearColor), rg);
 

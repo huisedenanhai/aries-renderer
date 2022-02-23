@@ -50,6 +50,7 @@ class SkyData {
     float strength() const;
     void set_strength(float strength);
     glm::vec3 radiance() const;
+
     float prefilter_bias() const;
     void set_prefilter_bias(float bias);
     int32_t prefilter_sample_count() const;
@@ -93,10 +94,13 @@ class SkyBase {
     explicit SkyBase(Context *context);
     virtual ~SkyBase() = default;
     SkyData *data();
-    virtual void render([[maybe_unused]] View *view, RenderGraph &rg);
+    virtual void update([[maybe_unused]] View *view, RenderGraph &rg);
+    virtual void render_background([[maybe_unused]] View *view,
+                                   RenderGraph &rg);
 
   private:
     std::unique_ptr<SkyData> _data = nullptr;
+    std::unique_ptr<ComputePipeline> _shade_background_panorama_pipeline{};
 };
 
 class PanoramaSky : public IPanoramaSky, public SkyBase {
@@ -125,7 +129,7 @@ class PhysicalSky : public IPhysicalSky, public SkyBase {
 
     ARS_SKY_BASE_FORWARD_COLOR_METHOD();
 
-    void render(View *view, RenderGraph &rg) override;
+    void update(View *view, RenderGraph &rg) override;
 
   private:
     void init_pipelines();

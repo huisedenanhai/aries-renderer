@@ -8,17 +8,18 @@
 
 namespace ars::render::vk {
 void DeferredShading::init_pipeline() {
-    _pipeline = ComputePipeline::create(_view->context(), "ShadingPass.comp");
+    _pipeline =
+        ComputePipeline::create(_view->context(), "Shading/ShadeMaterial.comp");
 }
 
 DeferredShading::DeferredShading(View *view) : _view(view) {
     init_pipeline();
 }
 
-void DeferredShading::execute(CommandBuffer *cmd, NamedRT final_color_rt) {
+void DeferredShading::execute(CommandBuffer *cmd) {
     ARS_PROFILER_SAMPLE_VK(cmd, "Deferred Shading", 0xFF771233);
 
-    auto final_color = _view->render_target(final_color_rt);
+    auto final_color = _view->render_target(NamedRT_LinearColor);
     auto final_color_extent = final_color->info().extent;
     auto background = _view->effect_vk()->background_vk();
     auto sky = background->sky_vk()->data();
@@ -37,35 +38,25 @@ void DeferredShading::execute(CommandBuffer *cmd, NamedRT final_color_rt) {
     desc.set_texture(0, 6, ctx->lut()->brdf_lut().get());
     desc.set_texture(0, 7, sky->irradiance_cube_map().get());
 
-    if (background->mode() == BackgroundMode::Sky) {
-        desc.set_texture(0, 8, sky->panorama().get());
-    } else {
-        desc.set_texture(
-            0, 8, ctx->default_texture_vk(DefaultTexture::White).get());
-    }
-
     if (_view->effect()->screen_space_reflection()->enabled()) {
-        desc.set_texture(0, 9, _view->render_target(NamedRT_Reflection).get());
+        desc.set_texture(0, 8, _view->render_target(NamedRT_Reflection).get());
     } else {
         desc.set_texture(
-            0, 9, ctx->default_texture_vk(DefaultTexture::Zero).get());
+            0, 8, ctx->default_texture_vk(DefaultTexture::Zero).get());
     }
 
     struct ShadingParam {
-        int32_t width;
-        int32_t height;
-        int32_t point_light_count;
-        int32_t directional_light_count;
         glm::mat4 I_P;
         glm::mat4 I_V;
         glm::vec3 env_radiance_factor;
         int32_t cube_map_mip_count;
-        glm::vec3 background_factor;
+
+        int32_t point_light_count;
+        int32_t directional_light_count;
+        //        glm::vec3 background_factor;
     };
 
     ShadingParam param{};
-    param.width = static_cast<int32_t>(final_color_extent.width);
-    param.height = static_cast<int32_t>(final_color_extent.height);
     param.point_light_count =
         static_cast<int32_t>(_view->scene_vk()->point_lights.size());
     param.directional_light_count =
@@ -73,12 +64,6 @@ void DeferredShading::execute(CommandBuffer *cmd, NamedRT final_color_rt) {
     param.env_radiance_factor = sky->radiance();
     param.cube_map_mip_count =
         static_cast<int32_t>(sky->irradiance_cube_map()->info().mip_levels);
-
-    if (background->mode() == BackgroundMode::Sky) {
-        param.background_factor = sky->radiance();
-    } else {
-        param.background_factor = background->radiance();
-    }
 
     auto v_matrix = _view->view_matrix();
     auto p_matrix = _view->projection_matrix();
@@ -139,13 +124,13 @@ void DeferredShading::execute(CommandBuffer *cmd, NamedRT final_color_rt) {
 
     desc.commit(cmd, _pipeline.get());
 
-    _pipeline->local_size().dispatch(cmd, param.width, param.height, 1);
+    _pipeline->local_size().dispatch(cmd, final_color->info().extent);
 }
 
-void DeferredShading::render(RenderGraph &rg, NamedRT final_color_rt) {
+void DeferredShading::render(RenderGraph &rg) {
     rg.add_pass(
         [&](RenderGraphPassBuilder &builder) {
-            builder.compute_shader_write(final_color_rt);
+            builder.compute_shader_write(NamedRT_LinearColor);
             builder.compute_shader_read(NamedRT_GBuffer0);
             builder.compute_shader_read(NamedRT_GBuffer1);
             builder.compute_shader_read(NamedRT_GBuffer2);
@@ -160,8 +145,6 @@ void DeferredShading::render(RenderGraph &rg, NamedRT final_color_rt) {
                                             ->data()
                                             ->irradiance_cube_map());
         },
-        [this, final_color_rt](CommandBuffer *cmd) {
-            execute(cmd, final_color_rt);
-        });
+        [this](CommandBuffer *cmd) { execute(cmd); });
 }
 } // namespace ars::render::vk

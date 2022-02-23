@@ -1,0 +1,7 @@
+{
+    "sources": [
+        "ShadeMaterial.comp",
+        "BackgroundSky.comp",
+        "BackgroundPanorama.comp"
+    ]
+}

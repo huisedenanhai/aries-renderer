@@ -9,10 +9,10 @@ class DeferredShading {
   public:
     explicit DeferredShading(View *view);
 
-    void render(RenderGraph &rg, NamedRT final_color_rt);
+    void render(RenderGraph &rg);
 
   private:
-    void execute(CommandBuffer *cmd, NamedRT final_color_rt);
+    void execute(CommandBuffer *cmd);
     void init_pipeline();
 
     View *_view = nullptr;

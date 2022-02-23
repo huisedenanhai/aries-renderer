@@ -8,7 +8,6 @@
     "ObjectId.frag",
     "GeometryPass.vert",
     "GeometryPass.frag",
-    "ShadingPass.comp",
     "ToneMapping.comp",
     "BRDFLut.comp",
     "Outline.comp",
@@ -25,6 +24,7 @@
   "subdirectories": [
     "SSR",
     "IBL",
-    "Atmosphere"
+    "Atmosphere",
+    "Shading"
   ]
 }

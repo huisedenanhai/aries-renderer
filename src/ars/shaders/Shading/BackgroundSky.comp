@@ -1,0 +1,20 @@
+#version 450 core
+
+#include <Misc.glsl>
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(set = 0,
+       binding = 0,
+       r11f_g11f_b10f) writeonly uniform image2D output_image;
+
+void main() {
+    ivec2 index = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(output_image).xy;
+    if (index.x >= size.x || index.y >= size.y) {
+        return;
+    }
+
+    vec2 uv = index_to_uv(index, 1.0 / size);
+    imageStore(output_image, index, vec4(uv, 0, 1));
+}

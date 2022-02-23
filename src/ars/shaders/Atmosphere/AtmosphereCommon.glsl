@@ -18,6 +18,7 @@ struct Atmosphere {
     float ozone_altitude;
     float ozone_thickness;
     float ground_albedo;
+    float mie_g;
 };
 
 // mu = dot(up, v_forward)

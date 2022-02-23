@@ -1,6 +1,7 @@
 #version 450 core
 
 #include "AtmosphereCommon.glsl"
+#include <Volume.glsl>
 
 layout(local_size_x = 8, local_size_y = 8) in;
 
@@ -15,13 +16,59 @@ layout(set = 1, binding = 0) uniform AtmosphereParam {
 
 layout(set = 1, binding = 1) uniform Param {
     vec3 sun_dir;
+    vec3 sun_radiance;
 };
 
-vec3 ray_march_sky_view(vec3 dir) {
+vec3 ray_march_sky_view(vec3 view_dir, vec3 view_pos) {
     if (length(sun_dir) == 0) {
         return vec3(0.0);
     }
-    return dir * 0.5 + 0.5;
+
+    float origin_r = length(view_pos);
+    float origin_mu = dot(normalize(view_pos), view_dir);
+    float dist;
+    bool hit_ground =
+        ray_hit_sphere(atmosphere.bottom_radius, origin_r, origin_mu, dist);
+    if (!hit_ground) {
+        dist = distance_to_atmosphere_top(atmosphere, origin_r, origin_mu);
+    }
+
+    int step_count = 30;
+    float dt = dist / step_count;
+
+    vec3 trans = vec3(1.0);
+    vec3 L = vec3(0.0);
+    for (int i = 0; i < step_count; i++) {
+        float t = (i + 0.5) * dt;
+        vec3 ray_p = view_pos + view_dir * t;
+        float r = length(ray_p);
+        float mu = dot(normalize(ray_p), sun_dir);
+
+        vec3 s = texture(transmittance_lut,
+                         transmittance_lut_r_mu_to_uv(atmosphere, r, mu))
+                     .rgb;
+        vec3 ms = texture(multi_scattering_lut,
+                          multi_scattering_lut_r_mu_to_uv(atmosphere, r, mu))
+                      .rgb;
+
+        vec3 e_s_r =
+            rayleigh_density(atmosphere, r) * atmosphere.rayleigh_scattering;
+        float e_s_m = mie_density(atmosphere, r) * atmosphere.mie_scattering;
+
+        float cos_scatter = dot(sun_dir, -view_dir);
+        float phase_r = rayleigh_phase(cos_scatter);
+        float phase_m =
+            mie_phase_cornette_shanks(atmosphere.mie_g, cos_scatter);
+
+        vec3 e = atmosphere_extinction(atmosphere, r);
+
+        vec3 direct_scatter = (e_s_r * phase_r + e_s_m * phase_m) * s;
+        vec3 multi_scatter = (e_s_r + e_s_m) * ms;
+        L += trans * (direct_scatter + multi_scatter) * dt;
+        trans *= exp(-e * dt);
+    }
+
+    return max(L * sun_radiance, vec3(0.0));
 }
 
 void main() {
@@ -33,7 +80,8 @@ void main() {
 
     vec2 uv = index_to_uv(index, 1.0 / size);
     vec3 dir = panorama_uv_to_direction(uv);
-    vec3 color = ray_march_sky_view(dir);
+    vec3 color =
+        ray_march_sky_view(dir, vec3(0.0, atmosphere.bottom_radius + 0.2, 0.0));
 
     imageStore(panorama_tex, index, vec4(color, 1.0));
 }

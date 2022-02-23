@@ -217,6 +217,7 @@ struct AtmosphereSettings {
     float ozone_altitude;
     float ozone_thickness;
     float ground_albedo;
+    float mie_g;
 };
 } // namespace
 
@@ -256,6 +257,7 @@ void PhysicalSky::init_atmosphere_settings_buffer() {
     atmosphere.ozone_altitude = 25.0f;
     atmosphere.ozone_thickness = 30.0f;
     atmosphere.ground_albedo = 0.3f;
+    atmosphere.mie_g = 0.8f;
 
     _atmosphere_settings_buffer->set_data(&atmosphere, 0, 1);
 }
@@ -343,6 +345,8 @@ void PhysicalSky::update_sky_view(View *view, RenderGraph &rg) {
             struct Param {
                 glm::vec3 sun_dir;
                 ARS_PADDING_FIELD(float);
+                glm::vec3 sun_radiance;
+                ARS_PADDING_FIELD(float);
             };
 
             Param param{};
@@ -355,6 +359,7 @@ void PhysicalSky::update_sky_view(View *view, RenderGraph &rg) {
                     scene->directional_lights.get<Light>(scene->sun_id);
 
                 param.sun_dir = -glm::normalize(sun_xform.forward());
+                param.sun_radiance = sun_light.color * sun_light.intensity;
             }
             desc.set_buffer_data(1, 1, param);
 

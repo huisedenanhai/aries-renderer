@@ -267,8 +267,8 @@ void PhysicalSky::init_textures() {
 
     auto panorama_info =
         TextureCreateInfo::sampled_2d(VK_FORMAT_B10G11R11_UFLOAT_PACK32,
-                                      256,
-                                      128,
+                                      200,
+                                      100,
                                       1,
                                       VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
     panorama_info.usage |= VK_IMAGE_USAGE_STORAGE_BIT;

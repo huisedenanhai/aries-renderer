@@ -475,7 +475,7 @@ void SkyBase::render_background(View *view, RenderGraph &rg) {
     auto background = view->effect_vk()->background_vk();
     rg.add_pass(
         [&](RenderGraphPassBuilder &builder) {
-            builder.compute_shader_read_write(NamedRT_LinearColor);
+            builder.compute_shader_write(NamedRT_LinearColor, false);
             builder.compute_shader_read(NamedRT_Depth);
 
             if (background->mode() == BackgroundMode::Sky) {

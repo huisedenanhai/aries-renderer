@@ -13,6 +13,10 @@ struct PassDependency {
     VkAccessFlags access_mask{};
     VkImageLayout layout{};
     VkPipelineStageFlags stage_mask{};
+    // If the pass performs a write-only access to rt and all content is
+    // rewrite, previous write to the rt will be considered useless and previous
+    // passes write to this rt might be culled
+    bool full_rewrite = true;
 
     // Textures in the src vector should be unique, so does the dst vector
     // Textures should be not null
@@ -46,16 +50,19 @@ struct PassDependencyBuilder {
     void add(NamedRT rt,
              VkAccessFlags access_mask,
              VkPipelineStageFlags stage_mask,
+             bool full_rewrite = true,
              VkImageLayout layout = VK_IMAGE_LAYOUT_GENERAL);
 
     void add(const Handle<Texture> &rt,
              VkAccessFlags access_mask,
              VkPipelineStageFlags stage_mask,
+             bool full_rewrite = true,
              VkImageLayout layout = VK_IMAGE_LAYOUT_GENERAL);
 
     void add(RenderTargetId rt,
              VkAccessFlags access_mask,
              VkPipelineStageFlags stage_mask,
+             bool full_rewrite = true,
              VkImageLayout layout = VK_IMAGE_LAYOUT_GENERAL);
 
   private:
@@ -75,10 +82,12 @@ struct RenderGraphPassBuilder {
     }
 
     template <typename Tex>
-    RenderGraphPassBuilder &compute_shader_write(Tex &&rt) {
+    RenderGraphPassBuilder &compute_shader_write(Tex &&rt,
+                                                 bool full_rewrite = true) {
         return access(std::forward<Tex>(rt),
                       VK_ACCESS_SHADER_WRITE_BIT,
-                      VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+                      VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                      full_rewrite);
     }
 
     template <typename Tex>

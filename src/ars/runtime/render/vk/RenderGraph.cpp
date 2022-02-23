@@ -125,7 +125,7 @@ void RenderGraph::compile() {
             info.active = true;
         }
 
-        // Kill all writes
+        // Kill all full rewrites
         for (auto &d : pass.dependencies) {
             if (!(d.access_mask & VULKAN_ACCESS_WRITE_MASK)) {
                 continue;
@@ -133,7 +133,9 @@ void RenderGraph::compile() {
             auto it = alive.find(d.texture.get());
             if (it != alive.end()) {
                 info.active = true;
-                alive.erase(it);
+                if (d.full_rewrite) {
+                    alive.erase(it);
+                }
             }
         }
         if (info.active) {
@@ -203,19 +205,26 @@ PassDependencyBuilder::PassDependencyBuilder(View *view,
 void PassDependencyBuilder::add(NamedRT rt,
                                 VkAccessFlags access_mask,
                                 VkPipelineStageFlags stage_mask,
+                                bool full_rewrite,
                                 VkImageLayout layout) {
-    add(_view->render_target(rt), access_mask, stage_mask, layout);
+    add(_view->render_target(rt),
+        access_mask,
+        stage_mask,
+        full_rewrite,
+        layout);
 }
 
 void PassDependencyBuilder::add(const Handle<Texture> &rt,
                                 VkAccessFlags access_mask,
                                 VkPipelineStageFlags stage_mask,
+                                bool full_rewrite,
                                 VkImageLayout layout) {
     PassDependency dep{};
     dep.texture = rt;
     dep.access_mask = access_mask;
     dep.stage_mask = stage_mask;
     dep.layout = layout;
+    dep.full_rewrite = full_rewrite;
 
     _deps->emplace_back(std::move(dep));
 }
@@ -223,7 +232,12 @@ void PassDependencyBuilder::add(const Handle<Texture> &rt,
 void PassDependencyBuilder::add(RenderTargetId rt,
                                 VkAccessFlags access_mask,
                                 VkPipelineStageFlags stage_mask,
+                                bool full_rewrite,
                                 VkImageLayout layout) {
-    add(_view->rt_manager()->get(rt), access_mask, stage_mask, layout);
+    add(_view->rt_manager()->get(rt),
+        access_mask,
+        stage_mask,
+        full_rewrite,
+        layout);
 }
 } // namespace ars::render::vk

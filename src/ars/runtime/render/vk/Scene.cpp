@@ -73,6 +73,18 @@ void DirectionalLight::set_user_data(uint64_t user_data) {
     get<UserData>().value = user_data;
 }
 
+bool DirectionalLight::is_sun() {
+    return _id == _scene->sun_id;
+}
+
+void DirectionalLight::set_is_sun(bool is_sun) {
+    if (is_sun) {
+        _scene->sun_id = _id;
+    } else if (_scene->sun_id == _id) {
+        _scene->sun_id = {};
+    }
+}
+
 math::XformTRS<float> RenderObject::xform() {
     return math::XformTRS<float>(get<glm::mat4>());
 }

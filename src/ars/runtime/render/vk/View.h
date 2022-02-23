@@ -68,7 +68,7 @@ class View : public IView {
     OverlayRenderer *vk_overlay() const;
 
     [[nodiscard]] Context *context() const;
-    [[nodiscard]] Scene *vk_scene() const;
+    [[nodiscard]] Scene *scene_vk() const;
 
     [[nodiscard]] Handle<Texture> render_target(NamedRT name) const;
     [[nodiscard]] RenderTargetManager *rt_manager() const;

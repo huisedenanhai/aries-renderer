@@ -142,7 +142,7 @@ RenderTargetId View::rt_id(NamedRT name) const {
     return _rt_ids[name];
 }
 
-Scene *View::vk_scene() const {
+Scene *View::scene_vk() const {
     return _scene;
 }
 

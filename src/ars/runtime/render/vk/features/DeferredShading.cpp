@@ -67,9 +67,9 @@ void DeferredShading::execute(CommandBuffer *cmd, NamedRT final_color_rt) {
     param.width = static_cast<int32_t>(final_color_extent.width);
     param.height = static_cast<int32_t>(final_color_extent.height);
     param.point_light_count =
-        static_cast<int32_t>(_view->vk_scene()->point_lights.size());
+        static_cast<int32_t>(_view->scene_vk()->point_lights.size());
     param.directional_light_count =
-        static_cast<int32_t>(_view->vk_scene()->directional_lights.size());
+        static_cast<int32_t>(_view->scene_vk()->directional_lights.size());
     param.env_radiance_factor = sky->radiance();
     param.cube_map_mip_count =
         static_cast<int32_t>(sky->irradiance_cube_map()->info().mip_levels);
@@ -96,7 +96,7 @@ void DeferredShading::execute(CommandBuffer *cmd, NamedRT final_color_rt) {
 
     std::vector<PointLightData> point_light_data{};
     {
-        auto &point_light_soa = _view->vk_scene()->point_lights;
+        auto &point_light_soa = _view->scene_vk()->point_lights;
         point_light_data.resize(
             std::max(point_light_soa.size(), static_cast<size_t>(1)));
 
@@ -121,7 +121,7 @@ void DeferredShading::execute(CommandBuffer *cmd, NamedRT final_color_rt) {
 
     std::vector<DirectionalLightData> dir_light_data{};
     {
-        auto &dir_light_soa = _view->vk_scene()->directional_lights;
+        auto &dir_light_soa = _view->scene_vk()->directional_lights;
         dir_light_data.resize(
             std::max(dir_light_soa.size(), static_cast<size_t>(1)));
 
@@ -129,7 +129,7 @@ void DeferredShading::execute(CommandBuffer *cmd, NamedRT final_color_rt) {
         auto light_arr = dir_light_soa.get_array<Light>();
         for (int i = 0; i < dir_light_soa.size(); i++) {
             auto &data = dir_light_data[i];
-            data.direction = glm::normalize(
+            data.direction = -glm::normalize(
                 math::transform_direction(v_matrix, xform_arr[i].forward()));
             data.color = light_arr[i].color;
             data.intensity = light_arr[i].intensity;

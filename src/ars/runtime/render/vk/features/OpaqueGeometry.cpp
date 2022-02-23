@@ -36,7 +36,7 @@ void OpaqueGeometry::execute(CommandBuffer *cmd) {
 
     _pipeline->bind(cmd);
 
-    auto &rd_objs = _view->vk_scene()->render_objects;
+    auto &rd_objs = _view->scene_vk()->render_objects;
     auto v_matrix = _view->view_matrix();
     auto p_matrix = _view->projection_matrix();
     rd_objs.for_each_id([&](Scene::RenderObjects::Id id) {

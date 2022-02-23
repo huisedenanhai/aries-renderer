@@ -97,6 +97,8 @@ class DirectionalLight : public IComponent {
     void set_color(glm::vec3 color);
     [[nodiscard]] float intensity() const;
     void set_intensity(float intensity);
+    [[nodiscard]] bool is_sun() const;
+    void set_is_sun(bool is_sun);
 
   private:
     RenderSystem *_render_system{};

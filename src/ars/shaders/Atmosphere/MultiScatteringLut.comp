@@ -3,7 +3,7 @@
 #include "AtmosphereCommon.glsl"
 #include <Volume.glsl>
 
-layout(local_size_x = 32, local_size_y = 32) in;
+layout(local_size_x = 8, local_size_y = 8) in;
 
 layout(set = 0, binding = 0, rgba16f) uniform image2D multi_scattering_lut;
 

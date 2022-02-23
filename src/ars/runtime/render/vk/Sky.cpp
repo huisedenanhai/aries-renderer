@@ -3,6 +3,7 @@
 #include "Pipeline.h"
 #include "Profiler.h"
 #include "RenderGraph.h"
+#include "Scene.h"
 
 namespace ars::render::vk {
 Handle<Texture> SkyData::irradiance_cube_map() {
@@ -226,10 +227,10 @@ PhysicalSky::PhysicalSky(Context *context)
     init_textures();
 }
 
-void PhysicalSky::render(RenderGraph &rg) {
+void PhysicalSky::render(View *view, RenderGraph &rg) {
     update_transmittance_lut(rg);
     update_multi_scattering_lut(rg);
-    update_sky_view(rg);
+    update_sky_view(view, rg);
 
     data()->mark_dirty();
     data()->update_cache(rg);
@@ -314,15 +315,15 @@ void PhysicalSky::update_transmittance_lut(RenderGraph &rg) {
 }
 
 void PhysicalSky::init_pipelines() {
-    _physical_panorama_pipeline = ComputePipeline::create(
-        _context, "Atmosphere/PhysicalSkyPanorama.comp");
+    _sky_view_lut_pipeline =
+        ComputePipeline::create(_context, "Atmosphere/SkyViewLut.comp");
     _transmittance_lut_pipeline =
         ComputePipeline::create(_context, "Atmosphere/TransmittanceLut.comp");
     _multi_scattering_lut_pipeline =
         ComputePipeline::create(_context, "Atmosphere/MultiScatteringLut.comp");
 }
 
-void PhysicalSky::update_sky_view(RenderGraph &rg) {
+void PhysicalSky::update_sky_view(View *view, RenderGraph &rg) {
     auto panorama = data()->panorama();
     rg.add_pass(
         [&](RenderGraphPassBuilder &builder) {
@@ -331,13 +332,35 @@ void PhysicalSky::update_sky_view(RenderGraph &rg) {
             builder.compute_shader_write(panorama);
         },
         [=](CommandBuffer *cmd) {
-            _physical_panorama_pipeline->bind(cmd);
+            _sky_view_lut_pipeline->bind(cmd);
 
             DescriptorEncoder desc{};
             desc.set_texture(0, 0, panorama.get());
-            desc.commit(cmd, _physical_panorama_pipeline.get());
+            desc.set_texture(0, 1, _transmittance_lut.get());
+            desc.set_texture(0, 2, _multi_scattering_lut.get());
+            desc.set_buffer(1, 0, _atmosphere_settings_buffer.get());
 
-            _physical_panorama_pipeline->local_size().dispatch(
+            struct Param {
+                glm::vec3 sun_dir;
+                ARS_PADDING_FIELD(float);
+            };
+
+            Param param{};
+            auto scene = view->scene_vk();
+            if (scene->sun_id.valid()) {
+                auto sun_xform =
+                    scene->directional_lights.get<math::XformTRS<float>>(
+                        scene->sun_id);
+                auto sun_light =
+                    scene->directional_lights.get<Light>(scene->sun_id);
+
+                param.sun_dir = -glm::normalize(sun_xform.forward());
+            }
+            desc.set_buffer_data(1, 1, param);
+
+            desc.commit(cmd, _sky_view_lut_pipeline.get());
+
+            _sky_view_lut_pipeline->local_size().dispatch(
                 cmd, panorama->info().extent);
         });
 }
@@ -436,7 +459,7 @@ SkyBase::SkyBase(Context *context) {
     _data = std::make_unique<SkyData>(context);
 }
 
-void SkyBase::render(RenderGraph &rg) {
+void SkyBase::render(View *view, RenderGraph &rg) {
     data()->update_cache(rg);
 }
 

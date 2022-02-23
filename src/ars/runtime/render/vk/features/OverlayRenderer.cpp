@@ -266,9 +266,9 @@ void OverlayRenderer::render_billboard(CommandBuffer *cmd) {
         }
     };
 
-    auto point_lights = _view->vk_scene()->point_lights;
+    auto point_lights = _view->scene_vk()->point_lights;
     draw_light_icons(point_lights);
-    auto directional_lights = _view->vk_scene()->directional_lights;
+    auto directional_lights = _view->scene_vk()->directional_lights;
     draw_light_icons(directional_lights);
 }
 

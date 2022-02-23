@@ -45,6 +45,7 @@ template <typename T> static void register_type(DeserializerRegistry &reg) {
 
 template <typename Reg> static Reg register_callbacks() {
     Reg reg{};
+    register_type<bool>(reg);
     register_type<size_t>(reg);
     register_type<uint8_t>(reg);
     register_type<uint16_t>(reg);

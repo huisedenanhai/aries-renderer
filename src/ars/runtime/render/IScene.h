@@ -64,6 +64,9 @@ class IDirectionalLight {
     virtual uint64_t user_data() = 0;
     virtual void set_user_data(uint64_t user_data) = 0;
 
+    virtual bool is_sun() = 0;
+    virtual void set_is_sun(bool is_sun) = 0;
+
     virtual IScene *scene() = 0;
 };
 

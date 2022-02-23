@@ -21,7 +21,7 @@ void radiance_to_point(PointLight light,
 }
 
 struct DirectionalLight {
-    // from light to shading point
+    // from shading point to light
     // direction should be normalized
     vec3 direction;
     vec3 color;
@@ -33,8 +33,7 @@ void radiance_to_point(DirectionalLight light,
                        out vec3 radiance,
                        out vec3 direction) {
     radiance = light.color * light.intensity;
-    // Notice the direction
-    direction = -light.direction;
+    direction = light.direction;
 }
 
 #endif

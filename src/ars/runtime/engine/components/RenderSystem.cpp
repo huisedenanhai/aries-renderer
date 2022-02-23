@@ -1,5 +1,6 @@
 #include "RenderSystem.h"
 #include <ars/runtime/core/Log.h>
+#include <ars/runtime/core/Reflect.h>
 #include <ars/runtime/render/IMaterial.h>
 #include <ars/runtime/render/IMesh.h>
 
@@ -108,10 +109,9 @@ void MeshRenderer::set_primitive_handles(std::vector<PrimitiveHandle> handles) {
 
 void PointLight::register_component() {
     engine::register_component<PointLight>("ars::engine::PointLight")
-        .property("color", &PointLight::color, &PointLight::set_color)(
+        .RTTR_MEMBER_PROPERTY(PointLight, color)(
             rttr::metadata(PropertyAttribute::Display, PropertyDisplay::Color))
-        .property(
-            "intensity", &PointLight::intensity, &PointLight::set_intensity);
+        .RTTR_MEMBER_PROPERTY(PointLight, intensity);
 }
 
 void PointLight::init(Entity *entity) {
@@ -158,12 +158,10 @@ void PointLight::set_intensity(float intensity) {
 void DirectionalLight::register_component() {
     engine::register_component<DirectionalLight>(
         "ars::engine::DirectionalLight")
-        .property(
-            "color", &DirectionalLight::color, &DirectionalLight::set_color)(
+        .RTTR_MEMBER_PROPERTY(DirectionalLight, color)(
             rttr::metadata(PropertyAttribute::Display, PropertyDisplay::Color))
-        .property("intensity",
-                  &DirectionalLight::intensity,
-                  &DirectionalLight::set_intensity);
+        .RTTR_MEMBER_PROPERTY(DirectionalLight, intensity)
+        .RTTR_MEMBER_PROPERTY(DirectionalLight, is_sun);
 }
 
 void DirectionalLight::init(Entity *entity) {
@@ -205,6 +203,14 @@ float DirectionalLight::intensity() const {
 
 void DirectionalLight::set_intensity(float intensity) {
     light()->set_intensity(intensity);
+}
+
+bool DirectionalLight::is_sun() const {
+    return light()->is_sun();
+}
+
+void DirectionalLight::set_is_sun(bool is_sun) {
+    light()->set_is_sun(is_sun);
 }
 
 RenderSystem::RenderSystem(render::IContext *context) {

@@ -12,7 +12,7 @@ namespace ars::render::vk {
 NamedRT Renderer::render(RenderGraph &rg) {
     ARS_PROFILER_SAMPLE("Build Render Graph", 0xFF772641);
 
-    _view->effect_vk()->background_vk()->sky_vk()->render(rg);
+    _view->effect_vk()->background_vk()->sky_vk()->render(_view, rg);
     _opaque_geometry->render(rg);
     _generate_hierarchy_z->render(rg);
     _screen_space_reflection->render(rg);

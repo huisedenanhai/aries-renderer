@@ -39,6 +39,8 @@ class Scene : public IScene {
     using PointLights = SoA<math::XformTRS<float>, Light, UserData>;
     PointLights point_lights{};
 
+    DirectionalLights::Id sun_id{};
+
   private:
     Context *_context = nullptr;
 };
@@ -57,6 +59,8 @@ class DirectionalLight : public IDirectionalLight {
     IScene *scene() override;
     uint64_t user_data() override;
     void set_user_data(uint64_t user_data) override;
+    bool is_sun() override;
+    void set_is_sun(bool is_sun) override;
 
   private:
     template <typename T> T &get() {

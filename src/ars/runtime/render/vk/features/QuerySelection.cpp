@@ -42,11 +42,11 @@ std::vector<uint64_t> QuerySelection::query_selection(uint32_t x,
                                  VK_BUFFER_USAGE_TRANSFER_DST_BIT,
                                  VMA_MEMORY_USAGE_GPU_TO_CPU);
 
-    auto &rd_objs = _view->vk_scene()->render_objects;
+    auto &rd_objs = _view->scene_vk()->render_objects;
     auto rd_obj_count = rd_objs.size();
-    auto &point_lights = _view->vk_scene()->point_lights;
+    auto &point_lights = _view->scene_vk()->point_lights;
     auto point_light_count = point_lights.size();
-    auto &directional_lights = _view->vk_scene()->directional_lights;
+    auto &directional_lights = _view->scene_vk()->directional_lights;
     auto directional_light_count = directional_lights.size();
     auto light_count = point_light_count + directional_light_count;
 

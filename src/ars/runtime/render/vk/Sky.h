@@ -8,6 +8,7 @@ class Context;
 class ComputePipeline;
 class Buffer;
 struct RenderGraph;
+class View;
 
 class ImageBasedLighting {
   public:
@@ -92,7 +93,7 @@ class SkyBase {
     explicit SkyBase(Context *context);
     virtual ~SkyBase() = default;
     SkyData *data();
-    virtual void render(RenderGraph &rg);
+    virtual void render([[maybe_unused]] View *view, RenderGraph &rg);
 
   private:
     std::unique_ptr<SkyData> _data = nullptr;
@@ -124,7 +125,7 @@ class PhysicalSky : public IPhysicalSky, public SkyBase {
 
     ARS_SKY_BASE_FORWARD_COLOR_METHOD();
 
-    void render(RenderGraph &rg) override;
+    void render(View *view, RenderGraph &rg) override;
 
   private:
     void init_pipelines();
@@ -132,10 +133,10 @@ class PhysicalSky : public IPhysicalSky, public SkyBase {
     void init_textures();
     void update_transmittance_lut(RenderGraph &rg);
     void update_multi_scattering_lut(RenderGraph &rg);
-    void update_sky_view(RenderGraph &rg);
+    void update_sky_view(View *view, RenderGraph &rg);
 
     Context *_context = nullptr;
-    std::unique_ptr<ComputePipeline> _physical_panorama_pipeline{};
+    std::unique_ptr<ComputePipeline> _sky_view_lut_pipeline{};
     std::unique_ptr<ComputePipeline> _transmittance_lut_pipeline{};
     std::unique_ptr<ComputePipeline> _multi_scattering_lut_pipeline{};
     Handle<Buffer> _atmosphere_settings_buffer{};

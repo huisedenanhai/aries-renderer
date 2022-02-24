@@ -35,9 +35,17 @@ void DeferredShading::execute(CommandBuffer *cmd) {
 
     shade_unlit(cmd);
     shade_reflection_emission(cmd);
-    shade_directional_light(cmd);
+
+    auto physical_sky = dynamic_cast<PhysicalSky *>(
+        _view->effect_vk()->background_vk()->sky_vk());
+
+    // Special shade for sun in physical sky
+    shade_directional_light(cmd, physical_sky != nullptr);
+    if (physical_sky != nullptr) {
+        shade_sun(cmd, physical_sky);
+    }
+
     shade_point_light(cmd);
-    shade_sun(cmd);
 
     _render_pass->end(rp_exec);
 }
@@ -63,11 +71,14 @@ void DeferredShading::render(RenderGraph &rg) {
             if (_view->effect()->screen_space_reflection()->enabled()) {
                 frag_read(NamedRT_Reflection);
             }
-            frag_read(_view->effect_vk()
-                          ->background_vk()
-                          ->sky_vk()
-                          ->data()
-                          ->irradiance_cube_map());
+
+            auto sky = _view->effect_vk()->background_vk()->sky_vk();
+            frag_read(sky->data()->irradiance_cube_map());
+
+            auto physical_sky = dynamic_cast<PhysicalSky *>(sky);
+            if (physical_sky != nullptr) {
+                frag_read(physical_sky->transmittance_lut());
+            }
         },
         [this](CommandBuffer *cmd) { execute(cmd); });
 }
@@ -132,59 +143,6 @@ void DeferredShading::set_up_shade(GraphicsPipeline *pipeline,
     desc.set_buffer(0, 5, _view->transform_buffer().get());
 
     desc.commit(cmd, pipeline);
-
-    //    auto v_matrix = _view->view_matrix();
-    //
-    //    struct alignas(16) PointLightData {
-    //        glm::vec3 position;
-    //        ARS_PADDING_FIELD(float);
-    //        glm::vec3 color;
-    //        float intensity;
-    //    };
-    //
-    //    std::vector<PointLightData> point_light_data{};
-    //    {
-    //        auto &point_light_soa = _view->scene_vk()->point_lights;
-    //        point_light_data.resize(
-    //            std::max(point_light_soa.size(), static_cast<size_t>(1)));
-    //
-    //        auto xform_arr =
-    //        point_light_soa.get_array<math::XformTRS<float>>(); auto light_arr
-    //        = point_light_soa.get_array<Light>(); for (int i = 0; i <
-    //        point_light_soa.size(); i++) {
-    //            auto &data = point_light_data[i];
-    //            data.position =
-    //                math::transform_position(v_matrix,
-    //                xform_arr[i].translation());
-    //            data.color = light_arr[i].color;
-    //            data.intensity = light_arr[i].intensity;
-    //        }
-    //    }
-    //
-    //    struct alignas(16) DirectionalLightData {
-    //        glm::vec3 direction;
-    //        ARS_PADDING_FIELD(float);
-    //        glm::vec3 color;
-    //        float intensity;
-    //    };
-    //
-    //    std::vector<DirectionalLightData> dir_light_data{};
-    //    {
-    //        auto &dir_light_soa = _view->scene_vk()->directional_lights;
-    //        dir_light_data.resize(
-    //            std::max(dir_light_soa.size(), static_cast<size_t>(1)));
-    //
-    //        auto xform_arr = dir_light_soa.get_array<math::XformTRS<float>>();
-    //        auto light_arr = dir_light_soa.get_array<Light>();
-    //        for (int i = 0; i < dir_light_soa.size(); i++) {
-    //            auto &data = dir_light_data[i];
-    //            data.direction = -glm::normalize(
-    //                math::transform_direction(v_matrix,
-    //                xform_arr[i].forward()));
-    //            data.color = light_arr[i].color;
-    //            data.intensity = light_arr[i].intensity;
-    //        }
-    //    }
 }
 
 void DeferredShading::shade_reflection_emission(CommandBuffer *cmd) {
@@ -220,11 +178,112 @@ void DeferredShading::shade_reflection_emission(CommandBuffer *cmd) {
     cmd->Draw(3, 1, 0, 0);
 }
 
-void DeferredShading::shade_directional_light(CommandBuffer *cmd) {
-    //    set_up_shade(_lit_directional_light_pipeline.get(), cmd);
+namespace {
+struct alignas(16) DirectionalLightData {
+    glm::vec3 direction;
+    ARS_PADDING_FIELD(float);
+    glm::vec3 color;
+    float intensity;
+};
+
+DirectionalLightData
+get_directional_light_data(View *view, Scene::DirectionalLights::Id id) {
+    auto &soa = view->scene_vk()->directional_lights;
+    auto v_matrix = view->view_matrix();
+
+    DirectionalLightData data{};
+    data.direction = -glm::normalize(math::transform_direction(
+        v_matrix, soa.get<math::XformTRS<float>>(id).forward()));
+    auto &light = soa.get<Light>(id);
+    data.color = light.color;
+    data.intensity = light.intensity;
+
+    return data;
 }
 
-void DeferredShading::shade_point_light(CommandBuffer *cmd) {}
+struct alignas(16) PointLightData {
+    glm::vec3 position;
+    ARS_PADDING_FIELD(float);
+    glm::vec3 color;
+    float intensity;
+};
 
-void DeferredShading::shade_sun(CommandBuffer *cmd) {}
+PointLightData get_point_light_data(View *view, Scene::PointLights::Id id) {
+    auto &soa = view->scene_vk()->point_lights;
+    auto v_matrix = view->view_matrix();
+
+    PointLightData data{};
+    data.position = math::transform_position(
+        v_matrix, soa.get<math::XformTRS<float>>(id).translation());
+    auto &light = soa.get<Light>(id);
+    data.color = light.color;
+    data.intensity = light.intensity;
+
+    return data;
+}
+
+} // namespace
+
+void DeferredShading::shade_directional_light(CommandBuffer *cmd,
+                                              bool ignore_sun) {
+    auto scene = _view->scene_vk();
+    auto light_count = scene->directional_lights.size();
+    if (light_count == 0 ||
+        (ignore_sun && light_count == 1 && scene->sun_id.valid())) {
+        return;
+    }
+
+    set_up_shade(_lit_directional_light_pipeline.get(), cmd);
+
+    scene->directional_lights.for_each_id([&](auto id) {
+        if (ignore_sun && id == scene->sun_id) {
+            return;
+        }
+
+        auto data = get_directional_light_data(_view, id);
+        DescriptorEncoder desc{};
+        desc.set_buffer_data(1, 0, data);
+        desc.commit(cmd, _lit_directional_light_pipeline.get());
+
+        cmd->Draw(3, 1, 0, 0);
+    });
+}
+
+void DeferredShading::shade_point_light(CommandBuffer *cmd) {
+    auto scene = _view->scene_vk();
+    auto light_count = scene->point_lights.size();
+    if (light_count == 0) {
+        return;
+    }
+
+    set_up_shade(_lit_point_light_pipeline.get(), cmd);
+    scene->point_lights.for_each_id([&](auto id) {
+        auto data = get_point_light_data(_view, id);
+
+        DescriptorEncoder desc{};
+        desc.set_buffer_data(1, 0, data);
+        desc.commit(cmd, _lit_point_light_pipeline.get());
+
+        cmd->Draw(3, 1, 0, 0);
+    });
+}
+
+void DeferredShading::shade_sun(CommandBuffer *cmd, PhysicalSky *sky) {
+    auto scene = _view->scene_vk();
+    if (!scene->sun_id.valid()) {
+        return;
+    }
+
+    set_up_shade(_lit_sun_pipeline.get(), cmd);
+
+    DescriptorEncoder desc{};
+
+    auto data = get_directional_light_data(_view, scene->sun_id);
+    desc.set_buffer_data(1, 0, data);
+    desc.set_buffer(1, 1, sky->atmosphere_settings_buffer().get());
+    desc.set_texture(1, 2, sky->transmittance_lut().get());
+    desc.commit(cmd, _lit_sun_pipeline.get());
+
+    cmd->Draw(3, 1, 0, 0);
+}
 } // namespace ars::render::vk

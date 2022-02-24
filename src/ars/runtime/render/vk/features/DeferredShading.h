@@ -5,6 +5,8 @@
 #include "../View.h"
 
 namespace ars::render::vk {
+class PhysicalSky;
+
 class DeferredShading {
   public:
     explicit DeferredShading(View *view);
@@ -19,9 +21,9 @@ class DeferredShading {
     void set_up_shade(GraphicsPipeline *pipeline, CommandBuffer *cmd);
     void shade_unlit(CommandBuffer *cmd);
     void shade_reflection_emission(CommandBuffer *cmd);
-    void shade_directional_light(CommandBuffer *cmd);
+    void shade_directional_light(CommandBuffer *cmd, bool ignore_sun);
     void shade_point_light(CommandBuffer *cmd);
-    void shade_sun(CommandBuffer *cmd);
+    void shade_sun(CommandBuffer *cmd, PhysicalSky *sky);
 
     View *_view = nullptr;
     std::unique_ptr<GraphicsPipeline> _lit_point_light_pipeline{};

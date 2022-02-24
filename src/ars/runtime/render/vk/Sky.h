@@ -131,6 +131,9 @@ class PhysicalSky : public IPhysicalSky, public SkyBase {
 
     void update(View *view, RenderGraph &rg) override;
 
+    Handle<Buffer> atmosphere_settings_buffer();
+    Handle<Texture> transmittance_lut();
+
   private:
     void init_pipelines();
     void init_atmosphere_settings_buffer();

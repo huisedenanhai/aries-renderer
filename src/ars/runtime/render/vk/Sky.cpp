@@ -391,6 +391,14 @@ void PhysicalSky::update_multi_scattering_lut(RenderGraph &rg) {
         });
 }
 
+Handle<Buffer> PhysicalSky::atmosphere_settings_buffer() {
+    return _atmosphere_settings_buffer;
+}
+
+Handle<Texture> PhysicalSky::transmittance_lut() {
+    return _transmittance_lut;
+}
+
 PhysicalSky::~PhysicalSky() = default;
 
 SkyData::SkyData(Context *context) : _context(context) {}

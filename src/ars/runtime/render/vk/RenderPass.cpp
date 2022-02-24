@@ -122,7 +122,8 @@ std::unique_ptr<RenderPass> RenderPass::create_with_single_pass(
 
     VkAttachmentReference depth_ref{};
     depth_ref.attachment = color_count;
-    depth_ref.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    //    depth_ref.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    depth_ref.layout = VK_IMAGE_LAYOUT_GENERAL;
 
     VkSubpassDescription subpass{};
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
@@ -179,7 +180,7 @@ void Framebuffer::init_framebuffer(VkRenderPass render_pass) {
     std::vector<VkImageView> attachments{};
     attachments.reserve(_attachments.size());
     for (auto &attach : _attachments) {
-        attachments.push_back(attach->image_view());
+        attachments.push_back(attach->image_view_of_level(0));
     }
     fb_info.attachmentCount = static_cast<uint32_t>(std::size(attachments));
     fb_info.pAttachments = attachments.data();

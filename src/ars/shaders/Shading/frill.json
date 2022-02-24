@@ -1,6 +1,20 @@
 {
     "sources": [
-        "ShadeMaterial.comp",
+        {
+            "file": "ShadeMaterial.frag",
+            "multi_compile": [
+                {
+                    "options": [
+                        "LIT_POINT_LIGHT",
+                        "LIT_DIRECTIONAL_LIGHT",
+                        "LIT_SUN",
+                        "LIT_REFLECTION_EMISSION",
+                        "UNLIT"
+                    ],
+                    "can_off": false
+                }
+            ]
+        },
         "BackgroundSky.comp",
         "BackgroundPanorama.comp"
     ]

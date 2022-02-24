@@ -186,7 +186,7 @@ std::array<NamedRT, 5> OpaqueGeometry::geometry_pass_rt_names() {
 
 void OpaqueGeometry::render(RenderGraph &rg) {
     rg.add_pass(
-        [this](RenderGraphPassBuilder &builder) {
+        [&](RenderGraphPassBuilder &builder) {
             for (auto rt : geometry_pass_rt_names()) {
                 if (rt != NamedRT_Depth) {
                     builder.access(
@@ -202,6 +202,6 @@ void OpaqueGeometry::render(RenderGraph &rg) {
                 }
             }
         },
-        [this](CommandBuffer *cmd) { execute(cmd); });
+        [=](CommandBuffer *cmd) { execute(cmd); });
 }
 } // namespace ars::render::vk

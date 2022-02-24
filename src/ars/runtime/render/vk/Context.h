@@ -150,7 +150,6 @@ class Context : public IContext {
 
     [[nodiscard]] Lut *lut() const;
     [[nodiscard]] ImageBasedLighting *ibl() const;
-
     [[nodiscard]] Profiler *profiler() const;
 
     void set_debug_name_internal(const std::string &name,

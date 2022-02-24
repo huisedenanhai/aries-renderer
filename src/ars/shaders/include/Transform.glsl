@@ -88,4 +88,7 @@ struct ViewTransform {
     mat4 reproject_IV_VP;
 };
 
+ShadingPoint get_shading_point(vec2 uv, float depth01, ViewTransform view) {
+    return get_shading_point(uv, depth01, view.I_P, view.I_V);
+}
 #endif

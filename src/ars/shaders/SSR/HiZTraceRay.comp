@@ -232,7 +232,7 @@ vec4 trace_ray(ivec2 index, ivec2 size) {
     }
 
     MetallicRoughnessPBR brdf = get_metallic_roughness_pbr(gbuffer);
-    ShadingPoint sp = get_shading_point(uv, depth01, view.I_P, mat4(0));
+    ShadingPoint sp = get_shading_point(uv, depth01, view);
 
     vec3 reflect_dir_vs;
     float pdf = sample_reflect_dir(

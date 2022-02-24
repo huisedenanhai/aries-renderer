@@ -39,7 +39,7 @@ void main() {
         return;
     }
 
-    ShadingPoint sp = get_shading_point(uv, depth01, view.I_P, view.I_V);
+    ShadingPoint sp = get_shading_point(uv, depth01, view);
 
     vec3 background = shade_background(sp.v_ws);
 

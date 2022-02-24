@@ -213,7 +213,7 @@ vec4 calculate_reflection(ivec2 index, ivec2 size) {
     MetallicRoughnessPBR brdf = get_metallic_roughness_pbr(gbuffer);
 
     float depth01 = texture(depth_stencil_tex, uv).r;
-    ShadingPoint sp = get_shading_point(uv, depth01, view.I_P, view.I_V);
+    ShadingPoint sp = get_shading_point(uv, depth01, view);
 
     vec3 n_vs = gbuffer.normal_vs;
 

@@ -149,7 +149,7 @@ void main() {
                                      texture(gbuffer2_tex, uv),
                                      texture(gbuffer3_tex, uv));
 
-    ShadingPoint sp = get_shading_point(uv, depth01, view.I_P, view.I_V);
+    ShadingPoint sp = get_shading_point(uv, depth01, view);
     vec3 result = shade(gbuffer, sp);
 
     imageStore(output_image, index, vec4(result, 1.0));

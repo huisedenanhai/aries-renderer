@@ -4,6 +4,7 @@
 #include "RenderTarget.h"
 
 namespace ars::render::vk {
+class Buffer;
 class Effect;
 class Scene;
 class Environment;
@@ -82,10 +83,13 @@ class View : public IView {
     [[nodiscard]] glm::mat4 last_frame_projection_matrix();
     [[nodiscard]] glm::mat4 last_frame_view_matrix();
 
+    [[nodiscard]] Handle<Buffer> transform_buffer();
+
   private:
     void flip_history_buffer();
     void alloc_render_targets();
     void update_color_tex_adapter(NamedRT rt);
+    void update_transform_buffer();
     [[nodiscard]] TextureInfo color_tex_info() const;
 
     Scene *_scene = nullptr;
@@ -105,5 +109,7 @@ class View : public IView {
 
     std::optional<glm::mat4> _last_frame_projection_matrix;
     std::optional<math::XformTRS<float>> _last_frame_xform{};
+
+    Handle<Buffer> _transform_buffer{};
 };
 } // namespace ars::render::vk

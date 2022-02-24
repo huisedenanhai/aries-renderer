@@ -55,6 +55,16 @@ struct ResData {
     template <typename T> bool is_type() const {
         return ty == rttr::type::get<T>().get_name();
     }
+
+    template <typename T> void set_type() {
+        ty = rttr::type::get<T>().get_name().to_string();
+    }
+
+    template <typename T> static ResData create() {
+        ResData data{};
+        data.template set_type<T>();
+        return data;
+    }
 };
 
 // Add preferred extension '.ares' to the path

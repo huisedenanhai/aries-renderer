@@ -1,4 +1,5 @@
 #include "View.h"
+#include "Buffer.h"
 #include "Context.h"
 #include "Effect.h"
 #include "Material.h"
@@ -18,12 +19,22 @@ namespace {
 VkExtent2D translate(const Extent2D &size) {
     return {size.width, size.height};
 }
+
+struct ViewTransform {
+    glm::mat4 V;
+    glm::mat4 P;
+    glm::mat4 I_V;
+    glm::mat4 I_P;
+    glm::mat4 reproject_IV_VP;
+};
 } // namespace
 
 void View::render() {
     ARS_PROFILER_SAMPLE("Render View", 0xFFAA6611);
     auto ctx = context();
     _rt_manager->update(translate(_size));
+
+    update_transform_buffer();
 
     RenderGraph rg(this);
 
@@ -51,6 +62,10 @@ View::View(Scene *scene, const Extent2D &size) : _scene(scene), _size(size) {
     _rt_manager = std::make_unique<RenderTargetManager>(scene->context());
     _rt_manager->update(translate(size));
 
+    _transform_buffer =
+        context()->create_buffer(sizeof(ViewTransform),
+                                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                                 VMA_MEMORY_USAGE_CPU_TO_GPU);
     alloc_render_targets();
 
     _renderer = std::make_unique<Renderer>(this);
@@ -306,5 +321,22 @@ glm::mat4 View::last_frame_view_matrix() {
 
 Effect *View::effect_vk() {
     return _effect.get();
+}
+
+Handle<Buffer> View::transform_buffer() {
+    return _transform_buffer;
+}
+
+void View::update_transform_buffer() {
+    ViewTransform t{};
+
+    t.V = view_matrix();
+    t.P = projection_matrix();
+    t.I_V = glm::inverse(t.V);
+    t.I_P = glm::inverse(t.P);
+    t.reproject_IV_VP =
+        last_frame_projection_matrix() * last_frame_view_matrix() * t.I_V;
+
+    _transform_buffer->set_data(t);
 }
 } // namespace ars::render::vk

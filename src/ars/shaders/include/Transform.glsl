@@ -80,4 +80,12 @@ vec3 calculate_geometry_normal_vs_from_depth_buffer(sampler2D depth_tex,
         depth_tex, uv, inv_resolution, I_P, 0);
 }
 
+struct ViewTransform {
+    mat4 V;
+    mat4 P;
+    mat4 I_V;
+    mat4 I_P;
+    mat4 reproject_IV_VP;
+};
+
 #endif

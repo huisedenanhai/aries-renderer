@@ -284,20 +284,15 @@ void ScreenSpaceReflection::temporal_filtering(RenderGraph &rg) {
                 int width;
                 int height;
                 float blend_factor;
-                ARS_PADDING_FIELD(int32_t);
-                glm::mat4 I_P;
-                glm::mat4 reproject_IV_VP;
             };
 
             Param param{};
             param.width = static_cast<int32_t>(dst_extent.width);
             param.height = static_cast<int32_t>(dst_extent.height);
             param.blend_factor = _reflection_history_valid ? 0.05f : 1.0f;
-            param.I_P = glm::inverse(_view->projection_matrix());
-            param.reproject_IV_VP = _view->last_frame_projection_matrix() *
-                                    _view->last_frame_view_matrix() *
-                                    glm::inverse(_view->view_matrix());
             desc.set_buffer_data(1, 0, param);
+
+            desc.set_buffer(1, 1, _view->transform_buffer().get());
 
             desc.commit(cmd, _temporal_filter_pipeline.get());
 

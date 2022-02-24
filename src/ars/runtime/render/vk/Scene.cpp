@@ -47,6 +47,7 @@ DirectionalLight::DirectionalLight(Scene *scene) : _scene(scene) {
 
 DirectionalLight::~DirectionalLight() {
     _scene->directional_lights.free(_id);
+    _scene->sun_id = {};
 }
 
 glm::vec3 DirectionalLight::color() {

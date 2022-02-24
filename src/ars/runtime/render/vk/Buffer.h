@@ -32,10 +32,14 @@ class Buffer {
     void set_data_raw(void *value, size_t byte_offset, size_t byte_count);
 
     template <typename T>
-    void set_data(T *value, size_t elem_offset, size_t elem_count) {
+    void set_data_array(const T *value, size_t elem_offset, size_t elem_count) {
         static_assert(std::is_pod_v<T>);
         set_data_raw(
             (void *)(value), elem_offset * sizeof(T), elem_count * sizeof(T));
+    }
+
+    template <typename T> void set_data(const T &value) {
+        set_data_array(&value, 0, 1);
     }
 
   private:

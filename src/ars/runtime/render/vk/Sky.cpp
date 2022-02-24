@@ -260,7 +260,7 @@ void PhysicalSky::init_atmosphere_settings_buffer() {
     atmosphere.ground_albedo = 0.3f;
     atmosphere.mie_g = 0.8f;
 
-    _atmosphere_settings_buffer->set_data(&atmosphere, 0, 1);
+    _atmosphere_settings_buffer->set_data(atmosphere);
 }
 
 void PhysicalSky::init_textures() {

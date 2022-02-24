@@ -501,8 +501,6 @@ void SkyBase::render_background(View *view, RenderGraph &rg) {
             }
 
             struct Param {
-                glm::mat4 I_P;
-                glm::mat4 I_V;
                 glm::vec3 background_factor;
             };
 
@@ -516,9 +514,8 @@ void SkyBase::render_background(View *view, RenderGraph &rg) {
             auto v_matrix = view->view_matrix();
             auto p_matrix = view->projection_matrix();
 
-            param.I_P = glm::inverse(p_matrix);
-            param.I_V = glm::inverse(v_matrix);
             desc.set_buffer_data(1, 0, param);
+            desc.set_buffer(1, 1, view->transform_buffer().get());
 
             desc.commit(cmd, _shade_background_panorama_pipeline.get());
 

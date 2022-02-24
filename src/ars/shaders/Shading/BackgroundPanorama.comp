@@ -13,10 +13,11 @@ layout(set = 0, binding = 1) uniform sampler2D depth_stencil_tex;
 layout(set = 0, binding = 2) uniform sampler2D background_panorama_tex;
 
 layout(set = 1, binding = 0) uniform Param {
-    mat4 I_P;
-    mat4 I_V;
-
     vec3 background_factor;
+};
+
+layout(set = 1, binding = 1) uniform View {
+    ViewTransform view;
 };
 
 vec3 shade_background(vec3 v_ws) {
@@ -38,7 +39,7 @@ void main() {
         return;
     }
 
-    ShadingPoint sp = get_shading_point(uv, depth01, I_P, I_V);
+    ShadingPoint sp = get_shading_point(uv, depth01, view.I_P, view.I_V);
 
     vec3 background = shade_background(sp.v_ws);
 

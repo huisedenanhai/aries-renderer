@@ -23,8 +23,6 @@ layout(set = 0, binding = 7) uniform samplerCube cube_map;
 layout(set = 0, binding = 8) uniform sampler2D ssr_reflection;
 
 layout(set = 1, binding = 0) uniform Param {
-    mat4 I_P;
-    mat4 I_V;
     vec3 env_randiance_factor;
     int cube_map_mip_count;
 
@@ -40,6 +38,11 @@ layout(set = 1, binding = 1) buffer PointLights {
 layout(set = 1, binding = 2) buffer DirectionalLights {
     DirectionalLight directional_lights[];
 };
+
+layout(set = 1, binding = 3) uniform View {
+    ViewTransform view;
+};
+
 
 vec3 get_env_filtered_radiance(vec3 v_ws, float lod) {
     return env_randiance_factor * textureLod(cube_map, v_ws, lod).rgb;
@@ -99,7 +102,7 @@ vec3 shade_metallic_roughness_pbr(GBuffer gbuffer, ShadingPoint sp) {
     }
 
     // Sample env irradiance
-    vec3 n_ws = transform_vector(I_V, n_vs);
+    vec3 n_ws = transform_vector(view.I_V, n_vs);
     vec3 diffuse_env_irradiance = brdf.occlusion * get_diffuse_irradiance(n_ws);
     vec3 diffuse_indirect_radiance = fd * diffuse_env_irradiance;
 
@@ -146,7 +149,7 @@ void main() {
                                      texture(gbuffer2_tex, uv),
                                      texture(gbuffer3_tex, uv));
 
-    ShadingPoint sp = get_shading_point(uv, depth01, I_P, I_V);
+    ShadingPoint sp = get_shading_point(uv, depth01, view.I_P, view.I_V);
     vec3 result = shade(gbuffer, sp);
 
     imageStore(output_image, index, vec4(result, 1.0));

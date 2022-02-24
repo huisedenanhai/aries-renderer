@@ -46,14 +46,11 @@ void DeferredShading::execute(CommandBuffer *cmd) {
     }
 
     struct ShadingParam {
-        glm::mat4 I_P;
-        glm::mat4 I_V;
         glm::vec3 env_radiance_factor;
         int32_t cube_map_mip_count;
 
         int32_t point_light_count;
         int32_t directional_light_count;
-        //        glm::vec3 background_factor;
     };
 
     ShadingParam param{};
@@ -66,10 +63,7 @@ void DeferredShading::execute(CommandBuffer *cmd) {
         static_cast<int32_t>(sky->irradiance_cube_map()->info().mip_levels);
 
     auto v_matrix = _view->view_matrix();
-    auto p_matrix = _view->projection_matrix();
 
-    param.I_P = glm::inverse(p_matrix);
-    param.I_V = glm::inverse(v_matrix);
     desc.set_buffer_data(1, 0, param);
 
     struct alignas(16) PointLightData {
@@ -121,6 +115,8 @@ void DeferredShading::execute(CommandBuffer *cmd) {
         }
     }
     desc.set_buffer_data(1, 2, dir_light_data);
+
+    desc.set_buffer(1, 3, _view->transform_buffer().get());
 
     desc.commit(cmd, _pipeline.get());
 

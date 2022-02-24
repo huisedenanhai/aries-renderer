@@ -125,23 +125,12 @@ void ScreenSpaceReflection::trace_rays(RenderGraph &rg) {
                 0, 3, _view->render_target(NamedRT_GBuffer2).get());
 
             struct Param {
-                glm::mat4 P;
-                glm::mat4 I_P;
-                int32_t width;
-                int32_t height;
                 int32_t hiz_mip_count;
                 int32_t frame_index;
                 float unbiased_sampling;
-                ARS_PADDING_FIELD(int32_t);
-                ARS_PADDING_FIELD(int32_t);
-                ARS_PADDING_FIELD(int32_t);
             };
 
             Param param{};
-            param.P = _view->projection_matrix();
-            param.I_P = glm::inverse(param.P);
-            param.width = static_cast<int32_t>(dst_extent.width);
-            param.height = static_cast<int32_t>(dst_extent.height);
             param.hiz_mip_count =
                 static_cast<int32_t>(hiz_buffer->info().mip_levels);
             param.frame_index = _frame_index++;
@@ -150,6 +139,7 @@ void ScreenSpaceReflection::trace_rays(RenderGraph &rg) {
                 std::clamp(1.0f - ssr_settings->sampling_bias(), 0.0f, 1.0f);
 
             desc.set_buffer_data(1, 0, param);
+            desc.set_buffer(1, 1, _view->transform_buffer().get());
 
             desc.commit(cmd, _hiz_trace_pipeline.get());
 
@@ -201,33 +191,19 @@ void ScreenSpaceReflection::resolve_reflection(RenderGraph &rg) {
                 0, 5, _view->render_target(NamedRT_LinearColorHistory).get());
 
             struct Param {
-                int32_t width;
-                int32_t height;
                 int32_t frame_index;
-                ARS_PADDING_FIELD(int32_t);
-                glm::mat4 P;
-                glm::mat4 I_P;
-                glm::mat4 I_V;
-                glm::mat4 reproject_IV_VP;
                 float screen_border_fade_size;
                 float thickness;
-                ARS_PADDING_FIELD(int32_t);
-                ARS_PADDING_FIELD(int32_t);
             };
 
             auto ssr = _view->effect()->screen_space_reflection();
             Param param{};
-            param.width = static_cast<int32_t>(dst_extent.width);
-            param.height = static_cast<int32_t>(dst_extent.height);
             param.frame_index = _frame_index;
-            param.P = _view->projection_matrix();
-            param.I_P = glm::inverse(param.P);
-            param.I_V = glm::inverse(_view->view_matrix());
-            param.reproject_IV_VP = _view->last_frame_projection_matrix() *
-                                    _view->last_frame_view_matrix() * param.I_V;
             param.screen_border_fade_size = 0.5f * ssr->border_fade();
             param.thickness = ssr->thickness();
             desc.set_buffer_data(1, 0, param);
+
+            desc.set_buffer(1, 1, _view->transform_buffer().get());
 
             desc.commit(cmd, _resolve_reflection_pipeline.get());
 
@@ -281,14 +257,10 @@ void ScreenSpaceReflection::temporal_filtering(RenderGraph &rg) {
                 _view->rt_manager()->get(_resolve_buffer_single_sample).get());
 
             struct Param {
-                int width;
-                int height;
                 float blend_factor;
             };
 
             Param param{};
-            param.width = static_cast<int32_t>(dst_extent.width);
-            param.height = static_cast<int32_t>(dst_extent.height);
             param.blend_factor = _reflection_history_valid ? 0.05f : 1.0f;
             desc.set_buffer_data(1, 0, param);
 

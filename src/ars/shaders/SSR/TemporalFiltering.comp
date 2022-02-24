@@ -14,8 +14,6 @@ layout(set = 0, binding = 2) uniform sampler2D history_color_tex;
 layout(set = 0, binding = 3) uniform sampler2D current_color_tex;
 
 layout(set = 1, binding = 0) uniform Param {
-    int width;
-    int height;
     float blend_factor;
 };
 
@@ -56,8 +54,8 @@ void neighbor_clamp(vec2 uv,
     color = min(max_color, color);
 }
 
-vec4 calculate_filtered_color(ivec2 index) {
-    vec2 inv_resolution = 1.0 / vec2(width, height);
+vec4 calculate_filtered_color(ivec2 index, ivec2 size) {
+    vec2 inv_resolution = 1.0 / size;
     vec2 uv = index_to_uv(index, inv_resolution);
     float depth01 = texture(depth_stencil_tex, uv).r;
     vec3 pos_vs = reconstruct_position_from_ss(view.I_P, uv, depth01);
@@ -75,10 +73,11 @@ vec4 calculate_filtered_color(ivec2 index) {
 
 void main() {
     ivec2 index = ivec2(gl_GlobalInvocationID.xy);
-    if (index.x >= width || index.y >= height) {
+    ivec2 size = imageSize(filtered_color_image).xy;
+    if (index.x >= size.x || index.y >= size.y) {
         return;
     }
 
-    vec4 filtered_color = calculate_filtered_color(index);
+    vec4 filtered_color = calculate_filtered_color(index, size);
     imageStore(filtered_color_image, index, filtered_color);
 }

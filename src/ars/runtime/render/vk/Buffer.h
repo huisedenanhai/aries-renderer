@@ -7,6 +7,34 @@
 namespace ars::render::vk {
 class Context;
 
+namespace details {
+template <typename T> struct BufferDataViewTrait {
+  public:
+    // If one really what to pass in something like device pointer, he must cast
+    // it to integer or wrap it in some struct
+    static_assert(std::is_pod_v<T> && !std::is_pointer_v<T>);
+    static void *ptr(const T &v) {
+        return (void *)&v;
+    }
+
+    static size_t size(const T &v) {
+        return sizeof(T);
+    }
+};
+
+template <typename T> struct BufferDataViewTrait<std::vector<T>> {
+  public:
+    static_assert(std::is_pod_v<T> && !std::is_pointer_v<T>);
+    static void *ptr(const std::vector<T> &v) {
+        return (void *)(v.data());
+    }
+
+    static size_t size(const std::vector<T> &v) {
+        return sizeof(T) * v.size();
+    }
+};
+} // namespace details
+
 class Buffer {
   public:
     Buffer(Context *context,
@@ -33,13 +61,14 @@ class Buffer {
 
     template <typename T>
     void set_data_array(const T *value, size_t elem_offset, size_t elem_count) {
-        static_assert(std::is_pod_v<T>);
+        static_assert(std::is_pod_v<T> && !std::is_pointer_v<T>);
         set_data_raw(
             (void *)(value), elem_offset * sizeof(T), elem_count * sizeof(T));
     }
 
     template <typename T> void set_data(const T &value) {
-        set_data_array(&value, 0, 1);
+        using DataView = details::BufferDataViewTrait<T>;
+        set_data_raw(DataView::ptr(value), 0, DataView::size(value));
     }
 
   private:

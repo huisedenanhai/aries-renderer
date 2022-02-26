@@ -15,6 +15,7 @@ class ImageBasedLighting {
     explicit ImageBasedLighting(Context *context);
     ~ImageBasedLighting();
 
+    // Specify another pipeline when you need special panorama uv mapping
     void capture_to_cube_map(CommandBuffer *cmd,
                              const Handle<Texture> &panorama_tex,
                              const Handle<Texture> &env_cube_map,
@@ -43,6 +44,10 @@ class SkyData {
     Handle<Texture> irradiance_cube_map();
 
     void mark_dirty(bool dirty = true);
+    // Specify another pipeline when you need special panorama uv mapping.
+    // When a pipeline other than the one used for the previous capture is
+    // specified, this method will consider cache as outdated and perform
+    // update.
     void update_cache(RenderGraph &rg,
                       ComputePipeline *capture_env_pipeline = nullptr);
 
@@ -104,6 +109,7 @@ class SkyBase {
                                    RenderGraph &rg);
 
   protected:
+    // Specify another pipeline when you need special panorama uv mapping
     void
     render_background(View *view, RenderGraph &rg, ComputePipeline *pipeline);
 

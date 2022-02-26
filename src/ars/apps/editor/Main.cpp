@@ -74,6 +74,11 @@ class Editor : public engine::IApplication {
                 window()->physical_size());
             _view->set_xform(
                 math::XformTRS<float>::from_translation({0, 0.3f, 2.0f}));
+
+            render::Perspective cam{};
+            cam.z_far = 10000.0f;
+            _view->set_camera(cam);
+
             _3d_view_state.focus_distance = 2.0f;
 
             _view->overlay()->set_light_gizmo(_light_bulb_icon, 0.1f);

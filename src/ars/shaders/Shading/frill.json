@@ -15,7 +15,11 @@
                 }
             ]
         },
-        "BackgroundSky.comp",
-        "BackgroundPanorama.comp"
+        {
+            "file": "Background.comp",
+            "multi_compile": [
+                "BACKGROUND_PHYSICAL_SKY"
+            ]
+        }
     ]
 }

@@ -37,22 +37,27 @@ void PanoramaSky::set_irradiance_cube_map_size(uint32_t resolution) {
     data()->set_irradiance_cube_map_size(resolution);
 }
 
-void ImageBasedLighting::capture_panorama_to_cube_map(
+void ImageBasedLighting::capture_to_cube_map(
     CommandBuffer *cmd,
     const Handle<Texture> &panorama_tex,
-    const Handle<Texture> &env_cube_map) {
+    const Handle<Texture> &env_cube_map,
+    ComputePipeline *pipeline) {
     assert(panorama_tex != nullptr);
     assert(env_cube_map != nullptr);
 
+    if (pipeline == nullptr) {
+        pipeline = _capture_panorama_pipeline.get();
+    }
+
     auto size = static_cast<int32_t>(env_cube_map->info().extent.width);
-    _capture_cube_map_pipeline->bind(cmd);
+    pipeline->bind(cmd);
 
     DescriptorEncoder desc{};
     desc.set_texture(0, 0, panorama_tex.get());
     desc.set_texture(0, 1, env_cube_map.get());
-    desc.commit(cmd, _capture_cube_map_pipeline.get());
+    desc.commit(cmd, pipeline);
 
-    _capture_cube_map_pipeline->local_size().dispatch(cmd, size, size, 6);
+    pipeline->local_size().dispatch(cmd, size, size, 6);
 }
 
 void ImageBasedLighting::prefilter_irradiance(
@@ -108,7 +113,7 @@ void ImageBasedLighting::prefilter_irradiance(
 ImageBasedLighting::ImageBasedLighting(Context *context) : _context(context) {
     _prefilter_env_pipeline =
         ComputePipeline::create(context, "IBL/PrefilterCubeMap.comp");
-    _capture_cube_map_pipeline =
+    _capture_panorama_pipeline =
         ComputePipeline::create(context, "IBL/CaptureHDRToCubeMap.comp");
 }
 
@@ -165,13 +170,15 @@ void SkyData::ensure_irradiance_cube_map() {
             Format::B10G11R11_UFLOAT_PACK32, _irradiance_cube_map_size)));
 }
 
-void SkyData::update_cache(RenderGraph &rg) {
-    if (!cache_dirty()) {
+void SkyData::update_cache(RenderGraph &rg,
+                           ComputePipeline *capture_env_pipeline) {
+    if (!cache_dirty(capture_env_pipeline)) {
         return;
     }
 
     ensure_irradiance_cube_map();
     _dirty = false;
+    _last_capture_env_pipeline = capture_env_pipeline;
 
     auto ibl = _context->ibl();
     assert(_panorama_texture != nullptr);
@@ -182,8 +189,8 @@ void SkyData::update_cache(RenderGraph &rg) {
         },
         [=](CommandBuffer *cmd) {
             ARS_PROFILER_SAMPLE_VK(cmd, "Capture Env Cube Map", 0xFF017411);
-            ibl->capture_panorama_to_cube_map(
-                cmd, _panorama_texture, _tmp_env_map);
+            ibl->capture_to_cube_map(
+                cmd, _panorama_texture, _tmp_env_map, capture_env_pipeline);
         });
 
     Texture::generate_mipmap(_tmp_env_map, rg);
@@ -235,7 +242,7 @@ void PhysicalSky::update(View *view, RenderGraph &rg) {
     update_sky_view(view, rg);
 
     data()->mark_dirty();
-    data()->update_cache(rg);
+    data()->update_cache(rg, _capture_sky_view_to_cube_map_pipeline.get());
 }
 
 void PhysicalSky::init_atmosphere_settings_buffer() {
@@ -324,6 +331,10 @@ void PhysicalSky::init_pipelines() {
         ComputePipeline::create(_context, "Atmosphere/TransmittanceLut.comp");
     _multi_scattering_lut_pipeline =
         ComputePipeline::create(_context, "Atmosphere/MultiScatteringLut.comp");
+    _shade_background_pipeline = ComputePipeline::create(
+        _context, "Shading/Background.comp", {"BACKGROUND_PHYSICAL_SKY"});
+    _capture_sky_view_to_cube_map_pipeline = ComputePipeline::create(
+        _context, "IBL/CaptureHDRToCubeMap.comp", {"BACKGROUND_PHYSICAL_SKY"});
 }
 
 void PhysicalSky::update_sky_view(View *view, RenderGraph &rg) {
@@ -399,15 +410,22 @@ Handle<Texture> PhysicalSky::transmittance_lut() {
     return _transmittance_lut;
 }
 
+void PhysicalSky::render_background(View *view, RenderGraph &rg) {
+    SkyBase::render_background(view, rg, _shade_background_pipeline.get());
+}
+
 PhysicalSky::~PhysicalSky() = default;
 
 SkyData::SkyData(Context *context) : _context(context) {}
 
-bool SkyData::cache_dirty() {
+bool SkyData::cache_dirty(ComputePipeline *pipeline) {
     // Default case
     if (_panorama_texture == nullptr) {
         assert(_irradiance_cube_map == nullptr);
         return false;
+    }
+    if (_last_capture_env_pipeline != pipeline) {
+        return true;
     }
     if (_dirty) {
         return true;
@@ -472,7 +490,7 @@ SkyData *SkyBase::data() {
 SkyBase::SkyBase(Context *context) {
     _data = std::make_unique<SkyData>(context);
     _shade_background_panorama_pipeline =
-        ComputePipeline::create(context, "Shading/BackgroundPanorama.comp");
+        ComputePipeline::create(context, "Shading/Background.comp");
 }
 
 void SkyBase::update(View *view, RenderGraph &rg) {
@@ -480,6 +498,13 @@ void SkyBase::update(View *view, RenderGraph &rg) {
 }
 
 void SkyBase::render_background(View *view, RenderGraph &rg) {
+    render_background(view, rg, _shade_background_panorama_pipeline.get());
+}
+
+void SkyBase::render_background(View *view,
+                                RenderGraph &rg,
+                                ComputePipeline *pipeline) {
+
     auto background = view->effect_vk()->background_vk();
     rg.add_pass(
         [&](RenderGraphPassBuilder &builder) {
@@ -495,7 +520,7 @@ void SkyBase::render_background(View *view, RenderGraph &rg) {
             auto final_rt = view->render_target(NamedRT_LinearColor);
             auto ctx = view->context();
 
-            _shade_background_panorama_pipeline->bind(cmd);
+            pipeline->bind(cmd);
 
             DescriptorEncoder desc{};
             desc.set_texture(0, 0, final_rt.get());
@@ -525,10 +550,9 @@ void SkyBase::render_background(View *view, RenderGraph &rg) {
             desc.set_buffer_data(1, 0, param);
             desc.set_buffer(1, 1, view->transform_buffer().get());
 
-            desc.commit(cmd, _shade_background_panorama_pipeline.get());
+            desc.commit(cmd, pipeline);
 
-            _shade_background_panorama_pipeline->local_size().dispatch(
-                cmd, final_rt->info().extent);
+            pipeline->local_size().dispatch(cmd, final_rt->info().extent);
         });
 }
 

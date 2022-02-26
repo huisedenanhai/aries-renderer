@@ -1,6 +1,11 @@
 {
     "sources": [
-        "CaptureHDRToCubeMap.comp",
+        {
+            "file": "CaptureHDRToCubeMap.comp",
+            "multi_compile": [
+                "BACKGROUND_PHYSICAL_SKY"
+            ]
+        },
         "PrefilterCubeMap.comp"
     ]
 }

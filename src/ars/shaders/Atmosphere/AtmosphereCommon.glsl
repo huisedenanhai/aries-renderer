@@ -102,4 +102,17 @@ vec2 multi_scattering_lut_r_mu_to_uv(Atmosphere atm, float r, float mu) {
     return vec2(x, y);
 }
 
+vec2 sky_view_lut_direction_to_uv(vec3 dir) {
+    vec2 uv = panorama_direction_to_uv(dir);
+    uv.y -= 0.5;
+    uv.y = 0.5 + 0.5 * sign(uv.y) * sqrt(abs(uv.y) * 2.0);
+    return uv;
+}
+
+vec3 sky_view_lut_uv_to_direction(vec2 uv) {
+    uv.y -= 0.5;
+    uv.y = 0.5 + 0.5 * sign(uv.y) * square(abs(uv.y) * 2.0);
+    return panorama_uv_to_direction(uv);
+}
+
 #endif

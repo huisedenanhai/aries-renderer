@@ -15,9 +15,10 @@ class ImageBasedLighting {
     explicit ImageBasedLighting(Context *context);
     ~ImageBasedLighting();
 
-    void capture_panorama_to_cube_map(CommandBuffer *cmd,
-                                      const Handle<Texture> &panorama_tex,
-                                      const Handle<Texture> &env_cube_map);
+    void capture_to_cube_map(CommandBuffer *cmd,
+                             const Handle<Texture> &panorama_tex,
+                             const Handle<Texture> &env_cube_map,
+                             ComputePipeline *pipeline = nullptr);
     void prefilter_irradiance(CommandBuffer *cmd,
                               const Handle<Texture> &env_cube_map,
                               const Handle<Texture> &irradiance_cube_map,
@@ -27,7 +28,7 @@ class ImageBasedLighting {
   private:
     Context *_context = nullptr;
     std::unique_ptr<ComputePipeline> _prefilter_env_pipeline{};
-    std::unique_ptr<ComputePipeline> _capture_cube_map_pipeline{};
+    std::unique_ptr<ComputePipeline> _capture_panorama_pipeline{};
 };
 
 class SkyData {
@@ -42,8 +43,8 @@ class SkyData {
     Handle<Texture> irradiance_cube_map();
 
     void mark_dirty(bool dirty = true);
-    void update_cache(RenderGraph &rg);
-    bool cache_dirty();
+    void update_cache(RenderGraph &rg,
+                      ComputePipeline *capture_env_pipeline = nullptr);
 
     glm::vec3 color() const;
     void set_color(glm::vec3 color);
@@ -57,6 +58,7 @@ class SkyData {
     void set_prefilter_sample_count(int32_t sample_count);
 
   private:
+    bool cache_dirty(ComputePipeline *pipeline);
     void ensure_irradiance_cube_map();
 
     Context *_context = nullptr;
@@ -67,6 +69,9 @@ class SkyData {
     uint32_t _irradiance_cube_map_size = 64;
     Handle<Texture> _panorama_texture{};
     bool _dirty = false;
+    // Only used as a mark, may be a dangling pointer, use void* to avoid any
+    // call to underling data
+    void *_last_capture_env_pipeline = nullptr;
 
     float _prefilter_bias = 3.0f;
     int32_t _prefilter_sample_count = 256;
@@ -97,6 +102,10 @@ class SkyBase {
     virtual void update([[maybe_unused]] View *view, RenderGraph &rg);
     virtual void render_background([[maybe_unused]] View *view,
                                    RenderGraph &rg);
+
+  protected:
+    void
+    render_background(View *view, RenderGraph &rg, ComputePipeline *pipeline);
 
   private:
     std::unique_ptr<SkyData> _data = nullptr;
@@ -130,7 +139,7 @@ class PhysicalSky : public IPhysicalSky, public SkyBase {
     ARS_SKY_BASE_FORWARD_COLOR_METHOD();
 
     void update(View *view, RenderGraph &rg) override;
-
+    void render_background(View *view, RenderGraph &rg) override;
     Handle<Buffer> atmosphere_settings_buffer();
     Handle<Texture> transmittance_lut();
 
@@ -146,6 +155,8 @@ class PhysicalSky : public IPhysicalSky, public SkyBase {
     std::unique_ptr<ComputePipeline> _sky_view_lut_pipeline{};
     std::unique_ptr<ComputePipeline> _transmittance_lut_pipeline{};
     std::unique_ptr<ComputePipeline> _multi_scattering_lut_pipeline{};
+    std::unique_ptr<ComputePipeline> _shade_background_pipeline{};
+    std::unique_ptr<ComputePipeline> _capture_sky_view_to_cube_map_pipeline{};
     Handle<Buffer> _atmosphere_settings_buffer{};
     Handle<Texture> _transmittance_lut{};
     Handle<Texture> _multi_scattering_lut{};

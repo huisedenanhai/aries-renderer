@@ -208,8 +208,18 @@ struct DescriptorEncoder {
                          void *data,
                          size_t data_size);
 
+    // The data parameter is intentionally marked as non-const to remind caller
+    // this method does not take ownership of data or immediately copy it. Data
+    // must stay alive before commit. T& refuse some common mistake like
+    //   desc.set_buffer_data(0, 0, get_data()); // ERROR!
+    // in the above example get_data() returns a tmp variable that dies
+    // immediately. To make things correct, one must store the result of
+    // get_data() in an actual variable.
+    //   auto data = get_data();
+    //   // Fine if data stay alive before commit
+    //   desc.set_buffer_data(0, 0, data);
     template <typename T>
-    void set_buffer_data(uint32_t set, uint32_t binding, const T &data) {
+    void set_buffer_data(uint32_t set, uint32_t binding, T &data) {
         using DataView = details::BufferDataViewTrait<T>;
         set_buffer_data(
             set, binding, DataView::ptr(data), DataView::size(data));

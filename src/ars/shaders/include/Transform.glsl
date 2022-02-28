@@ -91,4 +91,9 @@ struct ViewTransform {
 ShadingPoint get_shading_point(ViewTransform view, vec2 uv, float depth01) {
     return get_shading_point(uv, depth01, view.I_P, view.I_V);
 }
+
+vec3 get_eye_position_ws(ViewTransform view) {
+    return transform_position(view.I_V, vec3(0)).xyz;
+}
+
 #endif

@@ -392,6 +392,7 @@ void PhysicalSky::update_sky_view(View *view, RenderGraph &rg) {
             desc.set_texture(0, 2, _multi_scattering_lut.get());
             desc.set_buffer(1, 0, _atmosphere_settings_buffer.get());
             desc.set_buffer_data(1, 1, get_atmosphere_sun_param(view));
+            desc.set_buffer(1, 2, view->transform_buffer().get());
 
             desc.commit(cmd, _sky_view_lut_pipeline.get());
 

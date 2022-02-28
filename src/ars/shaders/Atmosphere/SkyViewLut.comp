@@ -17,6 +17,10 @@ layout(set = 1, binding = 1) uniform Sun {
     AtmosphereSun sun;
 };
 
+layout(set = 1, binding = 2) uniform View {
+    ViewTransform view;
+};
+
 vec3 ray_march_sky_view(vec3 view_dir, vec3 view_pos) {
     if (length(sun.direction) == 0) {
         return vec3(0.0);
@@ -56,8 +60,8 @@ void main() {
 
     vec2 uv = index_to_uv(index, 1.0 / size);
     vec3 dir = sky_view_lut_uv_to_direction(uv);
-    vec3 color =
-        ray_march_sky_view(dir, vec3(0.0, atmosphere.bottom_radius + 0.2, 0.0));
+    vec3 color = ray_march_sky_view(
+        dir, get_view_position_planet_coord(atmosphere, view));
 
     imageStore(panorama_tex, index, vec4(color, 1.0));
 }

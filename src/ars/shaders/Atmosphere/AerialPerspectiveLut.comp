@@ -27,17 +27,6 @@ vec4 ray_march_aerial_perspective(vec3 view_pos, vec3 view_dir, float dist) {
         return vec4(0, 0, 0, 1);
     }
 
-    float origin_r = length(view_pos);
-    float origin_mu = dot(normalize(view_pos), view_dir);
-    float max_dist;
-    bool hit_ground =
-        ray_hit_sphere(atmosphere.bottom_radius, origin_r, origin_mu, max_dist);
-    if (!hit_ground) {
-        max_dist = distance_to_atmosphere_top(atmosphere, origin_r, origin_mu);
-    }
-
-    dist = min(dist, max_dist);
-
     int step_count = 30;
     vec3 L, trans;
     ray_march_scattering_transmittance(atmosphere,
@@ -67,7 +56,7 @@ void main() {
     imageStore(aerial_perspective_lut,
                index,
                ray_march_aerial_perspective(
-                   vec3(0.0, atmosphere.bottom_radius + 0.2, 0.0),
+                   get_view_position_planet_coord(atmosphere, view),
                    -sp.v_ws,
                    length(sp.pos_vs)));
 }

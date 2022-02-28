@@ -2,10 +2,10 @@
 #define ARS_ATMOSPHERE_COMMON_GLSL
 
 #include <Misc.glsl>
+#include <Transform.glsl>
 #include <Volume.glsl>
 
 // By default Atmosphere calculation use km as length unit.
-// Other unit should works fine as long as all unit is consistent.
 
 struct Atmosphere {
     float bottom_radius;
@@ -169,6 +169,16 @@ void ray_march_scattering_transmittance(Atmosphere atm,
     }
 
     scattering = max(scattering * sun.radiance, vec3(0.0));
+}
+
+vec3 get_view_position_planet_coord(Atmosphere atm, ViewTransform view) {
+    vec3 eye_pos_ws = get_eye_position_ws(view);
+
+    return vec3(0.0,
+                clamp(atm.bottom_radius + eye_pos_ws.y * 1e-3,
+                      atm.bottom_radius,
+                      atm.top_radius),
+                0.0);
 }
 
 #endif

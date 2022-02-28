@@ -437,16 +437,52 @@ TextureCreateInfo::sampled_2d(VkFormat format,
                               uint32_t height,
                               uint32_t mip_levels,
                               VkSamplerAddressMode address_mode) {
+    return sampled(VK_IMAGE_TYPE_2D,
+                   VK_IMAGE_VIEW_TYPE_2D,
+                   format,
+                   width,
+                   height,
+                   1,
+                   mip_levels,
+                   address_mode);
+}
+
+TextureCreateInfo
+TextureCreateInfo::sampled_3d(VkFormat format,
+                              uint32_t width,
+                              uint32_t height,
+                              uint32_t depth,
+                              uint32_t mip_levels,
+                              VkSamplerAddressMode address_mode) {
+    return sampled(VK_IMAGE_TYPE_3D,
+                   VK_IMAGE_VIEW_TYPE_3D,
+                   format,
+                   width,
+                   height,
+                   depth,
+                   mip_levels,
+                   address_mode);
+}
+
+TextureCreateInfo
+TextureCreateInfo::sampled(VkImageType image_type,
+                           VkImageViewType view_type,
+                           VkFormat format,
+                           uint32_t width,
+                           uint32_t height,
+                           uint32_t depth,
+                           uint32_t mip_levels,
+                           VkSamplerAddressMode address_mode) {
     TextureCreateInfo info{};
     info.aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT;
-    info.view_type = VK_IMAGE_VIEW_TYPE_2D;
-    info.image_type = VK_IMAGE_TYPE_2D;
+    info.view_type = view_type;
+    info.image_type = image_type;
     info.format = format;
     info.usage = IMAGE_USAGE_SAMPLED_COLOR;
     info.samples = VK_SAMPLE_COUNT_1_BIT;
     info.mip_levels = mip_levels;
     info.array_layers = 1;
-    info.extent = VkExtent3D{width, height, 1};
+    info.extent = VkExtent3D{width, height, depth};
     info.address_mode_u = address_mode;
     info.address_mode_v = address_mode;
     info.address_mode_w = address_mode;

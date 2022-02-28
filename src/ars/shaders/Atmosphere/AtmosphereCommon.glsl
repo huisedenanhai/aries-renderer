@@ -2,6 +2,7 @@
 #define ARS_ATMOSPHERE_COMMON_GLSL
 
 #include <Misc.glsl>
+#include <Volume.glsl>
 
 // By default Atmosphere calculation use km as length unit.
 // Other unit should works fine as long as all unit is consistent.
@@ -19,6 +20,12 @@ struct Atmosphere {
     float ozone_thickness;
     float ground_albedo;
     float mie_g;
+};
+
+struct AtmosphereSun {
+    // points from shading point to sun
+    vec3 direction;
+    vec3 radiance;
 };
 
 // mu = dot(up, v_forward)
@@ -113,6 +120,55 @@ vec3 sky_view_lut_uv_to_direction(vec2 uv) {
     uv.y -= 0.5;
     uv.y = 0.5 + 0.5 * sign(uv.y) * square(abs(uv.y) * 2.0);
     return panorama_uv_to_direction(uv);
+}
+
+// view_dir points from view point to shading point.
+// sun_dir points from shading point to sun.
+// Directions and positions are in the planet world coordinate, which origin is
+// at the center of planet.
+void ray_march_scattering_transmittance(Atmosphere atm,
+                                        AtmosphereSun sun,
+                                        sampler2D transmittance_lut,
+                                        sampler2D multi_scattering_lut,
+                                        vec3 view_dir,
+                                        vec3 view_pos,
+                                        float dist,
+                                        int step_count,
+                                        out vec3 scattering,
+                                        out vec3 transmittance) {
+    transmittance = vec3(1.0);
+    scattering = vec3(0.0);
+
+    float dt = dist / step_count;
+    for (int i = 0; i < step_count; i++) {
+        float t = (i + 0.5) * dt;
+        vec3 ray_p = view_pos + view_dir * t;
+        float r = length(ray_p);
+        float mu = dot(normalize(ray_p), sun.direction);
+
+        vec3 s =
+            texture(transmittance_lut, transmittance_lut_r_mu_to_uv(atm, r, mu))
+                .rgb;
+        vec3 ms = texture(multi_scattering_lut,
+                          multi_scattering_lut_r_mu_to_uv(atm, r, mu))
+                      .rgb;
+
+        vec3 e_s_r = rayleigh_density(atm, r) * atm.rayleigh_scattering;
+        float e_s_m = mie_density(atm, r) * atm.mie_scattering;
+
+        float cos_scatter = dot(sun.direction, -view_dir);
+        float phase_r = rayleigh_phase(cos_scatter);
+        float phase_m = mie_phase_cornette_shanks(atm.mie_g, cos_scatter);
+
+        vec3 e = atmosphere_extinction(atm, r);
+
+        vec3 direct_scatter = (e_s_r * phase_r + e_s_m * phase_m) * s;
+        vec3 multi_scatter = (e_s_r + e_s_m) * ms;
+        scattering += transmittance * (direct_scatter + multi_scatter) * dt;
+        transmittance *= exp(-e * dt);
+    }
+
+    scattering = max(scattering * sun.radiance, vec3(0.0));
 }
 
 #endif

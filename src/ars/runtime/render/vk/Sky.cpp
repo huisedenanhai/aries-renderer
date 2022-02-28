@@ -227,6 +227,28 @@ struct AtmosphereSettings {
     float ground_albedo;
     float mie_g;
 };
+
+struct AtmosphereSunParam {
+    glm::vec3 direction;
+    ARS_PADDING_FIELD(float);
+    glm::vec3 radiance;
+    ARS_PADDING_FIELD(float);
+};
+
+AtmosphereSunParam get_atmosphere_sun_param(View *view) {
+    AtmosphereSunParam param{};
+    auto scene = view->scene_vk();
+    if (scene->sun_id.valid()) {
+        auto sun_xform =
+            scene->directional_lights.get<math::XformTRS<float>>(scene->sun_id);
+        auto sun_light = scene->directional_lights.get<Light>(scene->sun_id);
+
+        param.direction = -glm::normalize(sun_xform.forward());
+        param.radiance = sun_light.color * sun_light.intensity;
+    }
+    return param;
+}
+
 } // namespace
 
 PhysicalSky::PhysicalSky(Context *context)
@@ -240,6 +262,7 @@ void PhysicalSky::update(View *view, RenderGraph &rg) {
     update_transmittance_lut(rg);
     update_multi_scattering_lut(rg);
     update_sky_view(view, rg);
+    update_aerial_perspective_lut(view, rg);
 
     data()->mark_dirty();
     data()->update_cache(rg, _capture_sky_view_to_cube_map_pipeline.get());
@@ -304,6 +327,17 @@ void PhysicalSky::init_textures() {
                                       VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER);
     multi_scatter_lut_info.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
     _multi_scattering_lut = _context->create_texture(multi_scatter_lut_info);
+
+    auto aerial_perspective_lut_info =
+        TextureCreateInfo::sampled_3d(VK_FORMAT_R16G16B16A16_SFLOAT,
+                                      32,
+                                      32,
+                                      32,
+                                      1,
+                                      VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER);
+    aerial_perspective_lut_info.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+    _aerial_perspective_lut =
+        _context->create_texture(aerial_perspective_lut_info);
 }
 
 void PhysicalSky::update_transmittance_lut(RenderGraph &rg) {
@@ -331,6 +365,8 @@ void PhysicalSky::init_pipelines() {
         ComputePipeline::create(_context, "Atmosphere/TransmittanceLut.comp");
     _multi_scattering_lut_pipeline =
         ComputePipeline::create(_context, "Atmosphere/MultiScatteringLut.comp");
+    _aerial_perspective_lut_pipeline = ComputePipeline::create(
+        _context, "Atmosphere/AerialPerspectiveLut.comp");
     _shade_background_pipeline = ComputePipeline::create(
         _context, "Shading/Background.comp", {"BACKGROUND_PHYSICAL_SKY"});
     _capture_sky_view_to_cube_map_pipeline = ComputePipeline::create(
@@ -353,27 +389,7 @@ void PhysicalSky::update_sky_view(View *view, RenderGraph &rg) {
             desc.set_texture(0, 1, _transmittance_lut.get());
             desc.set_texture(0, 2, _multi_scattering_lut.get());
             desc.set_buffer(1, 0, _atmosphere_settings_buffer.get());
-
-            struct Param {
-                glm::vec3 sun_dir;
-                ARS_PADDING_FIELD(float);
-                glm::vec3 sun_radiance;
-                ARS_PADDING_FIELD(float);
-            };
-
-            Param param{};
-            auto scene = view->scene_vk();
-            if (scene->sun_id.valid()) {
-                auto sun_xform =
-                    scene->directional_lights.get<math::XformTRS<float>>(
-                        scene->sun_id);
-                auto sun_light =
-                    scene->directional_lights.get<Light>(scene->sun_id);
-
-                param.sun_dir = -glm::normalize(sun_xform.forward());
-                param.sun_radiance = sun_light.color * sun_light.intensity;
-            }
-            desc.set_buffer_data(1, 1, param);
+            desc.set_buffer_data(1, 1, get_atmosphere_sun_param(view));
 
             desc.commit(cmd, _sky_view_lut_pipeline.get());
 
@@ -411,7 +427,42 @@ Handle<Texture> PhysicalSky::transmittance_lut() {
 }
 
 void PhysicalSky::render_background(View *view, RenderGraph &rg) {
-    SkyBase::render_background(view, rg, _shade_background_pipeline.get());
+    SkyBase::render_background(
+        view, rg, _shade_background_pipeline.get(), nullptr, nullptr);
+
+    rg.add_pass(
+        [&](RenderGraphPassBuilder &builder) {
+            builder.compute_shader_read(_aerial_perspective_lut);
+            builder.compute_shader_read(NamedRT_Depth);
+            builder.compute_shader_read_write(NamedRT_LinearColor);
+        },
+        [=](CommandBuffer *cmd) {
+
+        });
+}
+
+void PhysicalSky::update_aerial_perspective_lut(View *view, RenderGraph &rg) {
+    rg.add_pass(
+        [&](RenderGraphPassBuilder &builder) {
+            builder.compute_shader_read(_transmittance_lut);
+            builder.compute_shader_read(_multi_scattering_lut);
+            builder.compute_shader_write(_aerial_perspective_lut);
+        },
+        [=](CommandBuffer *cmd) {
+            _aerial_perspective_lut_pipeline->bind(cmd);
+
+            DescriptorEncoder desc{};
+            desc.set_texture(0, 0, _aerial_perspective_lut.get());
+            desc.set_texture(0, 1, _transmittance_lut.get());
+            desc.set_texture(0, 2, _multi_scattering_lut.get());
+            desc.set_buffer(1, 0, _atmosphere_settings_buffer.get());
+            desc.set_buffer_data(1, 1, get_atmosphere_sun_param(view));
+            desc.set_buffer(1, 2, view->transform_buffer().get());
+            desc.commit(cmd, _aerial_perspective_lut_pipeline.get());
+
+            _aerial_perspective_lut_pipeline->local_size().dispatch(
+                cmd, _aerial_perspective_lut->info().extent);
+        });
 }
 
 PhysicalSky::~PhysicalSky() = default;
@@ -498,13 +549,16 @@ void SkyBase::update(View *view, RenderGraph &rg) {
 }
 
 void SkyBase::render_background(View *view, RenderGraph &rg) {
-    render_background(view, rg, _shade_background_panorama_pipeline.get());
+    render_background(
+        view, rg, _shade_background_panorama_pipeline.get(), nullptr, nullptr);
 }
 
-void SkyBase::render_background(View *view,
-                                RenderGraph &rg,
-                                ComputePipeline *pipeline) {
-
+void SkyBase::render_background(
+    View *view,
+    RenderGraph &rg,
+    ComputePipeline *pipeline,
+    const std::function<void(RenderGraphPassBuilder &)> &additional_deps,
+    const std::function<void(DescriptorEncoder &)> &additional_desc) {
     auto background = view->effect_vk()->background_vk();
     rg.add_pass(
         [&](RenderGraphPassBuilder &builder) {
@@ -513,6 +567,10 @@ void SkyBase::render_background(View *view,
 
             if (background->mode() == BackgroundMode::Sky) {
                 builder.compute_shader_read(data()->panorama());
+            }
+
+            if (additional_deps != nullptr) {
+                additional_deps(builder);
             }
         },
         [=](CommandBuffer *cmd) {
@@ -544,12 +602,12 @@ void SkyBase::render_background(View *view,
                 param.background_factor = background->radiance();
             }
 
-            auto v_matrix = view->view_matrix();
-            auto p_matrix = view->projection_matrix();
-
             desc.set_buffer_data(1, 0, param);
             desc.set_buffer(1, 1, view->transform_buffer().get());
 
+            if (additional_desc != nullptr) {
+                additional_desc(desc);
+            }
             desc.commit(cmd, pipeline);
 
             pipeline->local_size().dispatch(cmd, final_rt->info().extent);

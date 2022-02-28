@@ -27,10 +27,27 @@ struct TextureCreateInfo {
     VkSamplerAddressMode address_mode_v = VK_SAMPLER_ADDRESS_MODE_REPEAT;
     VkSamplerAddressMode address_mode_w = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 
+    static TextureCreateInfo sampled(VkImageType image_type,
+                                     VkImageViewType view_type,
+                                     VkFormat format,
+                                     uint32_t width,
+                                     uint32_t height,
+                                     uint32_t depth,
+                                     uint32_t mip_levels,
+                                     VkSamplerAddressMode address_mode);
+
     static TextureCreateInfo sampled_2d(
         VkFormat format,
         uint32_t width,
         uint32_t height,
+        uint32_t mip_levels = MAX_MIP_LEVELS,
+        VkSamplerAddressMode address_mode = VK_SAMPLER_ADDRESS_MODE_REPEAT);
+
+    static TextureCreateInfo sampled_3d(
+        VkFormat format,
+        uint32_t width,
+        uint32_t height,
+        uint32_t depth,
         uint32_t mip_levels = MAX_MIP_LEVELS,
         VkSamplerAddressMode address_mode = VK_SAMPLER_ADDRESS_MODE_REPEAT);
 };

@@ -2,6 +2,8 @@
     "sources": [
         "SkyViewLut.comp",
         "TransmittanceLut.comp",
-        "MultiScatteringLut.comp"
+        "MultiScatteringLut.comp",
+        "AerialPerspectiveLut.comp",
+        "ApplyAerialPerspective.comp"
     ]
 }

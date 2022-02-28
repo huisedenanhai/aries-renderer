@@ -25,6 +25,10 @@ vec2 index_to_uv(vec2 index, vec2 inv_resolution) {
     return (index + vec2(0.5)) * inv_resolution;
 }
 
+vec3 index_to_uv(vec3 index, vec3 inv_resolution) {
+    return (index + vec3(0.5)) * inv_resolution;
+}
+
 float clamp01(float v) {
     return clamp(v, 0.0, 1.0);
 }
@@ -123,6 +127,10 @@ bool ray_hit_sphere(float radius, float r, float mu, out float dist) {
     dist = t0 >= 0 ? t0 : t1;
 
     return d2 >= 0 && dist >= 0;
+}
+
+float average(vec3 v) {
+    return (v.x + v.y + v.z) / 3.0;
 }
 
 #endif

@@ -1,0 +1,73 @@
+#version 450 core
+
+#include "AtmosphereCommon.glsl"
+#include <Transform.glsl>
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
+
+layout(set = 0, binding = 0, rgba16f) uniform image3D aerial_perspective_lut;
+
+layout(set = 0, binding = 1) uniform sampler2D transmittance_lut;
+layout(set = 0, binding = 2) uniform sampler2D multi_scattering_lut;
+
+layout(set = 1, binding = 0) uniform Param {
+    Atmosphere atmosphere;
+};
+
+layout(set = 1, binding = 1) uniform Sun {
+    AtmosphereSun sun;
+};
+
+layout(set = 1, binding = 2) uniform View {
+    ViewTransform view;
+};
+
+vec4 ray_march_aerial_perspective(vec3 view_pos, vec3 view_dir, float dist) {
+    if (length(sun.direction) == 0) {
+        return vec4(0, 0, 0, 1);
+    }
+
+    float origin_r = length(view_pos);
+    float origin_mu = dot(normalize(view_pos), view_dir);
+    float max_dist;
+    bool hit_ground =
+        ray_hit_sphere(atmosphere.bottom_radius, origin_r, origin_mu, max_dist);
+    if (!hit_ground) {
+        max_dist = distance_to_atmosphere_top(atmosphere, origin_r, origin_mu);
+    }
+
+    dist = min(dist, max_dist);
+
+    int step_count = 30;
+    vec3 L, trans;
+    ray_march_scattering_transmittance(atmosphere,
+                                       sun,
+                                       transmittance_lut,
+                                       multi_scattering_lut,
+                                       view_dir,
+                                       view_pos,
+                                       dist,
+                                       step_count,
+                                       L,
+                                       trans);
+    return vec4(L, average(trans));
+}
+
+void main() {
+    ivec3 index = ivec3(gl_GlobalInvocationID.xyz);
+    ivec3 size = imageSize(aerial_perspective_lut).xyz;
+
+    if (index.x >= size.x || index.y >= size.y || index.z >= size.z) {
+        return;
+    }
+
+    vec3 uv = index_to_uv(index, 1.0 / size);
+    ShadingPoint sp = get_shading_point(view, uv.xy, uv.z);
+
+    imageStore(aerial_perspective_lut,
+               index,
+               ray_march_aerial_perspective(
+                   vec3(0.0, atmosphere.bottom_radius + 0.2, 0.0),
+                   -sp.v_ws,
+                   length(sp.pos_vs)));
+}

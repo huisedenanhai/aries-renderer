@@ -5,6 +5,8 @@
 
 namespace ars::render::vk {
 class Context;
+struct DescriptorEncoder;
+class RenderGraphPassBuilder;
 class ComputePipeline;
 class Buffer;
 struct RenderGraph;
@@ -110,8 +112,12 @@ class SkyBase {
 
   protected:
     // Specify another pipeline when you need special panorama uv mapping
-    void
-    render_background(View *view, RenderGraph &rg, ComputePipeline *pipeline);
+    void render_background(
+        View *view,
+        RenderGraph &rg,
+        ComputePipeline *pipeline,
+        const std::function<void(RenderGraphPassBuilder &)> &additional_deps,
+        const std::function<void(DescriptorEncoder &)> &additional_desc);
 
   private:
     std::unique_ptr<SkyData> _data = nullptr;
@@ -156,16 +162,19 @@ class PhysicalSky : public IPhysicalSky, public SkyBase {
     void update_transmittance_lut(RenderGraph &rg);
     void update_multi_scattering_lut(RenderGraph &rg);
     void update_sky_view(View *view, RenderGraph &rg);
+    void update_aerial_perspective_lut(View *view, RenderGraph &rg);
 
     Context *_context = nullptr;
     std::unique_ptr<ComputePipeline> _sky_view_lut_pipeline{};
     std::unique_ptr<ComputePipeline> _transmittance_lut_pipeline{};
     std::unique_ptr<ComputePipeline> _multi_scattering_lut_pipeline{};
+    std::unique_ptr<ComputePipeline> _aerial_perspective_lut_pipeline{};
     std::unique_ptr<ComputePipeline> _shade_background_pipeline{};
     std::unique_ptr<ComputePipeline> _capture_sky_view_to_cube_map_pipeline{};
     Handle<Buffer> _atmosphere_settings_buffer{};
     Handle<Texture> _transmittance_lut{};
     Handle<Texture> _multi_scattering_lut{};
+    Handle<Texture> _aerial_perspective_lut{};
 };
 
 std::shared_ptr<PhysicalSky> upcast(const std::shared_ptr<IPhysicalSky> &sky);

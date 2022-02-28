@@ -161,6 +161,6 @@ void main() {
                                      texture(gbuffer2_tex, uv),
                                      texture(gbuffer3_tex, uv));
 
-    ShadingPoint sp = get_shading_point(uv, depth01, view);
+    ShadingPoint sp = get_shading_point(view, uv, depth01);
     lit_result = vec4(shade(gbuffer, sp), 1.0);
 }

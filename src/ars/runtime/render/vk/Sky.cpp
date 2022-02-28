@@ -371,6 +371,8 @@ void PhysicalSky::init_pipelines() {
         _context, "Shading/Background.comp", {"BACKGROUND_PHYSICAL_SKY"});
     _capture_sky_view_to_cube_map_pipeline = ComputePipeline::create(
         _context, "IBL/CaptureHDRToCubeMap.comp", {"BACKGROUND_PHYSICAL_SKY"});
+    _apply_aerial_perspective_pipeline = ComputePipeline::create(
+        _context, "Atmosphere/ApplyAerialPerspective.comp");
 }
 
 void PhysicalSky::update_sky_view(View *view, RenderGraph &rg) {
@@ -437,7 +439,18 @@ void PhysicalSky::render_background(View *view, RenderGraph &rg) {
             builder.compute_shader_read_write(NamedRT_LinearColor);
         },
         [=](CommandBuffer *cmd) {
+            _apply_aerial_perspective_pipeline->bind(cmd);
 
+            DescriptorEncoder desc{};
+            desc.set_texture(
+                0, 0, view->render_target(NamedRT_LinearColor).get());
+            desc.set_texture(0, 1, view->render_target(NamedRT_Depth).get());
+            desc.set_texture(0, 2, _aerial_perspective_lut.get());
+            desc.set_buffer(1, 0, view->transform_buffer().get());
+            desc.commit(cmd, _apply_aerial_perspective_pipeline.get());
+
+            _apply_aerial_perspective_pipeline->local_size().dispatch(
+                cmd, view->render_target(NamedRT_LinearColor)->info().extent);
         });
 }
 

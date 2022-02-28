@@ -1,5 +1,35 @@
 #version 450 core
 
+#include <Misc.glsl>
+#include <Transform.glsl>
+
 layout(local_size_x = 8, local_size_y = 8) in;
 
-void main() {}
+layout(set = 0, binding = 0, r11f_g11f_b10f) uniform image2D output_image;
+layout(set = 0, binding = 1) uniform sampler2D depth_stencil_tex;
+layout(set = 0, binding = 2) uniform sampler3D aerial_perspective_lut;
+
+layout(set = 1, binding = 0) uniform View {
+    ViewTransform view;
+};
+
+void main() {
+    ivec2 index = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(output_image);
+    if (index.x >= size.x || index.y >= size.y) {
+        return;
+    }
+
+    vec2 uv = index_to_uv(index, 1.0 / size);
+    float depth01 = texture(depth_stencil_tex, uv).r;
+    // Skip background
+    if (depth01 == 0.0) {
+        return;
+    }
+
+    vec4 aerial_perspective =
+        texture(aerial_perspective_lut, vec3(uv, depth01));
+    vec3 color = imageLoad(output_image, index).rgb;
+    color = color * aerial_perspective.a + aerial_perspective.rgb;
+    imageStore(output_image, index, vec4(color, 1.0));
+}

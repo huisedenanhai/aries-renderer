@@ -171,6 +171,7 @@ class PhysicalSky : public IPhysicalSky, public SkyBase {
     std::unique_ptr<ComputePipeline> _aerial_perspective_lut_pipeline{};
     std::unique_ptr<ComputePipeline> _shade_background_pipeline{};
     std::unique_ptr<ComputePipeline> _capture_sky_view_to_cube_map_pipeline{};
+    std::unique_ptr<ComputePipeline> _apply_aerial_perspective_pipeline{};
     Handle<Buffer> _atmosphere_settings_buffer{};
     Handle<Texture> _transmittance_lut{};
     Handle<Texture> _multi_scattering_lut{};

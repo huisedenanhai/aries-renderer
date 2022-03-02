@@ -21,6 +21,36 @@ layout(set = 1, binding = 2) uniform View {
     ViewTransform view;
 };
 
+bool calculate_ray_march_range(float r,
+                               float mu,
+                               out float start_dist,
+                               out float end_dist) {
+    // The look of sky is undefined when eye sinks in the ground. Just render
+    // everything black.
+    if (r <= atmosphere.bottom_radius) {
+        return false;
+    }
+
+    float t0, t1;
+    bool hit_top = ray_hit_sphere(atmosphere.top_radius, r, mu, t0, t1);
+
+    // View is at outer space and does not hit atmosphere
+    if (!hit_top) {
+        return false;
+    }
+
+    start_dist = max(0.0, t0);
+    end_dist = max(0.0, t1);
+
+    float t;
+    bool hit_groud = ray_forward_hit_sphere(atmosphere.bottom_radius, r, mu, t);
+    if (hit_groud) {
+        end_dist = t;
+    }
+
+    return true;
+}
+
 vec3 ray_march_sky_view(vec3 view_dir, vec3 view_pos) {
     if (length(sun.direction) == 0) {
         return vec3(0.0);
@@ -28,11 +58,13 @@ vec3 ray_march_sky_view(vec3 view_dir, vec3 view_pos) {
 
     float origin_r = length(view_pos);
     float origin_mu = dot(normalize(view_pos), view_dir);
-    float dist;
-    bool hit_ground =
-        ray_hit_sphere(atmosphere.bottom_radius, origin_r, origin_mu, dist);
-    if (!hit_ground) {
-        dist = distance_to_atmosphere_top(atmosphere, origin_r, origin_mu);
+
+    float start_dist, end_dist;
+    bool hit =
+        calculate_ray_march_range(origin_r, origin_mu, start_dist, end_dist);
+
+    if (!hit) {
+        return vec3(0.0);
     }
 
     int step_count = 30;
@@ -43,7 +75,8 @@ vec3 ray_march_sky_view(vec3 view_dir, vec3 view_pos) {
                                        multi_scattering_lut,
                                        view_dir,
                                        view_pos,
-                                       dist,
+                                       start_dist,
+                                       end_dist,
                                        step_count,
                                        L,
                                        trans);

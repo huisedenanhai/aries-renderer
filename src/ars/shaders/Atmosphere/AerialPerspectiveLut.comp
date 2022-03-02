@@ -23,7 +23,9 @@ layout(set = 1, binding = 2) uniform View {
 };
 
 vec4 ray_march_aerial_perspective(vec3 view_pos, vec3 view_dir, float dist) {
-    if (length(sun.direction) == 0) {
+    if (length(sun.direction) == 0 ||
+        // How the atmosphere looks is undefined when eye sinks underground
+        length(view_pos) <= atmosphere.bottom_radius) {
         return vec4(0, 0, 0, 1);
     }
 
@@ -35,6 +37,7 @@ vec4 ray_march_aerial_perspective(vec3 view_pos, vec3 view_dir, float dist) {
                                        multi_scattering_lut,
                                        view_dir,
                                        view_pos,
+                                       0.0,
                                        dist,
                                        step_count,
                                        L,

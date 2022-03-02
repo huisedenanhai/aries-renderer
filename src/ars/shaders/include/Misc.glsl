@@ -115,18 +115,28 @@ float fade_on_edge_01(float v, float fade_size) {
     return clamp(min(v, 1.0 - v) / fade_size, 0.0, 1.0);
 }
 
-// check if there is a hit in the positive direction of the ray
+// check if there is any hit with sphere
 // mu = dot(r_dir, ray_dir)
-bool ray_hit_sphere(float radius, float r, float mu, out float dist) {
+// this method ensures t0 <= t1
+bool ray_hit_sphere(
+    float radius, float r, float mu, out float t0, out float t1) {
     float d2 = square(radius) + square(r) * (square(mu) - 1.0);
     float d = safe_sqrt(d2);
 
-    float t0 = -d - r * mu;
-    float t1 = d - r * mu;
+    t0 = -d - r * mu;
+    t1 = d - r * mu;
+    return d2 >= 0;
+}
+
+// check if there is a hit in the positive direction of the ray
+// mu = dot(r_dir, ray_dir)
+bool ray_forward_hit_sphere(float radius, float r, float mu, out float dist) {
+    float t0, t1;
+    bool has_hit = ray_hit_sphere(radius, r, mu, t0, t1);
 
     dist = t0 >= 0 ? t0 : t1;
 
-    return d2 >= 0 && dist >= 0;
+    return has_hit && dist >= 0;
 }
 
 float average(vec3 v) {

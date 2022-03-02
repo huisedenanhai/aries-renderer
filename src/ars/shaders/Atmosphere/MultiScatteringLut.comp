@@ -19,8 +19,8 @@ void ray_march_sample(float origin_r,
                       out vec3 L_in,
                       out vec3 L_f) {
     float dist;
-    bool hit_ground =
-        ray_hit_sphere(atmosphere.bottom_radius, origin_r, origin_mu, dist);
+    bool hit_ground = ray_forward_hit_sphere(
+        atmosphere.bottom_radius, origin_r, origin_mu, dist);
     if (!hit_ground) {
         dist = distance_to_atmosphere_top(atmosphere, origin_r, origin_mu);
     }

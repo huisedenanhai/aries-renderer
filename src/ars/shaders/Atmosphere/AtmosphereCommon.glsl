@@ -32,7 +32,7 @@ struct AtmosphereSun {
 // Assume there is a hit
 float distance_to_atmosphere_top(Atmosphere atm, float r, float mu) {
     float dist;
-    bool hit = ray_hit_sphere(atm.top_radius, r, mu, dist);
+    bool hit = ray_forward_hit_sphere(atm.top_radius, r, mu, dist);
     return max(0.0, dist);
 }
 
@@ -144,20 +144,22 @@ void ray_march_scattering_transmittance(Atmosphere atm,
                                         sampler2D multi_scattering_lut,
                                         vec3 view_dir,
                                         vec3 view_pos,
-                                        float dist,
+                                        float start_dist,
+                                        float end_dist,
                                         int step_count,
                                         out vec3 scattering,
                                         out vec3 transmittance) {
     transmittance = vec3(1.0);
     scattering = vec3(0.0);
 
-    float dt = dist / step_count;
+    float dt = (end_dist - start_dist) / step_count;
     for (int i = 0; i < step_count; i++) {
-        float t = (i + 0.5) * dt;
+        float t = (i + 0.5) * dt + start_dist;
         vec3 ray_p = view_pos + view_dir * t;
         float r = length(ray_p);
         float mu = dot(normalize(ray_p), sun.direction);
 
+        // s and ms are 0 when r is out of range
         vec3 s =
             texture(transmittance_lut, transmittance_lut_r_mu_to_uv(atm, r, mu))
                 .rgb;
@@ -184,13 +186,8 @@ void ray_march_scattering_transmittance(Atmosphere atm,
 }
 
 vec3 get_view_position_planet_coord(Atmosphere atm, ViewTransform view) {
-    vec3 eye_pos_ws = get_eye_position_ws(view);
-
-    return vec3(0.0,
-                clamp(atm.bottom_radius + eye_pos_ws.y * 1e-3,
-                      atm.bottom_radius,
-                      atm.top_radius),
-                0.0);
+    vec3 eye_pos_ws_km = get_eye_position_ws(view) * 1e-3;
+    return eye_pos_ws_km + vec3(0.0, atm.bottom_radius, 0.0);
 }
 
 #endif

@@ -122,6 +122,18 @@ vec3 sky_view_lut_uv_to_direction(vec2 uv) {
     return panorama_uv_to_direction(uv);
 }
 
+vec3 aerial_perspective_lut_pos_ss_to_uvw(ViewTransform view, vec3 pos_ss) {
+    float linear_z = depth01_to_linear_z(view, pos_ss.z);
+    float w = inverse_lerp(view.z_near, view.z_far, linear_z);
+    return vec3(pos_ss.xy, w);
+}
+
+vec3 aerial_perspective_lut_uvw_to_pos_ss(ViewTransform view, vec3 uvw) {
+    float linear_z = mix(view.z_near, view.z_far, uvw.z);
+    float depth01 = linear_z_to_depth01(view, linear_z);
+    return vec3(uvw.xy, depth01);
+}
+
 // view_dir points from view point to shading point.
 // sun_dir points from shading point to sun.
 // Directions and positions are in the planet world coordinate, which origin is

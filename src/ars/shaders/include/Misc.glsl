@@ -133,4 +133,8 @@ float average(vec3 v) {
     return (v.x + v.y + v.z) / 3.0;
 }
 
+float inverse_lerp(float a, float b, float v) {
+    return (v - a) / (b - a);
+}
+
 #endif

@@ -50,13 +50,15 @@ void main() {
         return;
     }
 
-    vec3 uv = index_to_uv(index, 1.0 / size);
-    ShadingPoint sp = get_shading_point(view, uv.xy, uv.z);
+    vec3 uvw = index_to_uv(index, 1.0 / size);
+    vec3 pos_ss = aerial_perspective_lut_uvw_to_pos_ss(view, uvw);
+    ShadingPoint sp = get_shading_point(view, pos_ss.xy, pos_ss.z);
 
     imageStore(aerial_perspective_lut,
                index,
                ray_march_aerial_perspective(
                    get_view_position_planet_coord(atmosphere, view),
                    -sp.v_ws,
-                   length(sp.pos_vs)));
+                   // Planet coord is in unit km
+                   length(sp.pos_vs) * 1e-3));
 }

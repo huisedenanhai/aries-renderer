@@ -86,6 +86,8 @@ struct ViewTransform {
     mat4 I_V;
     mat4 I_P;
     mat4 reproject_IV_VP;
+    float z_far;
+    float z_near;
 };
 
 ShadingPoint get_shading_point(ViewTransform view, vec2 uv, float depth01) {
@@ -94,6 +96,20 @@ ShadingPoint get_shading_point(ViewTransform view, vec2 uv, float depth01) {
 
 vec3 get_eye_position_ws(ViewTransform view) {
     return transform_position(view.I_V, vec3(0)).xyz;
+}
+
+// This method will map depth01 to linear z
+// This method returns POSITIVE z value for depth01 in range [0, 1], which is
+// different in sign from the result of reconstruct_position_from_ss, as view
+// space z axis points backward from camera.
+float depth01_to_linear_z(ViewTransform view, float depth01) {
+    vec4 zw = view.I_P * vec4(0, 0, depth01, 1);
+    return -zw.z / zw.w;
+}
+
+float linear_z_to_depth01(ViewTransform view, float linear_z) {
+    vec4 zw = view.P * vec4(0, 0, -linear_z, 1);
+    return zw.z / zw.w;
 }
 
 #endif

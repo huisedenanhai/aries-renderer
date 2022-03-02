@@ -1,7 +1,6 @@
 #version 450 core
 
-#include <Misc.glsl>
-#include <Transform.glsl>
+#include "AtmosphereCommon.glsl"
 
 layout(local_size_x = 8, local_size_y = 8) in;
 
@@ -28,7 +27,9 @@ void main() {
     }
 
     vec4 aerial_perspective =
-        texture(aerial_perspective_lut, vec3(uv, depth01));
+        texture(aerial_perspective_lut,
+                aerial_perspective_lut_pos_ss_to_uvw(view, vec3(uv, depth01)));
+
     vec3 color = imageLoad(output_image, index).rgb;
     color = color * aerial_perspective.a + aerial_perspective.rgb;
     imageStore(output_image, index, vec4(color, 1.0));

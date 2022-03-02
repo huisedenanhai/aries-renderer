@@ -26,6 +26,8 @@ struct ViewTransform {
     glm::mat4 I_V;
     glm::mat4 I_P;
     glm::mat4 reproject_IV_VP;
+    float z_near;
+    float z_far;
 };
 } // namespace
 
@@ -336,6 +338,8 @@ void View::update_transform_buffer() {
     t.I_P = glm::inverse(t.P);
     t.reproject_IV_VP =
         last_frame_projection_matrix() * last_frame_view_matrix() * t.I_V;
+    t.z_near = camera().z_near();
+    t.z_far = camera().z_far();
 
     _transform_buffer->set_data(t);
 }

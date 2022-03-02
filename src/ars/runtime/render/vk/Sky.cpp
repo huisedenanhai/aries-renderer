@@ -213,20 +213,6 @@ void SkyData::update_cache(RenderGraph &rg,
 PanoramaSky::~PanoramaSky() = default;
 
 namespace {
-struct AtmosphereSettings {
-    float bottom_radius;
-    float top_radius;
-    float mie_scattering;
-    float mie_absorption;
-    glm::vec3 rayleigh_scattering;
-    float rayleigh_altitude;
-    glm::vec3 ozone_absorption;
-    float mie_altitude;
-    float ozone_altitude;
-    float ozone_thickness;
-    float ground_albedo;
-    float mie_g;
-};
 
 struct AtmosphereSunParam {
     glm::vec3 direction;
@@ -261,7 +247,7 @@ PhysicalSky::PhysicalSky(Context *context)
 void PhysicalSky::update(View *view, RenderGraph &rg) {
     update_transmittance_lut(rg);
     update_multi_scattering_lut(rg);
-    update_sky_view(view, rg);
+    update_sky_view_lut(view, rg);
     update_aerial_perspective_lut(view, rg);
 
     data()->mark_dirty();
@@ -276,21 +262,22 @@ void PhysicalSky::init_atmosphere_settings_buffer() {
 
     // Initialize with earth data
     // Length unit is km
-    AtmosphereSettings atmosphere{};
-    atmosphere.bottom_radius = 6360.0f;
-    atmosphere.top_radius = 6460.0f;
-    atmosphere.mie_scattering = 3.996e-3f;
-    atmosphere.mie_absorption = 4.40e-3f;
-    atmosphere.rayleigh_scattering = glm::vec3(5.802, 13.558, 33.1) * 1.0e-3f;
-    atmosphere.rayleigh_altitude = 8.0f;
-    atmosphere.ozone_absorption = glm::vec3(0.650, 1.881, 0.085) * 1.0e-3f;
-    atmosphere.mie_altitude = 1.2f;
-    atmosphere.ozone_altitude = 25.0f;
-    atmosphere.ozone_thickness = 30.0f;
-    atmosphere.ground_albedo = 0.3f;
-    atmosphere.mie_g = 0.8f;
+    _atmosphere_settings.bottom_radius = 6360.0f;
+    _atmosphere_settings.top_radius = 6460.0f;
+    _atmosphere_settings.mie_scattering = 3.996e-3f;
+    _atmosphere_settings.mie_absorption = 4.40e-3f;
+    _atmosphere_settings.rayleigh_scattering =
+        glm::vec3(5.802, 13.558, 33.1) * 1.0e-3f;
+    _atmosphere_settings.rayleigh_altitude = 8.0f;
+    _atmosphere_settings.ozone_absorption =
+        glm::vec3(0.650, 1.881, 0.085) * 1.0e-3f;
+    _atmosphere_settings.mie_altitude = 1.2f;
+    _atmosphere_settings.ozone_altitude = 25.0f;
+    _atmosphere_settings.ozone_thickness = 30.0f;
+    _atmosphere_settings.ground_albedo = 0.3f;
+    _atmosphere_settings.mie_g = 0.8f;
 
-    _atmosphere_settings_buffer->set_data(atmosphere);
+    _atmosphere_settings_buffer->set_data(_atmosphere_settings);
 }
 
 void PhysicalSky::init_textures() {
@@ -360,46 +347,21 @@ void PhysicalSky::update_transmittance_lut(RenderGraph &rg) {
 
 void PhysicalSky::init_pipelines() {
     _sky_view_lut_pipeline =
-        ComputePipeline::create(_context, "Atmosphere/SkyViewLut.comp");
+        ComputePipeline::create(_context, "Atmosphere/SkyView.comp");
+    _shade_ray_march_background_pipeline = ComputePipeline::create(
+        _context, "Atmosphere/SkyView.comp", {"SKY_VIEW_BACKGROUND"});
     _transmittance_lut_pipeline =
         ComputePipeline::create(_context, "Atmosphere/TransmittanceLut.comp");
     _multi_scattering_lut_pipeline =
         ComputePipeline::create(_context, "Atmosphere/MultiScatteringLut.comp");
     _aerial_perspective_lut_pipeline = ComputePipeline::create(
         _context, "Atmosphere/AerialPerspectiveLut.comp");
-    _shade_background_pipeline = ComputePipeline::create(
+    _shade_sky_view_lut_background_pipeline = ComputePipeline::create(
         _context, "Shading/Background.comp", {"BACKGROUND_PHYSICAL_SKY"});
     _capture_sky_view_to_cube_map_pipeline = ComputePipeline::create(
         _context, "IBL/CaptureHDRToCubeMap.comp", {"BACKGROUND_PHYSICAL_SKY"});
     _apply_aerial_perspective_pipeline = ComputePipeline::create(
         _context, "Atmosphere/ApplyAerialPerspective.comp");
-}
-
-void PhysicalSky::update_sky_view(View *view, RenderGraph &rg) {
-    auto panorama = data()->panorama();
-    rg.add_pass(
-        [&](RenderGraphPassBuilder &builder) {
-            builder.compute_shader_read(_transmittance_lut);
-            builder.compute_shader_read(_multi_scattering_lut);
-            builder.compute_shader_write(panorama);
-        },
-        [=](CommandBuffer *cmd) {
-            _sky_view_lut_pipeline->bind(cmd);
-
-            DescriptorEncoder desc{};
-            desc.set_texture(0, 0, panorama.get());
-            desc.set_texture(0, 1, _transmittance_lut.get());
-            desc.set_texture(0, 2, _multi_scattering_lut.get());
-            desc.set_buffer(1, 0, _atmosphere_settings_buffer.get());
-            auto sun_param = get_atmosphere_sun_param(view);
-            desc.set_buffer_data(1, 1, sun_param);
-            desc.set_buffer(1, 2, view->transform_buffer().get());
-
-            desc.commit(cmd, _sky_view_lut_pipeline.get());
-
-            _sky_view_lut_pipeline->local_size().dispatch(
-                cmd, panorama->info().extent);
-        });
 }
 
 void PhysicalSky::update_multi_scattering_lut(RenderGraph &rg) {
@@ -431,8 +393,12 @@ Handle<Texture> PhysicalSky::transmittance_lut() {
 }
 
 void PhysicalSky::render_background(View *view, RenderGraph &rg) {
-    SkyBase::render_background(
-        view, rg, _shade_background_pipeline.get(), nullptr, nullptr);
+    if (should_ray_march_background(view)) {
+        ray_march_background(view, rg);
+    } else {
+        SkyBase::render_background(
+            view, rg, _shade_sky_view_lut_background_pipeline.get());
+    }
 
     rg.add_pass(
         [&](RenderGraphPassBuilder &builder) {
@@ -478,6 +444,74 @@ void PhysicalSky::update_aerial_perspective_lut(View *view, RenderGraph &rg) {
 
             _aerial_perspective_lut_pipeline->local_size().dispatch(
                 cmd, _aerial_perspective_lut->info().extent);
+        });
+}
+
+void PhysicalSky::ray_march_background(View *view, RenderGraph &rg) {
+    ray_march_sky_view(view, rg, true);
+}
+
+void PhysicalSky::update_sky_view_lut(View *view, RenderGraph &rg) {
+    ray_march_sky_view(view, rg, false);
+}
+
+bool PhysicalSky::should_ray_march_background(View *view) const {
+    auto background = view->effect_vk()->background_vk();
+    if (background->mode() == BackgroundMode::Color) {
+        return false;
+    }
+    auto planet_eye_pos =
+        view->xform().translation() * 1e-3f +
+        glm::vec3(0.0f, _atmosphere_settings.bottom_radius, 0.0f);
+    float height_threshold = 0.6f;
+    float start_ray_march_height = glm::mix(_atmosphere_settings.bottom_radius,
+                                            _atmosphere_settings.top_radius,
+                                            height_threshold);
+    return glm::length(planet_eye_pos) >= start_ray_march_height;
+}
+
+void PhysicalSky::ray_march_sky_view(View *view,
+                                     RenderGraph &rg,
+                                     bool background) {
+    auto output_image = data()->panorama();
+    if (background) {
+        output_image = view->render_target(NamedRT_LinearColor);
+    }
+    auto full_rewrite = !background;
+    auto pipeline = background ? _shade_ray_march_background_pipeline.get()
+                               : _sky_view_lut_pipeline.get();
+
+    rg.add_pass(
+        [&](RenderGraphPassBuilder &builder) {
+            builder.compute_shader_read(_transmittance_lut);
+            builder.compute_shader_read(_multi_scattering_lut);
+            builder.compute_shader_write(output_image, full_rewrite);
+
+            if (background) {
+                builder.compute_shader_read(NamedRT_Depth);
+            }
+        },
+        [=](CommandBuffer *cmd) {
+            pipeline->bind(cmd);
+
+            DescriptorEncoder desc{};
+            desc.set_texture(0, 0, output_image.get());
+            desc.set_texture(0, 1, _transmittance_lut.get());
+            desc.set_texture(0, 2, _multi_scattering_lut.get());
+            desc.set_buffer(1, 0, _atmosphere_settings_buffer.get());
+            auto sun_param = get_atmosphere_sun_param(view);
+            desc.set_buffer_data(1, 1, sun_param);
+            desc.set_buffer(1, 2, view->transform_buffer().get());
+
+            if (background) {
+                desc.set_buffer_data(2, 0, data()->radiance());
+                desc.set_texture(
+                    2, 1, view->render_target(NamedRT_Depth).get());
+            }
+
+            desc.commit(cmd, pipeline);
+
+            pipeline->local_size().dispatch(cmd, output_image->info().extent);
         });
 }
 
@@ -565,16 +599,12 @@ void SkyBase::update(View *view, RenderGraph &rg) {
 }
 
 void SkyBase::render_background(View *view, RenderGraph &rg) {
-    render_background(
-        view, rg, _shade_background_panorama_pipeline.get(), nullptr, nullptr);
+    render_background(view, rg, _shade_background_panorama_pipeline.get());
 }
 
-void SkyBase::render_background(
-    View *view,
-    RenderGraph &rg,
-    ComputePipeline *pipeline,
-    const std::function<void(RenderGraphPassBuilder &)> &additional_deps,
-    const std::function<void(DescriptorEncoder &)> &additional_desc) {
+void SkyBase::render_background(View *view,
+                                RenderGraph &rg,
+                                ComputePipeline *pipeline) {
     auto background = view->effect_vk()->background_vk();
     rg.add_pass(
         [&](RenderGraphPassBuilder &builder) {
@@ -583,10 +613,6 @@ void SkyBase::render_background(
 
             if (background->mode() == BackgroundMode::Sky) {
                 builder.compute_shader_read(data()->panorama());
-            }
-
-            if (additional_deps != nullptr) {
-                additional_deps(builder);
             }
         },
         [=](CommandBuffer *cmd) {
@@ -621,9 +647,6 @@ void SkyBase::render_background(
             desc.set_buffer_data(1, 0, param);
             desc.set_buffer(1, 1, view->transform_buffer().get());
 
-            if (additional_desc != nullptr) {
-                additional_desc(desc);
-            }
             desc.commit(cmd, pipeline);
 
             pipeline->local_size().dispatch(cmd, final_rt->info().extent);

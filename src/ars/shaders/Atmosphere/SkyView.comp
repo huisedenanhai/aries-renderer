@@ -4,7 +4,7 @@
 
 layout(local_size_x = 8, local_size_y = 8) in;
 
-layout(set = 0, binding = 0, r11f_g11f_b10f) uniform image2D panorama_tex;
+layout(set = 0, binding = 0, r11f_g11f_b10f) uniform image2D output_image;
 
 layout(set = 0, binding = 1) uniform sampler2D transmittance_lut;
 layout(set = 0, binding = 2) uniform sampler2D multi_scattering_lut;
@@ -20,6 +20,14 @@ layout(set = 1, binding = 1) uniform Sun {
 layout(set = 1, binding = 2) uniform View {
     ViewTransform view;
 };
+
+#ifdef SKY_VIEW_BACKGROUND
+layout(set = 2, binding = 0) uniform Background {
+    vec3 background_factor;
+};
+
+layout(set = 2, binding = 1) uniform sampler2D depth_stencil_tex;
+#endif
 
 bool calculate_ray_march_range(float r,
                                float mu,
@@ -86,15 +94,32 @@ vec3 ray_march_sky_view(vec3 view_dir, vec3 view_pos) {
 
 void main() {
     ivec2 index = ivec2(gl_GlobalInvocationID.xy);
-    ivec2 size = imageSize(panorama_tex);
+    ivec2 size = imageSize(output_image);
     if (index.x >= size.x || index.y >= size.y) {
         return;
     }
 
     vec2 uv = index_to_uv(index, 1.0 / size);
+
+#ifdef SKY_VIEW_BACKGROUND
+    float depth01 = texture(depth_stencil_tex, uv).r;
+    // Only work with background
+    if (depth01 != 0.0) {
+        return;
+    }
+
+    ShadingPoint sp = get_shading_point(view, uv, depth01);
+    vec3 dir = -sp.v_ws;
+#else
     vec3 dir = sky_view_lut_uv_to_direction(uv);
+#endif
+
     vec3 color = ray_march_sky_view(
         dir, get_view_position_planet_coord(atmosphere, view));
 
-    imageStore(panorama_tex, index, vec4(color, 1.0));
+#ifdef SKY_VIEW_BACKGROUND
+    color *= background_factor;
+#endif
+
+    imageStore(output_image, index, vec4(color, 1.0));
 }

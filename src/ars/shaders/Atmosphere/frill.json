@@ -1,6 +1,11 @@
 {
     "sources": [
-        "SkyViewLut.comp",
+        {
+            "file": "SkyView.comp",
+            "multi_compile": [
+                "SKY_VIEW_BACKGROUND"
+            ]
+        },
         "TransmittanceLut.comp",
         "MultiScatteringLut.comp",
         "AerialPerspectiveLut.comp",

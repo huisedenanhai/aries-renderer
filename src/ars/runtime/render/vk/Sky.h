@@ -112,12 +112,8 @@ class SkyBase {
 
   protected:
     // Specify another pipeline when you need special panorama uv mapping
-    void render_background(
-        View *view,
-        RenderGraph &rg,
-        ComputePipeline *pipeline,
-        const std::function<void(RenderGraphPassBuilder &)> &additional_deps,
-        const std::function<void(DescriptorEncoder &)> &additional_desc);
+    void
+    render_background(View *view, RenderGraph &rg, ComputePipeline *pipeline);
 
   private:
     std::unique_ptr<SkyData> _data = nullptr;
@@ -143,6 +139,21 @@ class PanoramaSky : public IPanoramaSky, public SkyBase {
 
 std::shared_ptr<PanoramaSky> upcast(const std::shared_ptr<IPanoramaSky> &sky);
 
+struct AtmosphereSettings {
+    float bottom_radius;
+    float top_radius;
+    float mie_scattering;
+    float mie_absorption;
+    glm::vec3 rayleigh_scattering;
+    float rayleigh_altitude;
+    glm::vec3 ozone_absorption;
+    float mie_altitude;
+    float ozone_altitude;
+    float ozone_thickness;
+    float ground_albedo;
+    float mie_g;
+};
+
 class PhysicalSky : public IPhysicalSky, public SkyBase {
   public:
     explicit PhysicalSky(Context *context);
@@ -161,17 +172,23 @@ class PhysicalSky : public IPhysicalSky, public SkyBase {
     void init_textures();
     void update_transmittance_lut(RenderGraph &rg);
     void update_multi_scattering_lut(RenderGraph &rg);
-    void update_sky_view(View *view, RenderGraph &rg);
+    void update_sky_view_lut(View *view, RenderGraph &rg);
+    void ray_march_sky_view(View *view, RenderGraph &rg, bool background);
     void update_aerial_perspective_lut(View *view, RenderGraph &rg);
+    void ray_march_background(View *view, RenderGraph &rg);
+    bool should_ray_march_background(View *view) const;
 
     Context *_context = nullptr;
     std::unique_ptr<ComputePipeline> _sky_view_lut_pipeline{};
     std::unique_ptr<ComputePipeline> _transmittance_lut_pipeline{};
     std::unique_ptr<ComputePipeline> _multi_scattering_lut_pipeline{};
     std::unique_ptr<ComputePipeline> _aerial_perspective_lut_pipeline{};
-    std::unique_ptr<ComputePipeline> _shade_background_pipeline{};
+    std::unique_ptr<ComputePipeline> _shade_sky_view_lut_background_pipeline{};
+    std::unique_ptr<ComputePipeline> _shade_ray_march_background_pipeline{};
     std::unique_ptr<ComputePipeline> _capture_sky_view_to_cube_map_pipeline{};
     std::unique_ptr<ComputePipeline> _apply_aerial_perspective_pipeline{};
+
+    AtmosphereSettings _atmosphere_settings{};
     Handle<Buffer> _atmosphere_settings_buffer{};
     Handle<Texture> _transmittance_lut{};
     Handle<Texture> _multi_scattering_lut{};

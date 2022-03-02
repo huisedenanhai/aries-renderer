@@ -601,7 +601,7 @@ void DescriptorEncoder::commit(CommandBuffer *cmd, Pipeline *pipeline) {
 
                            auto buf = ctx->create_buffer(
                                data.size, usage, VMA_MEMORY_USAGE_CPU_TO_GPU);
-                           buf->set_data_raw(data.data, 0, data.size);
+                           buf->set_data_raw(data.data.get(), 0, data.size);
 
                            fill_desc_buffer(&w,
                                             &buf_info,
@@ -645,10 +645,9 @@ void DescriptorEncoder::commit(CommandBuffer *cmd, Pipeline *pipeline) {
     }
 }
 
-void DescriptorEncoder::set_binding(
-    uint32_t set,
-    uint32_t binding,
-    const DescriptorEncoder::BindingData &data) {
+void DescriptorEncoder::set_binding(uint32_t set,
+                                    uint32_t binding,
+                                    DescriptorEncoder::BindingData data) {
     assert(set < MAX_DESC_SET_COUNT);
     assert(binding < MAX_DESC_BINDING_COUNT);
 
@@ -662,8 +661,8 @@ void DescriptorEncoder::set_binding(
     BindingInfo info{};
     info.set = set;
     info.binding = binding;
-    info.data = data;
-    _bindings[index] = info;
+    info.data = std::move(data);
+    _bindings[index] = std::move(info);
 }
 
 void DescriptorEncoder::set_buffer_data(uint32_t set,
@@ -675,9 +674,10 @@ void DescriptorEncoder::set_buffer_data(uint32_t set,
         return;
     }
     BufferDataInfo info{};
-    info.data = data;
+    info.data = std::make_unique<uint8_t[]>(data_size);
     info.size = data_size;
-    set_binding(set, binding, info);
+    std::memcpy(info.data.get(), data, data_size);
+    set_binding(set, binding, std::move(info));
 }
 
 void DescriptorEncoder::set_buffer(uint32_t set,

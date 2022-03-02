@@ -203,23 +203,16 @@ struct DescriptorEncoder {
                      Texture *texture,
                      std::optional<uint32_t> level = std::nullopt);
 
+    // This method will copy content of underlying data.
+    // This method used to do no copy and expect the caller to keep the
+    // ownership of the data, which is proven to be too error-prone in practice.
     void set_buffer_data(uint32_t set,
                          uint32_t binding,
                          void *data,
                          size_t data_size);
 
-    // The data parameter is intentionally marked as non-const to remind caller
-    // this method does not take ownership of data or immediately copy it. Data
-    // must stay alive before commit. T& refuse some common mistake like
-    //   desc.set_buffer_data(0, 0, get_data()); // ERROR!
-    // in the above example get_data() returns a tmp variable that dies
-    // immediately. To make things correct, one must store the result of
-    // get_data() in an actual variable.
-    //   auto data = get_data();
-    //   // Fine if data stay alive before commit
-    //   desc.set_buffer_data(0, 0, data);
     template <typename T>
-    void set_buffer_data(uint32_t set, uint32_t binding, T &data) {
+    void set_buffer_data(uint32_t set, uint32_t binding, const T &data) {
         using DataView = details::BufferDataViewTrait<T>;
         set_buffer_data(
             set, binding, DataView::ptr(data), DataView::size(data));
@@ -242,7 +235,7 @@ struct DescriptorEncoder {
     };
 
     struct BufferDataInfo {
-        void *data = nullptr;
+        std::unique_ptr<uint8_t[]> data{};
         size_t size{};
     };
 
@@ -260,7 +253,7 @@ struct DescriptorEncoder {
         BindingData data{};
     };
 
-    void set_binding(uint32_t set, uint32_t binding, const BindingData &data);
+    void set_binding(uint32_t set, uint32_t binding, BindingData data);
 
     int _binding_indices[MAX_DESC_SET_COUNT][MAX_DESC_BINDING_COUNT]{};
     std::vector<BindingInfo> _bindings;

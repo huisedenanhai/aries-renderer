@@ -36,6 +36,7 @@ struct ShadingPoint {
     vec2 screen_uv;
     float depth01;
     vec3 pos_vs;
+    vec3 pos_ws;
     // v_vs points from shading point to view point
     vec3 v_vs;
     vec3 v_ws;
@@ -47,6 +48,7 @@ ShadingPoint get_shading_point(vec2 uv, float depth01, mat4 I_P, mat4 I_V) {
     info.screen_uv = uv;
     info.depth01 = depth01;
     info.pos_vs = reconstruct_position_from_ss(I_P, uv, info.depth01);
+    info.pos_ws = transform_position(I_V, info.pos_vs).xyz;
     info.v_vs = -normalize(info.pos_vs);
     info.v_ws = transform_vector(I_V, info.v_vs);
     return info;

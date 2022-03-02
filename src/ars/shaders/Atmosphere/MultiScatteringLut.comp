@@ -40,11 +40,7 @@ void ray_march_sample(float origin_r,
         vec2 ray_p = ray_origin + ray_dir * t;
         float r = length(ray_p);
         float mu = dot(normalize(ray_p), sun_dir);
-        // The transmittance lut already take planet shadow into account.
-        // Occluded rays will read border value 0.0 of lut
-        vec3 s = texture(transmittance_lut,
-                         transmittance_lut_r_mu_to_uv(atmosphere, r, mu))
-                     .rgb;
+        vec3 s = get_transmittance(atmosphere, transmittance_lut, r, mu);
         vec3 e_s = atmosphere_extinction_scatter(atmosphere, r);
         vec3 e = atmosphere_extinction(atmosphere, r);
         float phase = isotropic_phase();
@@ -57,19 +53,16 @@ void ray_march_sample(float origin_r,
     if (hit_ground) {
         vec2 ray_p = ray_origin + ray_dir * dist;
         float mu = dot(normalize(ray_p), sun_dir);
-        vec3 s = texture(transmittance_lut,
-                         transmittance_lut_r_mu_to_uv(
-                             atmosphere,
-                             // We know the ray is on the ground, use atmosphere
-                             // bottom radius rather than length(ray_p) to avoid
-                             // some potential floating point precision issue.
-                             atmosphere.bottom_radius,
-                             mu))
-                     .rgb;
+        vec3 s = get_transmittance(
+            atmosphere,
+            transmittance_lut,
+            // We know the ray is on the ground, use atmosphere
+            // bottom radius rather than length(ray_p) to avoid
+            // some potential floating point precision issue.
+            atmosphere.bottom_radius,
+            mu);
         float brdf = atmosphere.ground_albedo / PI;
-        // There should be no need to clamp mu to positive, those negative mu
-        // will make sampled s == 0.0, due to lut encoding and address mode.
-        L_in += trans * brdf * mu * s;
+        L_in += trans * brdf * max(mu, 0.0) * s;
     }
 }
 

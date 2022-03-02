@@ -294,15 +294,12 @@ void PhysicalSky::init_textures() {
     data()->set_panorama(_context->create_texture(panorama_info));
     data()->set_prefilter_sample_count(64);
 
-    auto trans_lut_info = TextureCreateInfo::sampled_2d(
-        VK_FORMAT_A2B10G10R10_UNORM_PACK32,
-        256,
-        64,
-        1,
-        // Ray hits ground will sample the black border, so the Lut already
-        // encodes planet shadow info, no need for manual intersection
-        // calculation when calculating shadow factor.
-        VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER);
+    auto trans_lut_info =
+        TextureCreateInfo::sampled_2d(VK_FORMAT_A2B10G10R10_UNORM_PACK32,
+                                      256,
+                                      64,
+                                      1,
+                                      VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
     trans_lut_info.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
     _transmittance_lut = _context->create_texture(trans_lut_info);
 
@@ -311,7 +308,7 @@ void PhysicalSky::init_textures() {
                                       32,
                                       32,
                                       1,
-                                      VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER);
+                                      VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
     multi_scatter_lut_info.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
     _multi_scattering_lut = _context->create_texture(multi_scatter_lut_info);
 
@@ -321,7 +318,7 @@ void PhysicalSky::init_textures() {
                                       32,
                                       32,
                                       1,
-                                      VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER);
+                                      VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
     aerial_perspective_lut_info.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
     _aerial_perspective_lut =
         _context->create_texture(aerial_perspective_lut_info);

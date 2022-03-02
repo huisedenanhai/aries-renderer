@@ -66,6 +66,18 @@ vec2 transmittance_lut_r_mu_to_uv(Atmosphere atm, float r, float mu) {
     return vec2(x, y);
 }
 
+vec3 get_transmittance(Atmosphere atm,
+                       sampler2D transmittance_lut,
+                       float r,
+                       float mu) {
+    vec2 uv = transmittance_lut_r_mu_to_uv(atm, r, mu);
+    vec3 s = texture(transmittance_lut, uv).rgb;
+    // ray cast to ground introduce floating point precision issue, only do
+    // simple check here.
+    bool shadowed = r < atm.bottom_radius || uv.y < 0.0 || uv.y > 1.0;
+    return shadowed ? vec3(0.0) : s;
+}
+
 float rayleigh_density(Atmosphere atm, float r) {
     float h = r - atm.bottom_radius;
     return exp(-h / atm.rayleigh_altitude);
@@ -159,10 +171,7 @@ void ray_march_scattering_transmittance(Atmosphere atm,
         float r = length(ray_p);
         float mu = dot(normalize(ray_p), sun.direction);
 
-        // s and ms are 0 when r is out of range
-        vec3 s =
-            texture(transmittance_lut, transmittance_lut_r_mu_to_uv(atm, r, mu))
-                .rgb;
+        vec3 s = get_transmittance(atm, transmittance_lut, r, mu);
         vec3 ms = texture(multi_scattering_lut,
                           multi_scattering_lut_r_mu_to_uv(atm, r, mu))
                       .rgb;
@@ -185,9 +194,13 @@ void ray_march_scattering_transmittance(Atmosphere atm,
     scattering = max(scattering * sun.radiance, vec3(0.0));
 }
 
+vec3 get_position_planet_coord(Atmosphere atm, vec3 pos_ws) {
+    vec3 pos_ws_km = pos_ws * 1e-3;
+    return pos_ws_km + vec3(0.0, atm.bottom_radius, 0.0);
+}
+
 vec3 get_view_position_planet_coord(Atmosphere atm, ViewTransform view) {
-    vec3 eye_pos_ws_km = get_eye_position_ws(view) * 1e-3;
-    return eye_pos_ws_km + vec3(0.0, atm.bottom_radius, 0.0);
+    return get_position_planet_coord(atm, get_eye_position_ws(view));
 }
 
 #endif

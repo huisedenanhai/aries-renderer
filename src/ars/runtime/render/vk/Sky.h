@@ -152,6 +152,7 @@ struct AtmosphereSettings {
     float ozone_thickness;
     float ground_albedo;
     float mie_g;
+    float world_center_altitude;
 };
 
 class PhysicalSky : public IPhysicalSky, public SkyBase {
@@ -165,6 +166,45 @@ class PhysicalSky : public IPhysicalSky, public SkyBase {
     void render_background(View *view, RenderGraph &rg) override;
     Handle<Buffer> atmosphere_settings_buffer();
     Handle<Texture> transmittance_lut();
+
+    ARS_OVERRIDE_SIMPLE_ABSTRACT_SETTER_GETTER(
+        float, bottom_raidus_km, _atmosphere_settings.bottom_radius);
+    ARS_OVERRIDE_SIMPLE_ABSTRACT_SETTER_GETTER(float,
+                                               top_altitude_km,
+                                               _top_altitude_km);
+    ARS_OVERRIDE_SIMPLE_ABSTRACT_SETTER_GETTER(
+        float, mie_scattering, _atmosphere_settings.mie_scattering);
+    ARS_OVERRIDE_SIMPLE_ABSTRACT_SETTER_GETTER(
+        float, mie_absorption, _atmosphere_settings.mie_absorption);
+    ARS_OVERRIDE_SIMPLE_ABSTRACT_SETTER_GETTER(float,
+                                               rayleigh_scattering_strength,
+                                               _rayleigh_scattering_strength);
+    ARS_OVERRIDE_SIMPLE_ABSTRACT_SETTER_GETTER(glm::vec3,
+                                               rayleigh_scattering,
+                                               _rayleigh_scattering);
+    ARS_OVERRIDE_SIMPLE_ABSTRACT_SETTER_GETTER(
+        float, rayleigh_altitude, _atmosphere_settings.rayleigh_altitude);
+    ARS_OVERRIDE_SIMPLE_ABSTRACT_SETTER_GETTER(float,
+                                               ozone_absorption_strength,
+                                               _ozone_absorption_strength);
+    ARS_OVERRIDE_SIMPLE_ABSTRACT_SETTER_GETTER(glm::vec3,
+                                               ozone_absorption,
+                                               _ozone_absorption);
+    ARS_OVERRIDE_SIMPLE_ABSTRACT_SETTER_GETTER(
+        float, mie_altitude, _atmosphere_settings.mie_altitude);
+    ARS_OVERRIDE_SIMPLE_ABSTRACT_SETTER_GETTER(
+        float, ozone_altitude, _atmosphere_settings.ozone_altitude);
+    ARS_OVERRIDE_SIMPLE_ABSTRACT_SETTER_GETTER(
+        float, ozone_thickness, _atmosphere_settings.ozone_thickness);
+    ARS_OVERRIDE_SIMPLE_ABSTRACT_SETTER_GETTER(
+        float, ground_albedo, _atmosphere_settings.ground_albedo);
+    ARS_OVERRIDE_SIMPLE_ABSTRACT_SETTER_GETTER(float,
+                                               mie_g,
+                                               _atmosphere_settings.mie_g);
+    ARS_OVERRIDE_SIMPLE_ABSTRACT_SETTER_GETTER(
+        float,
+        world_center_altitude_km,
+        _atmosphere_settings.world_center_altitude);
 
   private:
     void init_pipelines();
@@ -190,6 +230,12 @@ class PhysicalSky : public IPhysicalSky, public SkyBase {
     std::unique_ptr<ComputePipeline> _apply_aerial_perspective_pipeline{};
 
     AtmosphereSettings _atmosphere_settings{};
+    float _top_altitude_km{};
+    float _rayleigh_scattering_strength = {};
+    glm::vec3 _rayleigh_scattering = {};
+    float _ozone_absorption_strength = {};
+    glm::vec3 _ozone_absorption = {};
+
     Handle<Buffer> _atmosphere_settings_buffer{};
     Handle<Texture> _transmittance_lut{};
     Handle<Texture> _multi_scattering_lut{};

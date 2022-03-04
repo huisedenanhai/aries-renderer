@@ -32,7 +32,24 @@ void IPanoramaSky::register_type() {
 }
 
 void IPhysicalSky::register_type() {
-    rttr::registration::class_<IPhysicalSky>("ars::render::IPhysicalSky");
+    rttr::registration::class_<IPhysicalSky>("ars::render::IPhysicalSky")
+        .RTTR_MEMBER_PROPERTY(IPhysicalSky, bottom_raidus_km)
+        .RTTR_MEMBER_PROPERTY(IPhysicalSky, top_altitude_km)
+        .RTTR_MEMBER_PROPERTY(IPhysicalSky, mie_scattering)
+        .RTTR_MEMBER_PROPERTY(IPhysicalSky, mie_absorption)
+        .RTTR_MEMBER_PROPERTY(IPhysicalSky, rayleigh_scattering_strength)
+        .RTTR_MEMBER_PROPERTY(IPhysicalSky, rayleigh_scattering)(
+            rttr::metadata(PropertyAttribute::Display, PropertyDisplay::Color))
+        .RTTR_MEMBER_PROPERTY(IPhysicalSky, rayleigh_altitude)
+        .RTTR_MEMBER_PROPERTY(IPhysicalSky, ozone_absorption_strength)
+        .RTTR_MEMBER_PROPERTY(IPhysicalSky, ozone_absorption)(
+            rttr::metadata(PropertyAttribute::Display, PropertyDisplay::Color))
+        .RTTR_MEMBER_PROPERTY(IPhysicalSky, mie_altitude)
+        .RTTR_MEMBER_PROPERTY(IPhysicalSky, ozone_altitude)
+        .RTTR_MEMBER_PROPERTY(IPhysicalSky, ozone_thickness)
+        .RTTR_MEMBER_PROPERTY(IPhysicalSky, ground_albedo)
+        .RTTR_MEMBER_PROPERTY(IPhysicalSky, mie_g)
+        .RTTR_MEMBER_PROPERTY(IPhysicalSky, world_center_altitude_km);
 }
 
 void IBackground::register_type() {
@@ -43,7 +60,7 @@ void IBackground::register_type() {
 
     rttr::registration::class_<IBackground>("ars::render::IBackground")
         .RTTR_MEMBER_PROPERTY(IBackground, mode)
-        .RTTR_MEMBER_PROPERTY(IBackground, color)( //
+        .RTTR_MEMBER_PROPERTY(IBackground, color)(
             rttr::metadata(PropertyAttribute::Display, PropertyDisplay::Color))
         .RTTR_MEMBER_PROPERTY(IBackground, strength)
         .RTTR_MEMBER_PROPERTY(IBackground, sky);

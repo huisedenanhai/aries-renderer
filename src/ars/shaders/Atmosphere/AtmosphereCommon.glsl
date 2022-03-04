@@ -20,6 +20,7 @@ struct Atmosphere {
     float ozone_thickness;
     float ground_albedo;
     float mie_g;
+    float world_center_altitude;
 };
 
 struct AtmosphereSun {
@@ -196,7 +197,8 @@ void ray_march_scattering_transmittance(Atmosphere atm,
 
 vec3 get_position_planet_coord(Atmosphere atm, vec3 pos_ws) {
     vec3 pos_ws_km = pos_ws * 1e-3;
-    return pos_ws_km + vec3(0.0, atm.bottom_radius, 0.0);
+    return pos_ws_km +
+           vec3(0.0, atm.bottom_radius + atm.world_center_altitude, 0.0);
 }
 
 vec3 get_view_position_planet_coord(Atmosphere atm, ViewTransform view) {

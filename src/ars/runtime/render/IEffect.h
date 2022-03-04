@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ars/runtime/core/Reflect.h>
+#include <ars/runtime/core/misc/Macro.h>
 #include <glm/vec3.hpp>
 
 namespace ars::render {
@@ -59,7 +60,23 @@ class IPhysicalSky : public ISky {
     RTTR_DERIVE(ISky);
 
   public:
-    // TODO expose sky parameter
+    ARS_DECLARE_SIMPLE_ABSTRACT_SETTER_GETTER(float, bottom_raidus_km);
+    ARS_DECLARE_SIMPLE_ABSTRACT_SETTER_GETTER(float, top_altitude_km);
+    ARS_DECLARE_SIMPLE_ABSTRACT_SETTER_GETTER(float, mie_scattering);
+    ARS_DECLARE_SIMPLE_ABSTRACT_SETTER_GETTER(float, mie_absorption);
+    ARS_DECLARE_SIMPLE_ABSTRACT_SETTER_GETTER(float,
+                                              rayleigh_scattering_strength);
+    ARS_DECLARE_SIMPLE_ABSTRACT_SETTER_GETTER(glm::vec3, rayleigh_scattering);
+    ARS_DECLARE_SIMPLE_ABSTRACT_SETTER_GETTER(float, rayleigh_altitude);
+    ARS_DECLARE_SIMPLE_ABSTRACT_SETTER_GETTER(float, ozone_absorption_strength);
+    ARS_DECLARE_SIMPLE_ABSTRACT_SETTER_GETTER(glm::vec3, ozone_absorption);
+    ARS_DECLARE_SIMPLE_ABSTRACT_SETTER_GETTER(float, mie_altitude);
+    ARS_DECLARE_SIMPLE_ABSTRACT_SETTER_GETTER(float, ozone_altitude);
+    ARS_DECLARE_SIMPLE_ABSTRACT_SETTER_GETTER(float, ozone_thickness);
+    ARS_DECLARE_SIMPLE_ABSTRACT_SETTER_GETTER(float, ground_albedo);
+    ARS_DECLARE_SIMPLE_ABSTRACT_SETTER_GETTER(float, mie_g);
+    ARS_DECLARE_SIMPLE_ABSTRACT_SETTER_GETTER(float, world_center_altitude_km);
+
     static void register_type();
 };
 

@@ -40,6 +40,19 @@
 
 #define ARS_NAME_WITH_LINENO(n) ARS_MACRO_CONCAT(n, __LINE__)
 
+#define ARS_DECLARE_SIMPLE_ABSTRACT_SETTER_GETTER(ty, name)                    \
+    virtual ty name() = 0;                                                     \
+    virtual void ARS_MACRO_CONCAT(set_, name)(ty value) = 0;
+
+#define ARS_OVERRIDE_SIMPLE_ABSTRACT_SETTER_GETTER(ty, name, field)            \
+    ty name() override {                                                       \
+        return field;                                                          \
+    }                                                                          \
+    void ARS_MACRO_CONCAT(set_, name)(ty ARS_NAME_WITH_LINENO(value))          \
+        override {                                                             \
+        field = ARS_NAME_WITH_LINENO(value);                                   \
+    }
+
 #ifdef _MSC_VER
 #define __PRETTY_FUNCTION__ __FUNCSIG__
 #endif

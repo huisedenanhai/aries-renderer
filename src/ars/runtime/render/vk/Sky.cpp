@@ -278,8 +278,17 @@ void PhysicalSky::init_atmosphere_settings_buffer() {
     _atmosphere_settings.ozone_thickness = 30.0f;
     _atmosphere_settings.ground_albedo = 0.3f;
     _atmosphere_settings.mie_g = 0.8f;
+    _atmosphere_settings.world_center_altitude = 0.2f;
 
-    update_atmosphere_settings_buffer();
+    _top_altitude_km =
+        _atmosphere_settings.top_radius - _atmosphere_settings.bottom_radius;
+    _rayleigh_scattering =
+        glm::normalize(_atmosphere_settings.rayleigh_scattering);
+    _rayleigh_scattering_strength =
+        glm::length(_atmosphere_settings.rayleigh_scattering);
+    _ozone_absorption = glm::normalize(_atmosphere_settings.ozone_absorption);
+    _ozone_absorption_strength =
+        glm::length(_atmosphere_settings.ozone_absorption);
 }
 
 void PhysicalSky::init_textures() {
@@ -515,6 +524,12 @@ void PhysicalSky::ray_march_sky_view(View *view,
 }
 
 void PhysicalSky::update_atmosphere_settings_buffer() {
+    _atmosphere_settings.top_radius =
+        _atmosphere_settings.bottom_radius + _top_altitude_km;
+    _atmosphere_settings.rayleigh_scattering =
+        _rayleigh_scattering * _rayleigh_scattering_strength;
+    _atmosphere_settings.ozone_absorption =
+        _ozone_absorption * _ozone_absorption_strength;
     _atmosphere_settings_buffer->set_data(_atmosphere_settings);
 }
 

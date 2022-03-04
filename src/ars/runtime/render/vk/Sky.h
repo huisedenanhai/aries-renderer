@@ -170,6 +170,7 @@ class PhysicalSky : public IPhysicalSky, public SkyBase {
     void init_pipelines();
     void init_atmosphere_settings_buffer();
     void init_textures();
+    void update_atmosphere_settings_buffer();
     void update_transmittance_lut(RenderGraph &rg);
     void update_multi_scattering_lut(RenderGraph &rg);
     void update_sky_view_lut(View *view, RenderGraph &rg);

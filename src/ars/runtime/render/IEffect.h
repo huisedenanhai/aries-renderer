@@ -30,7 +30,7 @@ class ISky {
 
   public:
     virtual ~ISky() = default;
-   
+
     virtual glm::vec3 color() = 0;
     virtual void set_color(glm::vec3 radiance) = 0;
 
@@ -59,6 +59,7 @@ class IPhysicalSky : public ISky {
     RTTR_DERIVE(ISky);
 
   public:
+    // TODO expose sky parameter
     static void register_type();
 };
 

@@ -245,6 +245,8 @@ PhysicalSky::PhysicalSky(Context *context)
 }
 
 void PhysicalSky::update(View *view, RenderGraph &rg) {
+    update_atmosphere_settings_buffer();
+
     update_transmittance_lut(rg);
     update_multi_scattering_lut(rg);
     update_sky_view_lut(view, rg);
@@ -277,7 +279,7 @@ void PhysicalSky::init_atmosphere_settings_buffer() {
     _atmosphere_settings.ground_albedo = 0.3f;
     _atmosphere_settings.mie_g = 0.8f;
 
-    _atmosphere_settings_buffer->set_data(_atmosphere_settings);
+    update_atmosphere_settings_buffer();
 }
 
 void PhysicalSky::init_textures() {
@@ -510,6 +512,10 @@ void PhysicalSky::ray_march_sky_view(View *view,
 
             pipeline->local_size().dispatch(cmd, output_image->info().extent);
         });
+}
+
+void PhysicalSky::update_atmosphere_settings_buffer() {
+    _atmosphere_settings_buffer->set_data(_atmosphere_settings);
 }
 
 PhysicalSky::~PhysicalSky() = default;

@@ -464,13 +464,17 @@ void PhysicalSky::update_sky_view_lut(View *view, RenderGraph &rg) {
 }
 
 bool PhysicalSky::should_ray_march_background(View *view) const {
+    // TODO better transition logic
     auto background = view->effect_vk()->background_vk();
     if (background->mode() == BackgroundMode::Color) {
         return false;
     }
     auto planet_eye_pos =
         view->xform().translation() * 1e-3f +
-        glm::vec3(0.0f, _atmosphere_settings.bottom_radius, 0.0f);
+        glm::vec3(0.0f,
+                  _atmosphere_settings.bottom_radius +
+                      _atmosphere_settings.world_center_altitude,
+                  0.0f);
     float height_threshold = 0.6f;
     float start_ray_march_height = glm::mix(_atmosphere_settings.bottom_radius,
                                             _atmosphere_settings.top_radius,

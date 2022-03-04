@@ -22,7 +22,7 @@ A very coarse plan for development.
         + [ ] Less ghosting
     + [ ] TAA
     + [ ] DOF
-    + [ ] Physical Sky
+    + [x] Physical Sky
     + [ ] Volumetric Cloud
     + [ ] Super Resolution
 3. Architecture

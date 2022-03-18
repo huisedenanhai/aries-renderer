@@ -1,1 +1,16 @@
-{}
+{
+    "sources": [
+        {
+            "file": "Draw.glsl",
+            "multi_compile": [
+                {
+                    "options": [
+                        "FRILL_SHADER_STAGE_VERT",
+                        "FRILL_SHADER_STAGE_FRAG"
+                    ],
+                    "can_off": false
+                }
+            ]
+        }
+    ]
+}

@@ -2,6 +2,7 @@
 #include "Material.h"
 #include "Mesh.h"
 #include "View.h"
+#include "features/Drawer.h"
 
 namespace ars::render::vk {
 std::unique_ptr<IRenderObject> Scene::create_render_object() {
@@ -24,6 +25,27 @@ Scene::Scene(Context *context) : _context(context) {}
 
 Context *Scene::context() const {
     return _context;
+}
+
+std::vector<DrawRequest> Scene::gather_draw_requests() {
+    // TODO culling
+    auto count = render_objects.size();
+    std::vector<DrawRequest> requests{};
+    requests.reserve(count);
+
+    auto xform_arr = render_objects.get_array<glm::mat4>();
+    auto mesh_arr = render_objects.get_array<std::shared_ptr<Mesh>>();
+    auto mat_arr = render_objects.get_array<std::shared_ptr<Material>>();
+
+    for (int i = 0; i < count; i++) {
+        DrawRequest req{};
+        req.M = xform_arr[i];
+        req.mesh = mesh_arr[i].get();
+        req.material = mat_arr[i].get();
+        requests.push_back(req);
+    }
+
+    return requests;
 }
 
 IScene *View::scene() {

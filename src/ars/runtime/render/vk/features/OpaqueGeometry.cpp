@@ -5,6 +5,7 @@
 #include "../Mesh.h"
 #include "../Profiler.h"
 #include "../Scene.h"
+#include "Drawer.h"
 
 namespace ars::render::vk {
 OpaqueGeometry::OpaqueGeometry(View *view) : _view(view) {
@@ -34,11 +35,17 @@ void OpaqueGeometry::execute(CommandBuffer *cmd) {
     auto rp_exec =
         _render_pass->begin(cmd, fb, clear_values, VK_SUBPASS_CONTENTS_INLINE);
 
-    _pipeline->bind(cmd);
+    auto draw_requests = _view->scene_vk()->gather_draw_requests();
+    _view->drawer()->draw(cmd,
+                          MaterialPass::GEOMETRY_PASS_ID,
+                          static_cast<uint32_t>(draw_requests.size()),
+                          draw_requests.data());
 
-    auto &rd_objs = _view->scene_vk()->render_objects;
-    auto v_matrix = _view->view_matrix();
-    auto p_matrix = _view->projection_matrix();
+    //    _pipeline->bind(cmd);
+    //
+    //    auto &rd_objs = _view->scene_vk()->render_objects;
+    //    auto v_matrix = _view->view_matrix();
+    //    auto p_matrix = _view->projection_matrix();
     //    rd_objs.for_each_id([&](Scene::RenderObjects::Id id) {
     //        auto &matrix = rd_objs.get<glm::mat4>(id);
     //        auto &mesh = rd_objs.get<std::shared_ptr<Mesh>>(id);

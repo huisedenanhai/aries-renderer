@@ -19,16 +19,6 @@ namespace {
 VkExtent2D translate(const Extent2D &size) {
     return {size.width, size.height};
 }
-
-struct ViewTransform {
-    glm::mat4 V;
-    glm::mat4 P;
-    glm::mat4 I_V;
-    glm::mat4 I_P;
-    glm::mat4 reproject_IV_VP;
-    float z_near;
-    float z_far;
-};
 } // namespace
 
 void View::render() {
@@ -342,5 +332,27 @@ void View::update_transform_buffer() {
     t.z_far = camera().z_far();
 
     _transform_buffer->set_data(t);
+}
+
+ViewTransform ViewTransform::from_V_P(const glm::mat4 &V, const glm::mat4 &P) {
+    ViewTransform v{};
+    v.P = P;
+    v.V = V;
+    v.I_P = glm::inverse(P);
+    v.I_V = glm::inverse(V);
+    // No history, just assume the view is static
+    v.reproject_IV_VP = P;
+
+    auto near = math::transform_position(v.I_P, {0, 0, 1.0f});
+    auto far = math::transform_position(v.I_P, {0, 0, 0.0f});
+    v.z_near = -near.z / near.w;
+
+    if (far.w == 0.0f) {
+        v.z_far = 0.0f;
+    } else {
+        v.z_far = -far.z / far.w;
+    }
+
+    return v;
 }
 } // namespace ars::render::vk

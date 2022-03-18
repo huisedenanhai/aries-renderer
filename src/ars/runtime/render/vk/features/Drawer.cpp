@@ -194,4 +194,49 @@ void Drawer::init_draw_id_billboard_alpha_clip() {
     _draw_id_billboard_alpha_clip_pipeline =
         std::make_unique<GraphicsPipeline>(ctx, info);
 }
+
+void Drawer::draw(CommandBuffer *cmd,
+                  const glm::mat4 &P,
+                  const glm::mat4 &V,
+                  uint32_t pass_id,
+                  uint32_t count,
+                  const DrawRequest *requests) {
+    auto transform_buffer =
+        cmd->context()->create_buffer(sizeof(ViewTransform),
+                                      VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                                      VMA_MEMORY_USAGE_CPU_TO_GPU);
+    transform_buffer->set_data(ViewTransform::from_V_P(V, P));
+    draw(cmd, P, V, transform_buffer, pass_id, count, requests);
+}
+
+void Drawer::draw(CommandBuffer *cmd,
+                  View *view,
+                  uint32_t pass_id,
+                  uint32_t count,
+                  const DrawRequest *requests) {
+    draw(cmd,
+         view->projection_matrix(),
+         view->view_matrix(),
+         view->transform_buffer(),
+         pass_id,
+         count,
+         requests);
+}
+
+void Drawer::draw(CommandBuffer *cmd,
+                  const glm::mat4 &P,
+                  const glm::mat4 &V,
+                  const Handle<Buffer> &view_transform_buffer,
+                  uint32_t pass_id,
+                  uint32_t count,
+                  const DrawRequest *requests) {
+    // TODO
+}
+
+void Drawer::draw(CommandBuffer *cmd,
+                  uint32_t pass_id,
+                  uint32_t count,
+                  const DrawRequest *requests) {
+    draw(cmd, _view, pass_id, count, requests);
+}
 } // namespace ars::render::vk

@@ -119,6 +119,19 @@ uint32_t MaterialPrototype::data_block_size() const {
     return _data_block_size;
 }
 
+std::shared_ptr<MaterialPass> MaterialPrototype::pass(uint32_t pass_id) const {
+    auto it = _passes.find(pass_id);
+    if (it == _passes.end()) {
+        return nullptr;
+    }
+    return it->second;
+}
+
+void MaterialPrototype::set_pass(uint32_t pass_id,
+                                 const std::shared_ptr<MaterialPass> &pass) {
+    _passes[pass_id] = pass;
+}
+
 Material::Material(MaterialPrototype *prototype) : IMaterial(prototype) {
     auto info = prototype->info();
     _texture_owners.resize(info.properties.size());

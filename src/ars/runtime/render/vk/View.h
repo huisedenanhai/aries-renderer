@@ -37,6 +37,18 @@ enum NamedRT {
     NamedRT_Count
 };
 
+struct ViewTransform {
+    glm::mat4 V;
+    glm::mat4 P;
+    glm::mat4 I_V;
+    glm::mat4 I_P;
+    glm::mat4 reproject_IV_VP;
+    float z_near;
+    float z_far;
+
+    static ViewTransform from_V_P(const glm::mat4 &V, const glm::mat4 &P);
+};
+
 class View : public IView {
   public:
     View(Scene *scene, const Extent2D &size);

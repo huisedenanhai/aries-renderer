@@ -7,6 +7,7 @@ namespace ars::render::vk {
 class Mesh;
 class Material;
 class Context;
+struct DrawRequest;
 
 struct Light {
     glm::vec3 color{1.0f, 1.0f, 1.0f};
@@ -27,6 +28,8 @@ class Scene : public IScene {
     std::unique_ptr<IView> create_view(const Extent2D &size) override;
 
     [[nodiscard]] Context *context() const;
+
+    std::vector<DrawRequest> gather_draw_requests();
 
     using RenderObjects = SoA<glm::mat4,
                               std::shared_ptr<Mesh>,

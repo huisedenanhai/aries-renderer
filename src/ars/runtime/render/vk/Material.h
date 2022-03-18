@@ -7,6 +7,12 @@
 namespace ars::render::vk {
 class Context;
 
+class MaterialPass {
+  public:
+    static constexpr uint32_t SHADOW_PASS_ID = 1000;
+    static constexpr uint32_t GEOMETRY_PASS_ID = 3000;
+};
+
 class MaterialPrototype : public IMaterialPrototype {
   public:
     explicit MaterialPrototype(Context *context, MaterialPrototypeInfo info);
@@ -20,12 +26,16 @@ class MaterialPrototype : public IMaterialPrototype {
     uint32_t property_offset(uint32_t index) const;
     uint32_t data_block_size() const;
 
+    std::shared_ptr<MaterialPass> pass(uint32_t pass_id) const;
+    void set_pass(uint32_t pass_id, const std::shared_ptr<MaterialPass> &pass);
+
   private:
     void init_data_block_layout();
 
     Context *_context = nullptr;
     std::vector<uint32_t> _property_offsets{};
     uint32_t _data_block_size{};
+    std::map<uint32_t, std::shared_ptr<MaterialPass>> _passes{};
 };
 
 MaterialPrototype *upcast(IMaterialPrototype *prototype);

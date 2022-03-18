@@ -5,6 +5,7 @@
 
 namespace ars::render::vk {
 class Mesh;
+class Material;
 class Context;
 
 struct Light {
@@ -29,7 +30,7 @@ class Scene : public IScene {
 
     using RenderObjects = SoA<glm::mat4,
                               std::shared_ptr<Mesh>,
-                              std::shared_ptr<IMaterial>,
+                              std::shared_ptr<Material>,
                               UserData>;
     RenderObjects render_objects{};
 

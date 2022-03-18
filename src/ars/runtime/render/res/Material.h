@@ -7,7 +7,7 @@ namespace ars::render {
 class IContext;
 
 struct MaterialResMeta {
-    MaterialType type = MaterialType::Error;
+    MaterialType type = MaterialType::MetallicRoughnessPBR;
     DataSlice properties;
 
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(MaterialResMeta, type, properties)

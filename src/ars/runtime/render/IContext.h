@@ -37,6 +37,14 @@ struct ApplicationInfo {
     bool enable_profiler = false;
 };
 
+enum class DefaultTexture : uint32_t {
+    White,
+    Zero,
+    Normal,
+    WhiteCubeMap,
+    Count
+};
+
 void init_render_backend(const ApplicationInfo &info);
 void destroy_render_backend();
 
@@ -60,6 +68,7 @@ class IContext {
     // Texture/Mesh/IMaterial generally requires multiple ownership. return a
     // shared_ptr by default.
     std::shared_ptr<ITexture> create_texture(const TextureInfo &info);
+    virtual std::shared_ptr<ITexture> default_texture(DefaultTexture tex) = 0;
 
     virtual std::shared_ptr<IMesh> create_mesh(const MeshInfo &info) = 0;
     // Return the prototype for error color material if the material type is not

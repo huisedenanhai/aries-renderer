@@ -7,99 +7,49 @@
 namespace ars::render::vk {
 class Context;
 
-struct MaterialTextureHandle {
+class MaterialPrototype : public IMaterialPrototype {
   public:
-    [[nodiscard]] std::shared_ptr<ITexture> texture() const;
-    [[nodiscard]] std::shared_ptr<ITexture> default_texture() const;
-    [[nodiscard]] Handle<Texture> vk_texture() const;
+    explicit MaterialPrototype(Context *context, MaterialPrototypeInfo info);
 
-    void set_texture(const std::shared_ptr<ITexture> &tex);
-    void set_default_texture(const std::shared_ptr<ITexture> &tex);
-
-  private:
-    std::shared_ptr<ITexture> _texture{};
-    std::shared_ptr<ITexture> _default_texture{};
-};
-
-template <typename MT> class MaterialPrototype : public IMaterialPrototype {
-  public:
-    [[maybe_unused]] explicit MaterialPrototype(Context *context)
-        : IMaterialPrototype(MT::Type, MT::reflect()), _context(context) {}
-
-    std::shared_ptr<IMaterial> create_material() override {
-        return std::make_shared<MT>(this);
-    }
+    std::shared_ptr<IMaterial> create_material() override;
 
     [[nodiscard]] Context *context() const {
         return _context;
     }
 
+    uint32_t property_offset(uint32_t index) const;
+    uint32_t data_block_size() const;
+
   private:
+    void init_data_block_layout();
+
     Context *_context = nullptr;
+    std::vector<uint32_t> _property_offsets{};
+    uint32_t _data_block_size{};
 };
 
-template <typename M, typename T>
-MaterialPropertyInfo make_material_property(const char *name, T M::*mem) {
-    if constexpr (std::is_same_v<T, MaterialTextureHandle>) {
-        return MaterialPropertyInfo(
-            name,
-            MaterialPropertyType::Texture,
-            [mem](IMaterial *m, const MaterialPropertyVariant &v) {
-                auto mat = dynamic_cast<M *>(m);
-                (mat->*mem).set_texture(std::get<std::shared_ptr<ITexture>>(v));
-            },
-            [mem](IMaterial *m) {
-                auto mat = dynamic_cast<M *>(m);
-                return (mat->*mem).texture();
-            });
-    } else {
-        return MaterialPropertyInfo::make(name, mem);
-    }
-}
+MaterialPrototype *upcast(IMaterialPrototype *prototype);
 
-class MetallicRoughnessMaterial : public IMaterial {
+class Material : public IMaterial {
   public:
-    static constexpr MaterialType Type = MaterialType::MetallicRoughnessPBR;
-    using Prototype = MaterialPrototype<MetallicRoughnessMaterial>;
+    explicit Material(MaterialPrototype *prototype);
 
-    explicit MetallicRoughnessMaterial(Prototype *prototype);
-    static std::vector<MaterialPropertyInfo> reflect();
+    MaterialPrototype *prototype_vk() const;
 
-    MaterialAlphaMode alpha_mode = MaterialAlphaMode::Opaque;
-    bool double_sided = false;
-    glm::vec4 base_color_factor = {1.0f, 1.0f, 1.0f, 1.0f};
-    MaterialTextureHandle base_color_tex{};
-    float metallic_factor = 1.0f;
-    float roughness_factor = 1.0f;
-    MaterialTextureHandle metallic_roughness_tex{};
-    MaterialTextureHandle normal_tex{};
-    float normal_scale = 1.0f;
-    MaterialTextureHandle occlusion_tex{};
-    float occlusion_strength = 1.0f;
-    MaterialTextureHandle emission_tex{};
-    glm::vec3 emission_factor = {0.0f, 0.0f, 0.0f};
+    void set_variant(const std::string &name,
+                     const MaterialPropertyVariant &value) override;
+    std::optional<MaterialPropertyVariant>
+    get_variant(const std::string &name) override;
+
+  private:
+    void set_variant_by_index(uint32_t index,
+                              const MaterialPropertyVariant &value);
+
+    std::vector<uint8_t> _data_block{};
+    std::vector<std::shared_ptr<ITexture>> _texture_owners{};
 };
 
-class UnlitMaterial : public IMaterial {
-  public:
-    static constexpr MaterialType Type = MaterialType::Unlit;
-    using Prototype = MaterialPrototype<UnlitMaterial>;
-
-    explicit UnlitMaterial(Prototype *prototype);
-    static std::vector<MaterialPropertyInfo> reflect();
-
-    glm::vec4 color_factor = {1.0f, 1.0f, 1.0f, 1.0f};
-    MaterialTextureHandle color_tex{};
-};
-
-class ErrorMaterial : public IMaterial {
-  public:
-    static constexpr MaterialType Type = MaterialType::Error;
-    using Prototype = MaterialPrototype<ErrorMaterial>;
-
-    explicit ErrorMaterial(Prototype *prototype);
-    static std::vector<MaterialPropertyInfo> reflect();
-};
+std::shared_ptr<Material> upcast(const std::shared_ptr<IMaterial> &m);
 
 class MaterialPrototypeRegistry {
   public:
@@ -109,9 +59,7 @@ class MaterialPrototypeRegistry {
     [[nodiscard]] IMaterialPrototype *prototype(MaterialType type) const;
 
   private:
-    std::unique_ptr<UnlitMaterial::Prototype> _unlit_material_prototype{};
-    std::unique_ptr<MetallicRoughnessMaterial::Prototype>
-        _metallic_roughness_material_prototype{};
-    std::unique_ptr<ErrorMaterial::Prototype> _error_material_prototype{};
+    std::unique_ptr<MaterialPrototype> _unlit_material_prototype{};
+    std::unique_ptr<MaterialPrototype> _metallic_roughness_material_prototype{};
 };
 } // namespace ars::render::vk

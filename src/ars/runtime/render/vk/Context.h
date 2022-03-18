@@ -65,14 +65,6 @@ class Queue {
     VkQueueFamilyProperties _family_properties{};
 };
 
-enum class DefaultTexture : uint32_t {
-    White,
-    Zero,
-    Normal,
-    WhiteCubeMap,
-    Count
-};
-
 struct ContextProperties {
     bool anisotropic_sampler_enabled = false;
     float max_sampler_anisotropy = 1.0f;
@@ -123,7 +115,7 @@ class Context : public IContext {
     bool begin_frame() override;
     void end_frame() override;
 
-    std::shared_ptr<ITexture> default_texture(DefaultTexture tex);
+    std::shared_ptr<ITexture> default_texture(DefaultTexture tex) override;
     Handle<Texture> default_texture_vk(DefaultTexture tex);
 
     std::shared_ptr<ITexture> create_single_color_texture_2d(glm::vec4 color);

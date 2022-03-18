@@ -512,12 +512,13 @@ void load_materials(IContext *context,
                          gltf_mat.emissiveFactor[1],
                          gltf_mat.emissiveFactor[2]));
 
-        m->set("double_sided", gltf_mat.doubleSided);
+        // TODO correctly handle double sided and alpha mode
 
-        m->set("alpha_mode", MaterialAlphaMode::Opaque);
-        if (gltf_mat.alphaMode == "BLEND") {
-            m->set("alpha_mode", MaterialAlphaMode::Blend);
-        }
+        // m->set("double_sided", gltf_mat.doubleSided);
+        // m->set("alpha_mode", MaterialAlphaMode::Opaque);
+        // if (gltf_mat.alphaMode == "BLEND") {
+        //     m->set("alpha_mode", MaterialAlphaMode::Blend);
+        // }
 
         model.materials.emplace_back(std::move(mat));
     }

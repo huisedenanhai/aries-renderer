@@ -1,4 +1,5 @@
 #include "Scene.h"
+#include "Material.h"
 #include "Mesh.h"
 #include "View.h"
 
@@ -107,11 +108,11 @@ void RenderObject::set_mesh(std::shared_ptr<IMesh> mesh) {
 }
 
 std::shared_ptr<IMaterial> RenderObject::material() {
-    return get<std::shared_ptr<IMaterial>>();
+    return get<std::shared_ptr<Material>>();
 }
 
 void RenderObject::set_material(std::shared_ptr<IMaterial> material) {
-    get<std::shared_ptr<IMaterial>>() = std::move(material);
+    get<std::shared_ptr<Material>>() = upcast(material);
 }
 
 RenderObject::RenderObject(Scene *scene) : _scene(scene) {

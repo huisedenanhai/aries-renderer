@@ -39,81 +39,81 @@ void OpaqueGeometry::execute(CommandBuffer *cmd) {
     auto &rd_objs = _view->scene_vk()->render_objects;
     auto v_matrix = _view->view_matrix();
     auto p_matrix = _view->projection_matrix();
-    rd_objs.for_each_id([&](Scene::RenderObjects::Id id) {
-        auto &matrix = rd_objs.get<glm::mat4>(id);
-        auto &mesh = rd_objs.get<std::shared_ptr<Mesh>>(id);
-        if (mesh == nullptr) {
-            return;
-        }
-        auto &mat_untyped = rd_objs.get<std::shared_ptr<IMaterial>>(id);
-        if (mat_untyped == nullptr ||
-            mat_untyped->type() != MaterialType::MetallicRoughnessPBR) {
-            return;
-        }
-        auto material =
-            std::dynamic_pointer_cast<MetallicRoughnessMaterial>(mat_untyped);
-
-        struct Transform {
-            glm::mat4 MV;
-            glm::mat4 I_MV;
-            glm::mat4 P;
-        };
-
-        Transform t{};
-        t.MV = v_matrix * matrix;
-        t.I_MV = glm::inverse(t.MV);
-        t.P = p_matrix;
-
-        struct MaterialParam {
-            glm::vec4 base_color_factor;
-            float metallic_factor;
-            float roughness_factor;
-            float normal_scale;
-            float occlusion_strength;
-            glm::vec3 emission_factor;
-        };
-
-        MaterialParam m{};
-        m.base_color_factor = material->base_color_factor;
-        m.metallic_factor = material->metallic_factor;
-        m.roughness_factor = material->roughness_factor;
-        m.normal_scale = material->normal_scale;
-        m.occlusion_strength = material->occlusion_strength;
-        m.emission_factor = material->emission_factor;
-
-        DescriptorEncoder desc{};
-        desc.set_buffer_data(0, 0, t);
-        desc.set_buffer_data(1, 0, m);
-
-        Handle<Texture> images[5] = {
-            material->base_color_tex.vk_texture(),
-            material->metallic_roughness_tex.vk_texture(),
-            material->normal_tex.vk_texture(),
-            material->occlusion_tex.vk_texture(),
-            material->emission_tex.vk_texture(),
-        };
-        for (int i = 0; i < std::size(images); i++) {
-            desc.set_texture(1, i + 1, images[i].get());
-        }
-
-        desc.commit(cmd, _pipeline.get());
-
-        VkBuffer vertex_buffers[] = {
-            mesh->position_buffer()->buffer(),
-            mesh->normal_buffer()->buffer(),
-            mesh->tangent_buffer()->buffer(),
-            mesh->tex_coord_buffer()->buffer(),
-        };
-        VkDeviceSize vertex_offsets[std::size(vertex_buffers)] = {};
-        cmd->BindVertexBuffers(0,
-                               static_cast<uint32_t>(std::size(vertex_buffers)),
-                               vertex_buffers,
-                               vertex_offsets);
-        cmd->BindIndexBuffer(
-            mesh->index_buffer()->buffer(), 0, VK_INDEX_TYPE_UINT32);
-
-        cmd->DrawIndexed(mesh->triangle_count() * 3, 1, 0, 0, 0);
-    });
+    //    rd_objs.for_each_id([&](Scene::RenderObjects::Id id) {
+    //        auto &matrix = rd_objs.get<glm::mat4>(id);
+    //        auto &mesh = rd_objs.get<std::shared_ptr<Mesh>>(id);
+    //        if (mesh == nullptr) {
+    //            return;
+    //        }
+    //        auto &mat_untyped = rd_objs.get<std::shared_ptr<IMaterial>>(id);
+    //        if (mat_untyped == nullptr ||
+    //            mat_untyped->type() != MaterialType::MetallicRoughnessPBR) {
+    //            return;
+    //        }
+    //        auto material =
+    //            std::dynamic_pointer_cast<MetallicRoughnessMaterial>(mat_untyped);
+    //
+    //        struct Transform {
+    //            glm::mat4 MV;
+    //            glm::mat4 I_MV;
+    //            glm::mat4 P;
+    //        };
+    //
+    //        Transform t{};
+    //        t.MV = v_matrix * matrix;
+    //        t.I_MV = glm::inverse(t.MV);
+    //        t.P = p_matrix;
+    //
+    //        struct MaterialParam {
+    //            glm::vec4 base_color_factor;
+    //            float metallic_factor;
+    //            float roughness_factor;
+    //            float normal_scale;
+    //            float occlusion_strength;
+    //            glm::vec3 emission_factor;
+    //        };
+    //
+    //        MaterialParam m{};
+    //        m.base_color_factor = material->base_color_factor;
+    //        m.metallic_factor = material->metallic_factor;
+    //        m.roughness_factor = material->roughness_factor;
+    //        m.normal_scale = material->normal_scale;
+    //        m.occlusion_strength = material->occlusion_strength;
+    //        m.emission_factor = material->emission_factor;
+    //
+    //        DescriptorEncoder desc{};
+    //        desc.set_buffer_data(0, 0, t);
+    //        desc.set_buffer_data(1, 0, m);
+    //
+    //        Handle<Texture> images[5] = {
+    //            material->base_color_tex.vk_texture(),
+    //            material->metallic_roughness_tex.vk_texture(),
+    //            material->normal_tex.vk_texture(),
+    //            material->occlusion_tex.vk_texture(),
+    //            material->emission_tex.vk_texture(),
+    //        };
+    //        for (int i = 0; i < std::size(images); i++) {
+    //            desc.set_texture(1, i + 1, images[i].get());
+    //        }
+    //
+    //        desc.commit(cmd, _pipeline.get());
+    //
+    //        VkBuffer vertex_buffers[] = {
+    //            mesh->position_buffer()->buffer(),
+    //            mesh->normal_buffer()->buffer(),
+    //            mesh->tangent_buffer()->buffer(),
+    //            mesh->tex_coord_buffer()->buffer(),
+    //        };
+    //        VkDeviceSize vertex_offsets[std::size(vertex_buffers)] = {};
+    //        cmd->BindVertexBuffers(0,
+    //                               static_cast<uint32_t>(std::size(vertex_buffers)),
+    //                               vertex_buffers,
+    //                               vertex_offsets);
+    //        cmd->BindIndexBuffer(
+    //            mesh->index_buffer()->buffer(), 0, VK_INDEX_TYPE_UINT32);
+    //
+    //        cmd->DrawIndexed(mesh->triangle_count() * 3, 1, 0, 0, 0);
+    //    });
 
     _render_pass->end(rp_exec);
 }

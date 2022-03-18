@@ -4,69 +4,22 @@
 #include <shaderc/shaderc.hpp>
 
 namespace ars::render {
-int IMaterial::str_to_id(const std::string &name) {
-    return static_cast<int>(std::hash<std::string>()(name));
-}
-
 IMaterial::IMaterial(IMaterialPrototype *prototype) : _prototype(prototype) {}
-
-MaterialType IMaterial::type() const {
-    return _prototype->type();
-}
 
 IMaterialPrototype *IMaterial::prototype() const {
     return _prototype;
-}
-
-void IMaterial::set_variant(int id, const MaterialPropertyVariant &value) {
-    assert(_prototype != nullptr);
-    for (auto &prop : _prototype->properties()) {
-        if (prop.id == id) {
-            if (value.type() != prop.type) {
-                ARS_LOG_WARN("material property type mismatch for id {}", id);
-                return;
-            }
-            prop.setter(this, value);
-            return;
-        }
-    }
-    ARS_LOG_WARN("Material property not found with id {}", id);
-}
-
-std::optional<MaterialPropertyVariant> IMaterial::get_variant(int id) {
-    assert(_prototype != nullptr);
-    for (auto &prop : _prototype->properties()) {
-        if (prop.id == id) {
-            return prop.getter(this);
-        }
-    }
-    ARS_LOG_WARN("Material property not found with id {}", id);
-    return std::nullopt;
 }
 
 void IMaterial::register_type() {
     rttr::registration::class_<IMaterial>("ars::render::IMaterial");
 }
 
-MaterialPropertyInfo::MaterialPropertyInfo(const char *name,
-                                           MaterialPropertyType type,
-                                           Setter setter,
-                                           Getter getter)
-    : name(name), id(IMaterial::str_to_id(name)), type(type),
-      setter(std::move(setter)), getter(std::move(getter)) {}
-
-MaterialType IMaterialPrototype::type() const {
-    return _type;
+MaterialPrototypeInfo IMaterialPrototype::info() const {
+    return _info;
 }
 
-const std::vector<MaterialPropertyInfo> &
-IMaterialPrototype::properties() const {
-    return _properties;
-}
-
-IMaterialPrototype::IMaterialPrototype(
-    MaterialType type, std::vector<MaterialPropertyInfo> properties)
-    : _type(type), _properties(std::move(properties)) {}
+IMaterialPrototype::IMaterialPrototype(MaterialPrototypeInfo info)
+    : _info(std::move(info)) {}
 
 MaterialPropertyType MaterialPropertyVariant::type() const {
     return std::visit(
@@ -154,5 +107,27 @@ std::vector<uint8_t> glsl_to_spirv(const std::string &glsl,
     auto beg = reinterpret_cast<const char *>(result.begin());
     auto end = reinterpret_cast<const char *>(result.end());
     return {beg, end};
+}
+
+std::optional<uint32_t>
+MaterialPrototypeInfo::find_property_index(const std::string &prop_name) {
+    for (int i = 0; i < properties.size(); i++) {
+        if (properties[i].name == prop_name) {
+            return i;
+        }
+    }
+    return std::nullopt;
+}
+
+MaterialPrototypeInfo &MaterialPrototypeInfo::add_property(
+    const std::string &prop_name,
+    MaterialPropertyType type,
+    const MaterialPropertyVariant &default_value) {
+    MaterialPropertyInfo p{};
+    p.name = prop_name;
+    p.type = type;
+    p.default_value = default_value;
+    properties.push_back(p);
+    return *this;
 }
 } // namespace ars::render

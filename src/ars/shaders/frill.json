@@ -25,6 +25,7 @@
     "SSR",
     "IBL",
     "Atmosphere",
-    "Shading"
+    "Shading",
+    "Draw"
   ]
 }

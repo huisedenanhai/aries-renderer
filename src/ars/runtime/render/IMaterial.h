@@ -15,16 +15,12 @@ namespace ars::render {
 class ITexture;
 class IMaterial;
 
-enum class MaterialPropertyType { Texture, Int, Float, Float2, Float3, Float4 };
+enum class MaterialPropertyType { Texture, Float, Float2, Float3, Float4 };
 
 template <typename T> struct MaterialPropertyTypeTrait;
 
 template <> struct MaterialPropertyTypeTrait<std::shared_ptr<ITexture>> {
     static constexpr MaterialPropertyType Type = MaterialPropertyType::Texture;
-};
-
-template <> struct MaterialPropertyTypeTrait<int> {
-    static constexpr MaterialPropertyType Type = MaterialPropertyType::Int;
 };
 
 template <> struct MaterialPropertyTypeTrait<float> {
@@ -44,14 +40,12 @@ template <> struct MaterialPropertyTypeTrait<glm::vec4> {
 };
 
 struct MaterialPropertyVariant : std::variant<std::shared_ptr<ITexture>,
-                                              int,
                                               float,
                                               glm::vec2,
                                               glm::vec3,
                                               glm::vec4> {
   private:
     using Base = std::variant<std::shared_ptr<ITexture>,
-                              int,
                               float,
                               glm::vec2,
                               glm::vec3,
@@ -65,103 +59,84 @@ struct MaterialPropertyVariant : std::variant<std::shared_ptr<ITexture>,
 
 struct MaterialPropertyInfo {
     std::string name{};
-    int id{};
     MaterialPropertyType type{};
-
-    using Setter =
-        std::function<void(IMaterial *, const MaterialPropertyVariant &)>;
-    using Getter = std::function<MaterialPropertyVariant(IMaterial *)>;
-    Setter setter{};
-    Getter getter{};
-
-    MaterialPropertyInfo() = default;
-    MaterialPropertyInfo(const char *name,
-                         MaterialPropertyType type,
-                         Setter setter,
-                         Getter getter);
-
-    template <typename M, typename T>
-    static MaterialPropertyInfo make(const char *name, T M::*mem) {
-        using Type = std::remove_reference_t<T>;
-        if constexpr (std::is_integral_v<Type> || std::is_enum_v<Type>) {
-            return MaterialPropertyInfo(
-                name,
-                MaterialPropertyType::Int,
-                [mem](IMaterial *m, const MaterialPropertyVariant &v) {
-                    auto mat = dynamic_cast<M *>(m);
-                    mat->*mem = static_cast<Type>(std::get<int>(v));
-                },
-                [mem](IMaterial *m) {
-                    auto mat = dynamic_cast<M *>(m);
-                    return static_cast<int>(mat->*mem);
-                });
-        } else {
-            return MaterialPropertyInfo(
-                name,
-                MaterialPropertyTypeTrait<Type>::Type,
-                [mem](IMaterial *m, const MaterialPropertyVariant &v) {
-                    auto mat = dynamic_cast<M *>(m);
-                    mat->*mem = std::get<Type>(v);
-                },
-                [mem](IMaterial *m) {
-                    auto mat = dynamic_cast<M *>(m);
-                    return mat->*mem;
-                });
-        }
-    }
+    MaterialPropertyVariant default_value{};
 };
 
-enum class MaterialType : uint32_t { Error, Unlit, MetallicRoughnessPBR };
+enum class MaterialType : uint32_t { Unlit, MetallicRoughnessPBR };
 
-enum class MaterialAlphaMode : uint32_t { Opaque, Blend };
+struct MaterialPrototypeInfo {
+    std::string name;
+    MaterialType shading_model = MaterialType::MetallicRoughnessPBR;
+    std::vector<MaterialPropertyInfo> properties{};
+
+    [[nodiscard]] std::optional<uint32_t>
+    find_property_index(const std::string &prop_name);
+
+    MaterialPrototypeInfo &
+    add_property(const std::string &prop_name,
+                 MaterialPropertyType type,
+                 const MaterialPropertyVariant &default_value);
+
+    template <typename T>
+    MaterialPrototypeInfo &add_property(const std::string &prop_name,
+                                        T &&default_value) {
+        using Type = std::remove_cv_t<std::remove_reference_t<T>>;
+        return add_property(prop_name,
+                            MaterialPropertyTypeTrait<Type>::Type,
+                            std::forward<T>(default_value));
+    }
+};
 
 // IMaterial prototype is owned by the context.
 class IMaterialPrototype {
   public:
-    IMaterialPrototype(MaterialType type,
-                       std::vector<MaterialPropertyInfo> properties);
+    explicit IMaterialPrototype(MaterialPrototypeInfo info);
 
     virtual ~IMaterialPrototype() = default;
 
     virtual std::shared_ptr<IMaterial> create_material() = 0;
 
-    [[nodiscard]] MaterialType type() const;
-    [[nodiscard]] const std::vector<MaterialPropertyInfo> &properties() const;
+    MaterialPrototypeInfo info() const;
 
   protected:
-    MaterialType _type{};
-    std::vector<MaterialPropertyInfo> _properties{};
+    MaterialPrototypeInfo _info{};
 };
 
-// If the material does not have corresponding property, or the property
-// type mismatches, setter will do nothing and getter will return default
-// value.
 class IMaterial : public IRes {
     RTTR_DERIVE(IRes);
 
   public:
     explicit IMaterial(IMaterialPrototype *prototype);
 
-    static int str_to_id(const std::string &id);
-
-    [[nodiscard]] MaterialType type() const;
     [[nodiscard]] IMaterialPrototype *prototype() const;
 
-    template <typename T> void set(int id, T &&value) {
-        using Type = std::remove_cv_t<std::remove_reference_t<T>>;
-        if constexpr (std::is_enum_v<Type> || std::is_integral_v<Type>) {
-            set_variant(id, static_cast<int>(value));
-        } else {
-            set_variant(id, std::forward<T>(value));
-        }
-    }
-
     template <typename T> void set(const std::string &name, T &&value) {
-        set(str_to_id(name), std::forward<T>(value));
+        set_variant(name, std::forward<T>(value));
     }
 
-    void set_variant(int id, const MaterialPropertyVariant &value);
-    std::optional<MaterialPropertyVariant> get_variant(int id);
+    template <typename T> std::optional<T> get(const std::string &name) {
+        auto v = get_variant(name);
+        if (v.has_value() && std::holds_alternative<T>(*v)) {
+            return std::get<T>(*v);
+        }
+        return std::nullopt;
+    }
+
+    // If the property with name is not found, do nothing
+    // If the property is found but type mismatch, do nothing
+    virtual void set_variant(const std::string &name,
+                             const MaterialPropertyVariant &value) = 0;
+
+    // If the property with name is not found, return std::nullopt.
+    // If the property is found and is not set, return default value.
+    // For texture, if the value is nullptr, return default value.
+    //
+    // For backend, when rendering, if a texture property has no value or
+    // default value, it should use the default white texture. Other types use
+    // default zeroed values.
+    virtual std::optional<MaterialPropertyVariant>
+    get_variant(const std::string &name) = 0;
 
     static void register_type();
 

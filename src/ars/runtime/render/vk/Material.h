@@ -9,8 +9,6 @@ class Context;
 
 class MaterialPass {
   public:
-    static constexpr uint32_t SHADOW_PASS_ID = 1000;
-    static constexpr uint32_t GEOMETRY_PASS_ID = 3000;
 };
 
 class MaterialPrototype : public IMaterialPrototype {

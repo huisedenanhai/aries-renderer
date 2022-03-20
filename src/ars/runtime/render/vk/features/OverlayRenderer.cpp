@@ -3,6 +3,7 @@
 #include "../Profiler.h"
 #include "../Scene.h"
 #include "Drawer.h"
+#include "Renderer.h"
 
 namespace ars::render::vk {
 namespace {
@@ -19,7 +20,6 @@ OverlayRenderer::OverlayRenderer(View *view) : _view(view) {
     _outline_detect_pipeline =
         ComputePipeline::create(_view->context(), "Outline.comp");
 
-    init_forward_render_pass();
     init_billboard_pipeline();
     init_line_pipeline();
 }
@@ -84,12 +84,13 @@ void OverlayRenderer::render(RenderGraph &rg, NamedRT dst_rt_name) {
             },
             [=](CommandBuffer *cmd) {
                 ARS_PROFILER_SAMPLE_VK(cmd, "Overlay Forward", 0xFF891742);
+                auto rp = overlay_pass().render_pass;
                 auto depth_rt = _view->render_target(NamedRT_Depth);
-                auto rp_exec = _overlay_forward_pass->begin(
+                auto rp_exec = rp->begin(
                     cmd, {dst_rt, depth_rt}, VK_SUBPASS_CONTENTS_INLINE);
                 render_line(cmd);
                 render_billboard(cmd);
-                _overlay_forward_pass->end(rp_exec);
+                rp->end(rp_exec);
             });
     }
 }
@@ -134,31 +135,6 @@ LightGizmo OverlayRenderer::light_gizmo() const {
     return _light_gizmo;
 }
 
-void OverlayRenderer::init_forward_render_pass() {
-    // Write to Post-processing buffer. Two post-processing buffer have same
-    // info, use either one for render pass creation is ok
-    auto color_info = _view->rt_info(NamedRT_PostProcessing0);
-    auto depth_info = _view->rt_info(NamedRT_Depth);
-    RenderPassAttachmentInfo color_attach{};
-    color_attach.format = color_info.format;
-    color_attach.samples = color_info.samples;
-    color_attach.initial_layout = VK_IMAGE_LAYOUT_GENERAL;
-    color_attach.final_layout = VK_IMAGE_LAYOUT_GENERAL;
-    color_attach.load_op = VK_ATTACHMENT_LOAD_OP_LOAD;
-    color_attach.store_op = VK_ATTACHMENT_STORE_OP_STORE;
-
-    RenderPassAttachmentInfo depth_attach{};
-    depth_attach.format = depth_info.format;
-    depth_attach.samples = depth_info.samples;
-    depth_attach.initial_layout = VK_IMAGE_LAYOUT_GENERAL;
-    depth_attach.final_layout = VK_IMAGE_LAYOUT_GENERAL;
-    depth_attach.load_op = VK_ATTACHMENT_LOAD_OP_LOAD;
-    depth_attach.store_op = VK_ATTACHMENT_STORE_OP_STORE;
-
-    _overlay_forward_pass = RenderPass::create_with_single_pass(
-        _view->context(), 1, &color_attach, &depth_attach);
-}
-
 void OverlayRenderer::init_billboard_pipeline() {
     auto ctx = _view->context();
     auto vert_shader = Shader::find_precompiled(ctx, "Billboard.vert");
@@ -182,12 +158,11 @@ void OverlayRenderer::init_billboard_pipeline() {
     GraphicsPipelineInfo info{};
     info.shaders.push_back(vert_shader.get());
     info.shaders.push_back(frag_shader.get());
-    info.render_pass = _overlay_forward_pass.get();
+    info.subpass = overlay_pass();
     info.depth_stencil = &depth_stencil;
     info.blend = &blend;
     info.push_constant_range_count = 1;
     info.push_constant_ranges = &push_constant;
-    info.subpass = 0;
 
     _billboard_pipeline = std::make_unique<GraphicsPipeline>(ctx, info);
 }
@@ -329,14 +304,13 @@ void OverlayRenderer::init_line_pipeline() {
     GraphicsPipelineInfo info{};
     info.shaders.push_back(vert_shader.get());
     info.shaders.push_back(frag_shader.get());
-    info.render_pass = _overlay_forward_pass.get();
+    info.subpass = overlay_pass();
     info.vertex_input = &vertex_input;
     info.depth_stencil = &depth_stencil;
     info.blend = &blend;
     info.push_constant_range_count = 1;
     info.push_constant_ranges = &push_constant;
     info.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
-    info.subpass = 0;
 
     _line_pipeline = std::make_unique<GraphicsPipeline>(ctx, info);
 }
@@ -426,5 +400,9 @@ void OverlayRenderer::render_object_ids(CommandBuffer *cmd) {
     _view->drawer()->draw_ids(
         cmd, outline_request_count, mvp_arr.data(), ids.data(), meshes.data());
     id_rp->end(id_rp_exec);
+}
+
+SubpassInfo OverlayRenderer::overlay_pass() const {
+    return _view->context()->renderer_data()->subpass(RenderPassID::Overlay);
 }
 } // namespace ars::render::vk

@@ -6,6 +6,7 @@
 #include "Scene.h"
 #include "Sky.h"
 #include "Swapchain.h"
+#include "features/Renderer.h"
 #include <GLFW/glfw3.h>
 #include <algorithm>
 #include <ars/runtime/core/Log.h>
@@ -578,6 +579,7 @@ Context::Context(const WindowInfo *info,
     _lut = std::make_unique<Lut>(this);
     _ibl = std::make_unique<ImageBasedLighting>(this);
     Context::init_profiler();
+    _renderer_data = std::make_unique<RendererContextData>(this);
 }
 
 Instance *Context::instance() const {
@@ -1016,5 +1018,9 @@ ImageBasedLighting *Context::ibl() const {
 
 Handle<Texture> Context::default_texture_vk(DefaultTexture tex) {
     return upcast(default_texture(tex).get());
+}
+
+RendererContextData *Context::renderer_data() const {
+    return _renderer_data.get();
 }
 } // namespace ars::render::vk

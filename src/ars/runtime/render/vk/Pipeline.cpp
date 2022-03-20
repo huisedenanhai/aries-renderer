@@ -291,7 +291,7 @@ void GraphicsPipeline::init_pipeline(const GraphicsPipelineInfo &info) {
     }
 
     assert(info.render_pass != nullptr);
-    auto &subpass = info.render_pass->subpasses()[info.subpass];
+    auto subpass = info.subpass.description();
 
     std::vector<VkPipelineColorBlendAttachmentState> attachments{};
     attachments.resize(subpass.colorAttachmentCount);
@@ -319,8 +319,8 @@ void GraphicsPipeline::init_pipeline(const GraphicsPipelineInfo &info) {
     create_info.pDynamicState = &dynamic_state;
 
     create_info.layout = _pipeline_layout;
-    create_info.renderPass = info.render_pass->render_pass();
-    create_info.subpass = info.subpass;
+    create_info.renderPass = info.subpass.render_pass->render_pass();
+    create_info.subpass = info.subpass.index;
 
     if (_context->device()->Create(
             _context->pipeline_cache(), 1, &create_info, &_pipeline) !=
@@ -738,5 +738,9 @@ PipelineLayoutInfo::binding(uint32_t set, uint32_t binding) const {
         return std::nullopt;
     }
     return s->bindings[binding];
+}
+
+VkSubpassDescription SubpassInfo::description() const {
+    return render_pass->subpasses()[index];
 }
 } // namespace ars::render::vk

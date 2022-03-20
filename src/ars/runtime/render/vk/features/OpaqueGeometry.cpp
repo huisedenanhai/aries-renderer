@@ -6,10 +6,10 @@
 #include "../Profiler.h"
 #include "../Scene.h"
 #include "Drawer.h"
+#include "Renderer.h"
 
 namespace ars::render::vk {
 OpaqueGeometry::OpaqueGeometry(View *view) : _view(view) {
-    init_render_pass();
     init_pipeline();
 }
 
@@ -19,6 +19,7 @@ void OpaqueGeometry::execute(CommandBuffer *cmd) {
     auto ctx = _view->context();
 
     Framebuffer *fb = nullptr;
+    auto rp = render_pass().render_pass;
     {
         auto rts = geometry_pass_rt_names();
         std::vector<Handle<Texture>> render_targets{};
@@ -26,18 +27,16 @@ void OpaqueGeometry::execute(CommandBuffer *cmd) {
         for (auto rt : rts) {
             render_targets.push_back(_view->render_target(rt));
         }
-        fb = ctx->create_tmp_framebuffer(_render_pass.get(),
-                                         std::move(render_targets));
+        fb = ctx->create_tmp_framebuffer(rp, std::move(render_targets));
     }
 
     // clear all rts to zero
     VkClearValue clear_values[5]{};
-    auto rp_exec =
-        _render_pass->begin(cmd, fb, clear_values, VK_SUBPASS_CONTENTS_INLINE);
+    auto rp_exec = rp->begin(cmd, fb, clear_values, VK_SUBPASS_CONTENTS_INLINE);
 
     auto draw_requests = _view->scene_vk()->gather_draw_requests();
     _view->drawer()->draw(cmd,
-                          MaterialPass::GEOMETRY_PASS_ID,
+                          RenderPassID::Geometry,
                           static_cast<uint32_t>(draw_requests.size()),
                           draw_requests.data());
 
@@ -122,13 +121,7 @@ void OpaqueGeometry::execute(CommandBuffer *cmd) {
     //        cmd->DrawIndexed(mesh->triangle_count() * 3, 1, 0, 0, 0);
     //    });
 
-    _render_pass->end(rp_exec);
-}
-
-void OpaqueGeometry::init_render_pass() {
-    auto rts = geometry_pass_rt_names();
-    _render_pass = _view->create_single_pass_render_pass(
-        rts.data(), static_cast<uint32_t>(std::size(rts) - 1), rts.back());
+    rp->end(rp_exec);
 }
 
 void OpaqueGeometry::init_pipeline() {
@@ -173,8 +166,7 @@ void OpaqueGeometry::init_pipeline() {
     GraphicsPipelineInfo info{};
     info.shaders.push_back(vert_shader.get());
     info.shaders.push_back(frag_shader.get());
-    info.render_pass = _render_pass.get();
-    info.subpass = 0;
+    info.subpass = render_pass();
 
     info.vertex_input = &vertex_input;
     info.depth_stencil = &depth_stencil;
@@ -210,5 +202,9 @@ void OpaqueGeometry::render(RenderGraph &rg) {
             }
         },
         [=](CommandBuffer *cmd) { execute(cmd); });
+}
+
+SubpassInfo OpaqueGeometry::render_pass() {
+    return _view->context()->renderer_data()->subpass(RenderPassID::Geometry);
 }
 } // namespace ars::render::vk

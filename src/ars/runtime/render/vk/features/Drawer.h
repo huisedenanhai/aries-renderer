@@ -5,6 +5,7 @@
 #include "../RenderPass.h"
 #include "../Texture.h"
 #include "../Vulkan.h"
+#include "Renderer.h"
 
 namespace ars::render::vk {
 constexpr VkFormat ID_COLOR_ATTACHMENT_FORMAT = VK_FORMAT_R32_UINT;
@@ -40,19 +41,19 @@ class Drawer {
     void draw(CommandBuffer *cmd,
               const glm::mat4 &P,
               const glm::mat4 &V,
-              uint32_t pass_id,
+              RenderPassID pass_id,
               uint32_t count,
               const DrawRequest *requests);
 
     void draw(CommandBuffer *cmd,
               View *view,
-              uint32_t pass_id,
+              RenderPassID pass_id,
               uint32_t count,
               const DrawRequest *requests);
 
     // Use the view holding the drawer
     void draw(CommandBuffer *cmd,
-              uint32_t pass_id,
+              RenderPassID pass_id,
               uint32_t count,
               const DrawRequest *requests);
 
@@ -65,7 +66,7 @@ class Drawer {
               const glm::mat4 &P,
               const glm::mat4 &V,
               const Handle<Buffer> &view_transform_buffer,
-              uint32_t pass_id,
+              RenderPassID pass_id,
               uint32_t count,
               const DrawRequest *requests);
 

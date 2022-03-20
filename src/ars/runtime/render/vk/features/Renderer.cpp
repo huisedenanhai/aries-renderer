@@ -74,4 +74,72 @@ void Renderer::add_inplace(RenderGraph &rg,
 }
 
 Renderer::~Renderer() = default;
+
+SubpassInfo RendererContextData::subpass(RenderPassID pass_id) const {
+    auto id = static_cast<uint32_t>(pass_id);
+    assert(id < _subpasses.size());
+    return _subpasses[id];
+}
+
+RendererContextData::RendererContextData(Context *context) : _context(context) {
+    init_render_passes();
+}
+
+void RendererContextData::init_geometry_pass() {
+    RenderPassAttachmentInfo colors[4]{};
+    colors[0].format = RT_FORMAT_GBUFFER0;
+    colors[1].format = RT_FORMAT_GBUFFER1;
+    colors[2].format = RT_FORMAT_GBUFFER2;
+    colors[3].format = RT_FORMAT_GBUFFER3;
+
+    RenderPassAttachmentInfo depth{};
+    depth.format = RT_FORMAT_DEPTH;
+
+    _geometry_pass =
+        RenderPass::create_with_single_pass(_context, 4, colors, &depth);
+}
+
+void RendererContextData::init_shading_pass() {
+    RenderPassAttachmentInfo color{};
+    color.format = RT_FORMAT_DEFAULT_HDR;
+
+    _shading_pass =
+        RenderPass::create_with_single_pass(_context, 1, &color, nullptr);
+}
+
+void RendererContextData::init_overlay_pass() {
+    RenderPassAttachmentInfo color{};
+    color.format = RT_FORMAT_DEFAULT_HDR;
+    color.samples = VK_SAMPLE_COUNT_1_BIT;
+    color.initial_layout = VK_IMAGE_LAYOUT_GENERAL;
+    color.final_layout = VK_IMAGE_LAYOUT_GENERAL;
+    color.load_op = VK_ATTACHMENT_LOAD_OP_LOAD;
+    color.store_op = VK_ATTACHMENT_STORE_OP_STORE;
+
+    RenderPassAttachmentInfo depth{};
+    depth.format = RT_FORMAT_DEPTH;
+    depth.samples = VK_SAMPLE_COUNT_1_BIT;
+    depth.initial_layout = VK_IMAGE_LAYOUT_GENERAL;
+    depth.final_layout = VK_IMAGE_LAYOUT_GENERAL;
+    depth.load_op = VK_ATTACHMENT_LOAD_OP_LOAD;
+    depth.store_op = VK_ATTACHMENT_STORE_OP_STORE;
+
+    _overlay_pass =
+        RenderPass::create_with_single_pass(_context, 1, &color, &depth);
+}
+
+void RendererContextData::init_render_passes() {
+    init_geometry_pass();
+    init_shading_pass();
+    init_overlay_pass();
+
+    _subpasses.resize(static_cast<uint32_t>(RenderPassID::Count));
+
+    _subpasses[static_cast<uint32_t>(RenderPassID::Geometry)] = {
+        _geometry_pass.get(), 0};
+    _subpasses[static_cast<uint32_t>(RenderPassID::Shading)] = {
+        _shading_pass.get(), 0};
+    _subpasses[static_cast<uint32_t>(RenderPassID::Overlay)] = {
+        _overlay_pass.get(), 0};
+}
 } // namespace ars::render::vk

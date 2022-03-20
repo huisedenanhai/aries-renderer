@@ -37,6 +37,13 @@ enum NamedRT {
     NamedRT_Count
 };
 
+constexpr VkFormat RT_FORMAT_DEFAULT_HDR = VK_FORMAT_B10G11R11_UFLOAT_PACK32;
+constexpr VkFormat RT_FORMAT_GBUFFER0 = VK_FORMAT_R8G8B8A8_SRGB;
+constexpr VkFormat RT_FORMAT_GBUFFER1 = VK_FORMAT_A2R10G10B10_UNORM_PACK32;
+constexpr VkFormat RT_FORMAT_GBUFFER2 = VK_FORMAT_R8G8B8A8_UNORM;
+constexpr VkFormat RT_FORMAT_GBUFFER3 = RT_FORMAT_DEFAULT_HDR;
+constexpr VkFormat RT_FORMAT_DEPTH = VK_FORMAT_D32_SFLOAT;
+
 struct ViewTransform {
     glm::mat4 V;
     glm::mat4 P;

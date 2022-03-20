@@ -5,6 +5,7 @@
 #include "../Profiler.h"
 #include "../Scene.h"
 #include "../Sky.h"
+#include "Renderer.h"
 
 namespace ars::render::vk {
 void DeferredShading::init_pipeline() {
@@ -16,7 +17,6 @@ void DeferredShading::init_pipeline() {
 }
 
 DeferredShading::DeferredShading(View *view) : _view(view) {
-    init_render_pass();
     init_pipeline();
 }
 
@@ -25,13 +25,13 @@ void DeferredShading::execute(CommandBuffer *cmd) {
 
     auto ctx = _view->context();
 
+    auto rp = render_pass().render_pass;
     auto fb = ctx->create_tmp_framebuffer(
-        _render_pass.get(), {_view->render_target(NamedRT_LinearColor)});
+        rp, {_view->render_target(NamedRT_LinearColor)});
 
     // clear color to zero
     VkClearValue clear_values[1]{};
-    auto rp_exec =
-        _render_pass->begin(cmd, fb, clear_values, VK_SUBPASS_CONTENTS_INLINE);
+    auto rp_exec = rp->begin(cmd, fb, clear_values, VK_SUBPASS_CONTENTS_INLINE);
 
     shade_unlit(cmd);
     shade_reflection_emission(cmd);
@@ -47,7 +47,7 @@ void DeferredShading::execute(CommandBuffer *cmd) {
 
     shade_point_light(cmd);
 
-    _render_pass->end(rp_exec);
+    rp->end(rp_exec);
 }
 
 void DeferredShading::render(RenderGraph &rg) {
@@ -100,25 +100,10 @@ DeferredShading::create_pipeline(const std::string &flag) {
     GraphicsPipelineInfo info{};
     info.shaders.push_back(vert_shader.get());
     info.shaders.push_back(frag_shader.get());
-    info.render_pass = _render_pass.get();
-    info.subpass = 0;
+    info.subpass = render_pass();
     info.blend = &blend;
 
     return std::make_unique<GraphicsPipeline>(ctx, info);
-}
-
-void DeferredShading::init_render_pass() {
-    RenderPassAttachmentInfo color{};
-
-    color.format = VK_FORMAT_B10G11R11_UFLOAT_PACK32;
-    color.samples = VK_SAMPLE_COUNT_1_BIT;
-    color.load_op = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    color.store_op = VK_ATTACHMENT_STORE_OP_STORE;
-    color.initial_layout = VK_IMAGE_LAYOUT_UNDEFINED;
-    color.final_layout = VK_IMAGE_LAYOUT_GENERAL;
-
-    _render_pass = RenderPass::create_with_single_pass(
-        _view->context(), 1, &color, nullptr);
 }
 
 void DeferredShading::shade_unlit(CommandBuffer *cmd) {
@@ -285,5 +270,9 @@ void DeferredShading::shade_sun(CommandBuffer *cmd, PhysicalSky *sky) {
     desc.commit(cmd, _lit_sun_pipeline.get());
 
     cmd->Draw(3, 1, 0, 0);
+}
+
+SubpassInfo DeferredShading::render_pass() {
+    return _view->context()->renderer_data()->subpass(RenderPassID::Shading);
 }
 } // namespace ars::render::vk

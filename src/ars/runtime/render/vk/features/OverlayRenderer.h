@@ -32,7 +32,6 @@ class OverlayRenderer : public IOverlay {
     void render(RenderGraph &rg, NamedRT dst_rt_name);
 
   private:
-    void init_forward_render_pass();
     void init_billboard_pipeline();
     void init_line_pipeline();
     void ensure_outline_rts();
@@ -44,6 +43,7 @@ class OverlayRenderer : public IOverlay {
     bool need_forward_pass() const;
     bool need_render_billboard() const;
     bool need_render_line() const;
+    SubpassInfo overlay_pass() const;
 
     View *_view = nullptr;
     std::array<glm::vec4, 256> _outline_colors{};
@@ -61,7 +61,6 @@ class OverlayRenderer : public IOverlay {
 
     LightGizmo _light_gizmo{};
 
-    std::unique_ptr<RenderPass> _overlay_forward_pass;
     std::unique_ptr<GraphicsPipeline> _billboard_pipeline;
 
     std::vector<glm::vec3> _line_vert_pos{};

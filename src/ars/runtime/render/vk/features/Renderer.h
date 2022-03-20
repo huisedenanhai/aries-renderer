@@ -14,6 +14,31 @@ class ScreenSpaceReflection;
 class ToneMapping;
 class QuerySelection;
 
+enum class RenderPassID : uint32_t {
+    Geometry,
+    Shading,
+    Overlay,
+    Count,
+};
+
+class RendererContextData {
+  public:
+    explicit RendererContextData(Context *context);
+    SubpassInfo subpass(RenderPassID pass_id) const;
+
+  private:
+    void init_render_passes();
+    void init_geometry_pass();
+    void init_shading_pass();
+    void init_overlay_pass();
+
+    Context *_context = nullptr;
+    std::unique_ptr<RenderPass> _geometry_pass{};
+    std::unique_ptr<RenderPass> _shading_pass{};
+    std::unique_ptr<RenderPass> _overlay_pass{};
+    std::vector<SubpassInfo> _subpasses{};
+};
+
 class Renderer {
   public:
     explicit Renderer(View *view);

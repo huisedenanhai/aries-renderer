@@ -131,11 +131,17 @@ VkPipelineColorBlendAttachmentState
 create_attachment_blend_state(VkBlendFactor src_factor,
                               VkBlendFactor dst_factor);
 
+struct SubpassInfo {
+    RenderPass *render_pass = nullptr;
+    uint32_t index = 0;
+
+    VkSubpassDescription description() const;
+};
+
 struct GraphicsPipelineInfo {
     std::optional<std::string> name;
     std::vector<Shader *> shaders{};
-    RenderPass *render_pass = nullptr;
-    uint32_t subpass = 0;
+    SubpassInfo subpass{};
 
     // Push constant ranges can not be inferred from shader reflection data as
     // offsets are unknown.

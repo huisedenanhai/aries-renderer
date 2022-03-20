@@ -155,8 +155,8 @@ class ImGuiViewportData {
         GraphicsPipelineInfo info{};
         info.shaders.push_back(vert_shader.get());
         info.shaders.push_back(frag_shader.get());
-        info.render_pass = _swapchain->render_pass();
-        info.subpass = 0;
+        info.subpass.render_pass = _swapchain->render_pass();
+        info.subpass.index = 0;
 
         info.push_constant_range_count = 1;
         info.push_constant_ranges = &push_constant_range;

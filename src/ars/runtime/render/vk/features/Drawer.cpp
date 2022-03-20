@@ -109,8 +109,8 @@ void Drawer::init_draw_id_pipeline() {
     GraphicsPipelineInfo info{};
     info.shaders.push_back(vert_shader.get());
     info.shaders.push_back(frag_shader.get());
-    info.render_pass = _render_pass.get();
-    info.subpass = 0;
+    info.subpass.render_pass = _render_pass.get();
+    info.subpass.index = 0;
 
     info.vertex_input = &vertex_input;
     info.depth_stencil = &depth_stencil;
@@ -184,8 +184,8 @@ void Drawer::init_draw_id_billboard_alpha_clip() {
     GraphicsPipelineInfo info{};
     info.shaders.push_back(vert_shader.get());
     info.shaders.push_back(frag_shader.get());
-    info.render_pass = _render_pass.get();
-    info.subpass = 0;
+    info.subpass.render_pass = _render_pass.get();
+    info.subpass.index = 0;
     info.depth_stencil = &depth_stencil;
 
     info.push_constant_range_count = 1;
@@ -198,7 +198,7 @@ void Drawer::init_draw_id_billboard_alpha_clip() {
 void Drawer::draw(CommandBuffer *cmd,
                   const glm::mat4 &P,
                   const glm::mat4 &V,
-                  uint32_t pass_id,
+                  RenderPassID pass_id,
                   uint32_t count,
                   const DrawRequest *requests) {
     auto transform_buffer =
@@ -211,7 +211,7 @@ void Drawer::draw(CommandBuffer *cmd,
 
 void Drawer::draw(CommandBuffer *cmd,
                   View *view,
-                  uint32_t pass_id,
+                  RenderPassID pass_id,
                   uint32_t count,
                   const DrawRequest *requests) {
     draw(cmd,
@@ -227,14 +227,14 @@ void Drawer::draw(CommandBuffer *cmd,
                   const glm::mat4 &P,
                   const glm::mat4 &V,
                   const Handle<Buffer> &view_transform_buffer,
-                  uint32_t pass_id,
+                  RenderPassID pass_id,
                   uint32_t count,
                   const DrawRequest *requests) {
     // TODO
 }
 
 void Drawer::draw(CommandBuffer *cmd,
-                  uint32_t pass_id,
+                  RenderPassID pass_id,
                   uint32_t count,
                   const DrawRequest *requests) {
     draw(cmd, _view, pass_id, count, requests);

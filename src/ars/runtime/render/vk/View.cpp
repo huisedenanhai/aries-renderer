@@ -164,23 +164,23 @@ TextureCreateInfo View::rt_info(NamedRT name) const {
 
     switch (name) {
     case NamedRT_GBuffer0: {
-        info = color_attachment(VK_FORMAT_R8G8B8A8_SRGB);
+        info = color_attachment(RT_FORMAT_GBUFFER0);
         break;
     }
     case NamedRT_GBuffer1: {
-        info = color_attachment(VK_FORMAT_A2R10G10B10_UNORM_PACK32);
+        info = color_attachment(RT_FORMAT_GBUFFER1);
         break;
     }
     case NamedRT_GBuffer2: {
-        info = color_attachment(VK_FORMAT_R8G8B8A8_UNORM);
+        info = color_attachment(RT_FORMAT_GBUFFER2);
         break;
     }
     case NamedRT_GBuffer3: {
-        info = color_attachment(VK_FORMAT_B10G11R11_UFLOAT_PACK32);
+        info = color_attachment(RT_FORMAT_GBUFFER3);
         break;
     }
     case NamedRT_Depth: {
-        info = TextureCreateInfo::sampled_2d(VK_FORMAT_D32_SFLOAT, 1, 1, 1);
+        info = TextureCreateInfo::sampled_2d(RT_FORMAT_DEPTH, 1, 1, 1);
         info.aspect_mask = VK_IMAGE_ASPECT_DEPTH_BIT;
         info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT |
                      VK_IMAGE_USAGE_SAMPLED_BIT;
@@ -189,7 +189,7 @@ TextureCreateInfo View::rt_info(NamedRT name) const {
     case NamedRT_LinearColor:
     case NamedRT_LinearColorHistory: {
         info = TextureCreateInfo::sampled_2d(
-            VK_FORMAT_B10G11R11_UFLOAT_PACK32, 1, 1, MAX_MIP_LEVELS);
+            RT_FORMAT_DEFAULT_HDR, 1, 1, MAX_MIP_LEVELS);
         info.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
         break;
     }
@@ -198,6 +198,7 @@ TextureCreateInfo View::rt_info(NamedRT name) const {
         info = translate(color_tex_info());
         info.usage |=
             VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
+        assert(info.format == RT_FORMAT_DEFAULT_HDR);
         break;
     }
     case NamedRT_HiZBuffer: {

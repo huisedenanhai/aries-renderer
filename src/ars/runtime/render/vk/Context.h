@@ -21,6 +21,7 @@ class Context;
 class MaterialPrototypeRegistry;
 class Profiler;
 class ImageBasedLighting;
+class RendererContextData;
 
 void init_vulkan_backend(const ApplicationInfo &app_info);
 void destroy_vulkan_backend();
@@ -143,6 +144,7 @@ class Context : public IContext {
     [[nodiscard]] Lut *lut() const;
     [[nodiscard]] ImageBasedLighting *ibl() const;
     [[nodiscard]] Profiler *profiler() const;
+    [[nodiscard]] RendererContextData *renderer_data() const;
 
     void set_debug_name_internal(const std::string &name,
                                  uint64_t object_handle,
@@ -208,6 +210,7 @@ class Context : public IContext {
     std::unique_ptr<Lut> _lut{};
     std::unique_ptr<ImageBasedLighting> _ibl{};
     std::unique_ptr<Profiler> _profiler{};
+    std::unique_ptr<RendererContextData> _renderer_data{};
 };
 
 template <typename Func>

@@ -16,12 +16,11 @@ class OpaqueGeometry {
     void execute(CommandBuffer *cmd);
 
   private:
-    void init_render_pass();
     void init_pipeline();
+    SubpassInfo render_pass();
     [[nodiscard]] static std::array<NamedRT, 5> geometry_pass_rt_names();
 
     View *_view = nullptr;
-    std::unique_ptr<RenderPass> _render_pass{};
     std::unique_ptr<GraphicsPipeline> _pipeline{};
 };
 } // namespace ars::render::vk

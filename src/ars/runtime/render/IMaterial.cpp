@@ -4,22 +4,9 @@
 #include <shaderc/shaderc.hpp>
 
 namespace ars::render {
-IMaterial::IMaterial(IMaterialPrototype *prototype) : _prototype(prototype) {}
-
-IMaterialPrototype *IMaterial::prototype() const {
-    return _prototype;
-}
-
 void IMaterial::register_type() {
     rttr::registration::class_<IMaterial>("ars::render::IMaterial");
 }
-
-MaterialPrototypeInfo IMaterialPrototype::info() const {
-    return _info;
-}
-
-IMaterialPrototype::IMaterialPrototype(MaterialPrototypeInfo info)
-    : _info(std::move(info)) {}
 
 MaterialPropertyType MaterialPropertyVariant::type() const {
     return std::visit(

@@ -49,7 +49,7 @@ MaterialPrototypeRegistry::prototype(MaterialType type) const {
 
 MaterialPrototype::MaterialPrototype(Context *context,
                                      MaterialPrototypeInfo info)
-    : IMaterialPrototype(std::move(info)), _context(context) {
+    : _info(std::move(info)), _context(context) {
     init_data_block_layout();
 }
 
@@ -119,20 +119,11 @@ uint32_t MaterialPrototype::data_block_size() const {
     return _data_block_size;
 }
 
-std::shared_ptr<MaterialPass> MaterialPrototype::pass(uint32_t pass_id) const {
-    auto it = _passes.find(pass_id);
-    if (it == _passes.end()) {
-        return nullptr;
-    }
-    return it->second;
+MaterialPrototypeInfo MaterialPrototype::info() {
+    return _info;
 }
 
-void MaterialPrototype::set_pass(uint32_t pass_id,
-                                 const std::shared_ptr<MaterialPass> &pass) {
-    _passes[pass_id] = pass;
-}
-
-Material::Material(MaterialPrototype *prototype) : IMaterial(prototype) {
+Material::Material(MaterialPrototype *prototype) : _prototype(prototype) {
     auto info = prototype->info();
     _texture_owners.resize(info.properties.size());
     _data_block.resize(prototype->data_block_size());
@@ -201,7 +192,7 @@ MaterialPrototype *upcast(IMaterialPrototype *prototype) {
 }
 
 MaterialPrototype *Material::prototype_vk() const {
-    return upcast(prototype());
+    return _prototype;
 }
 
 void Material::set_variant_by_index(uint32_t index,
@@ -229,6 +220,10 @@ void Material::set_variant_by_index(uint32_t index,
                    }
                }),
                value);
+}
+
+IMaterialPrototype *Material::prototype() {
+    return prototype_vk();
 }
 
 std::shared_ptr<Material> upcast(const std::shared_ptr<IMaterial> &m) {

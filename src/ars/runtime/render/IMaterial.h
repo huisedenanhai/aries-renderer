@@ -88,28 +88,21 @@ struct MaterialPrototypeInfo {
     }
 };
 
-// IMaterial prototype is owned by the context.
+// IMaterialPrototype is owned by the context.
 class IMaterialPrototype {
   public:
-    explicit IMaterialPrototype(MaterialPrototypeInfo info);
-
     virtual ~IMaterialPrototype() = default;
 
     virtual std::shared_ptr<IMaterial> create_material() = 0;
 
-    MaterialPrototypeInfo info() const;
-
-  protected:
-    MaterialPrototypeInfo _info{};
+    virtual MaterialPrototypeInfo info() = 0;
 };
 
 class IMaterial : public IRes {
     RTTR_DERIVE(IRes);
 
   public:
-    explicit IMaterial(IMaterialPrototype *prototype);
-
-    [[nodiscard]] IMaterialPrototype *prototype() const;
+    virtual IMaterialPrototype *prototype() = 0;
 
     template <typename T> void set(const std::string &name, T &&value) {
         set_variant(name, std::forward<T>(value));
@@ -139,9 +132,6 @@ class IMaterial : public IRes {
     get_variant(const std::string &name) = 0;
 
     static void register_type();
-
-  protected:
-    IMaterialPrototype *_prototype = nullptr;
 };
 
 enum class ShaderKind {

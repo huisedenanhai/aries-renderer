@@ -16,6 +16,7 @@ class MaterialPrototype : public IMaterialPrototype {
     explicit MaterialPrototype(Context *context, MaterialPrototypeInfo info);
 
     std::shared_ptr<IMaterial> create_material() override;
+    MaterialPrototypeInfo info() override;
 
     [[nodiscard]] Context *context() const {
         return _context;
@@ -24,16 +25,13 @@ class MaterialPrototype : public IMaterialPrototype {
     uint32_t property_offset(uint32_t index) const;
     uint32_t data_block_size() const;
 
-    std::shared_ptr<MaterialPass> pass(uint32_t pass_id) const;
-    void set_pass(uint32_t pass_id, const std::shared_ptr<MaterialPass> &pass);
-
   private:
     void init_data_block_layout();
 
     Context *_context = nullptr;
+    MaterialPrototypeInfo _info{};
     std::vector<uint32_t> _property_offsets{};
     uint32_t _data_block_size{};
-    std::map<uint32_t, std::shared_ptr<MaterialPass>> _passes{};
 };
 
 MaterialPrototype *upcast(IMaterialPrototype *prototype);
@@ -44,6 +42,7 @@ class Material : public IMaterial {
 
     MaterialPrototype *prototype_vk() const;
 
+    IMaterialPrototype *prototype() override;
     void set_variant(const std::string &name,
                      const MaterialPropertyVariant &value) override;
     std::optional<MaterialPropertyVariant>
@@ -53,6 +52,7 @@ class Material : public IMaterial {
     void set_variant_by_index(uint32_t index,
                               const MaterialPropertyVariant &value);
 
+    MaterialPrototype *_prototype = nullptr;
     std::vector<uint8_t> _data_block{};
     std::vector<std::shared_ptr<ITexture>> _texture_owners{};
 };

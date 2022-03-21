@@ -18,10 +18,7 @@ class MaterialPrototype : public IMaterialPrototype {
     std::shared_ptr<IMaterial> create_material() override;
     MaterialPrototypeInfo info() override;
 
-    [[nodiscard]] Context *context() const {
-        return _context;
-    }
-
+    [[nodiscard]] Context *context() const;
     uint32_t property_offset(uint32_t index) const;
     uint32_t data_block_size() const;
 
@@ -40,15 +37,18 @@ class Material : public IMaterial {
   public:
     explicit Material(MaterialPrototype *prototype);
 
-    MaterialPrototype *prototype_vk() const;
-
     IMaterialPrototype *prototype() override;
     void set_variant(const std::string &name,
                      const MaterialPropertyVariant &value) override;
     std::optional<MaterialPropertyVariant>
     get_variant(const std::string &name) override;
 
+    MaterialPrototype *prototype_vk() const;
+    std::vector<Handle<Texture>> referenced_textures();
+
   private:
+    std::shared_ptr<ITexture> get_texture_by_index(uint32_t index);
+    MaterialPropertyVariant get_variant_by_index(uint32_t index);
     void set_variant_by_index(uint32_t index,
                               const MaterialPropertyVariant &value);
 

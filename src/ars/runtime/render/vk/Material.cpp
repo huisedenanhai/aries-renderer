@@ -123,6 +123,10 @@ MaterialPrototypeInfo MaterialPrototype::info() {
     return _info;
 }
 
+Context *MaterialPrototype::context() const {
+    return _context;
+}
+
 Material::Material(MaterialPrototype *prototype) : _prototype(prototype) {
     auto info = prototype->info();
     _texture_owners.resize(info.properties.size());
@@ -155,36 +159,7 @@ Material::get_variant(const std::string &name) {
     if (!index.has_value()) {
         return std::nullopt;
     }
-
-    assert(*index < info.properties.size());
-
-    auto &p = info.properties[*index];
-    auto data_ptr = &_data_block[proto->property_offset(*index)];
-    switch (p.type) {
-    case MaterialPropertyType::Texture: {
-        auto tex = _texture_owners[*index];
-        if (tex == nullptr) {
-            if (std::holds_alternative<std::shared_ptr<ITexture>>(
-                    p.default_value)) {
-                tex = std::get<std::shared_ptr<ITexture>>(p.default_value);
-            }
-        }
-        if (tex == nullptr) {
-            tex = proto->context()->default_texture(DefaultTexture::White);
-        }
-        return tex;
-    }
-    case MaterialPropertyType::Float:
-        return *reinterpret_cast<float *>(data_ptr);
-    case MaterialPropertyType::Float2:
-        return *reinterpret_cast<glm::vec2 *>(data_ptr);
-    case MaterialPropertyType::Float3:
-        return *reinterpret_cast<glm::vec3 *>(data_ptr);
-    case MaterialPropertyType::Float4:
-        return *reinterpret_cast<glm::vec4 *>(data_ptr);
-    }
-
-    return std::nullopt;
+    return get_variant_by_index(*index);
 }
 
 MaterialPrototype *upcast(IMaterialPrototype *prototype) {
@@ -224,6 +199,55 @@ void Material::set_variant_by_index(uint32_t index,
 
 IMaterialPrototype *Material::prototype() {
     return prototype_vk();
+}
+
+std::vector<Handle<Texture>> Material::referenced_textures() {
+    std::vector<Handle<Texture>> textures{};
+    auto props = _prototype->info().properties;
+    for (int i = 0; i < props.size(); i++) {
+        if (props[i].type == MaterialPropertyType::Texture) {
+            textures.push_back(upcast(get_texture_by_index(i).get()));
+        }
+    }
+    return textures;
+}
+
+MaterialPropertyVariant Material::get_variant_by_index(uint32_t index) {
+    auto info = prototype_vk()->info();
+    assert(index < info.properties.size());
+
+    auto &p = info.properties[index];
+    auto data_ptr = &_data_block[prototype_vk()->property_offset(index)];
+    switch (p.type) {
+    case MaterialPropertyType::Texture:
+        return get_texture_by_index(index);
+    case MaterialPropertyType::Float:
+        return *reinterpret_cast<float *>(data_ptr);
+    case MaterialPropertyType::Float2:
+        return *reinterpret_cast<glm::vec2 *>(data_ptr);
+    case MaterialPropertyType::Float3:
+        return *reinterpret_cast<glm::vec3 *>(data_ptr);
+    case MaterialPropertyType::Float4:
+        return *reinterpret_cast<glm::vec4 *>(data_ptr);
+    }
+}
+
+std::shared_ptr<ITexture> Material::get_texture_by_index(uint32_t index) {
+    auto info = prototype_vk()->info();
+    assert(index < info.properties.size());
+    auto &p = info.properties[index];
+    assert(p.type == MaterialPropertyType::Texture);
+    auto tex = _texture_owners[index];
+    if (tex == nullptr) {
+        if (std::holds_alternative<std::shared_ptr<ITexture>>(
+                p.default_value)) {
+            tex = std::get<std::shared_ptr<ITexture>>(p.default_value);
+        }
+    }
+    if (tex == nullptr) {
+        tex = prototype_vk()->context()->default_texture(DefaultTexture::White);
+    }
+    return tex;
 }
 
 std::shared_ptr<Material> upcast(const std::shared_ptr<IMaterial> &m) {

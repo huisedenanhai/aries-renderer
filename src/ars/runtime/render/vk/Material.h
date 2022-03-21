@@ -13,10 +13,11 @@ class MaterialPass {
 
 class MaterialPrototype : public IMaterialPrototype {
   public:
-    explicit MaterialPrototype(Context *context, MaterialPrototypeInfo info);
+    explicit MaterialPrototype(Context *context,
+                               MaterialPropertyBlockInfo info);
 
     std::shared_ptr<IMaterial> create_material() override;
-    MaterialPrototypeInfo info() override;
+    MaterialPropertyBlockInfo info() override;
 
     [[nodiscard]] Context *context() const;
     uint32_t property_offset(uint32_t index) const;
@@ -26,7 +27,7 @@ class MaterialPrototype : public IMaterialPrototype {
     void init_data_block_layout();
 
     Context *_context = nullptr;
-    MaterialPrototypeInfo _info{};
+    MaterialPropertyBlockInfo _info{};
     std::vector<uint32_t> _property_offsets{};
     uint32_t _data_block_size{};
 };

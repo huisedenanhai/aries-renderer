@@ -7,18 +7,16 @@ namespace ars::render::vk {
 MaterialPrototypeRegistry::MaterialPrototypeRegistry(Context *context) {
     auto white_tex = context->default_texture(DefaultTexture::White);
 
-    MaterialPrototypeInfo unlit{};
+    MaterialPropertyBlockInfo unlit{};
     unlit.name = "Default Unlit";
-    unlit.shading_model = MaterialType::Unlit;
     unlit.add_property("color_factor", glm::vec4(1.0f));
     unlit.add_property("color_tex", white_tex);
 
     _unlit_material_prototype =
         std::make_unique<MaterialPrototype>(context, unlit);
 
-    MaterialPrototypeInfo pbr{};
+    MaterialPropertyBlockInfo pbr{};
     pbr.name = "Default Lit Metallic Roughness";
-    pbr.shading_model = MaterialType::MetallicRoughnessPBR;
     pbr.add_property("base_color_factor", glm::vec4(1.0f));
     pbr.add_property("metallic_factor", 1.0f);
     pbr.add_property("roughness_factor", 1.0f);
@@ -48,7 +46,7 @@ MaterialPrototypeRegistry::prototype(MaterialType type) const {
 }
 
 MaterialPrototype::MaterialPrototype(Context *context,
-                                     MaterialPrototypeInfo info)
+                                     MaterialPropertyBlockInfo info)
     : _info(std::move(info)), _context(context) {
     init_data_block_layout();
 }
@@ -119,7 +117,7 @@ uint32_t MaterialPrototype::data_block_size() const {
     return _data_block_size;
 }
 
-MaterialPrototypeInfo MaterialPrototype::info() {
+MaterialPropertyBlockInfo MaterialPrototype::info() {
     return _info;
 }
 

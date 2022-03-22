@@ -290,7 +290,7 @@ void GraphicsPipeline::init_pipeline(const GraphicsPipelineInfo &info) {
         create_info.pDepthStencilState = info.depth_stencil;
     }
 
-    assert(info.render_pass != nullptr);
+    assert(info.subpass.render_pass != nullptr);
     auto subpass = info.subpass.description();
 
     std::vector<VkPipelineColorBlendAttachmentState> attachments{};

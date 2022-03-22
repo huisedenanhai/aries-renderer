@@ -14,22 +14,17 @@ class MaterialPass {
 class MaterialPrototype : public IMaterialPrototype {
   public:
     explicit MaterialPrototype(Context *context,
-                               MaterialPropertyBlockInfo info);
+                               const MaterialPropertyBlockInfo &info);
 
     std::shared_ptr<IMaterial> create_material() override;
     MaterialPropertyBlockInfo info() override;
 
+    std::shared_ptr<MaterialPropertyBlockLayout> property_block_layout() const;
     [[nodiscard]] Context *context() const;
-    uint32_t property_offset(uint32_t index) const;
-    uint32_t data_block_size() const;
 
   private:
-    void init_data_block_layout();
-
     Context *_context = nullptr;
-    MaterialPropertyBlockInfo _info{};
-    std::vector<uint32_t> _property_offsets{};
-    uint32_t _data_block_size{};
+    std::shared_ptr<MaterialPropertyBlockLayout> _block_layout = nullptr;
 };
 
 MaterialPrototype *upcast(IMaterialPrototype *prototype);
@@ -44,18 +39,13 @@ class Material : public IMaterial {
     std::optional<MaterialPropertyVariant>
     get_variant(const std::string &name) override;
 
+    MaterialPropertyBlock *property_block() const;
+
     MaterialPrototype *prototype_vk() const;
-    std::vector<Handle<Texture>> referenced_textures();
 
   private:
-    std::shared_ptr<ITexture> get_texture_by_index(uint32_t index);
-    MaterialPropertyVariant get_variant_by_index(uint32_t index);
-    void set_variant_by_index(uint32_t index,
-                              const MaterialPropertyVariant &value);
-
     MaterialPrototype *_prototype = nullptr;
-    std::vector<uint8_t> _data_block{};
-    std::vector<std::shared_ptr<ITexture>> _texture_owners{};
+    std::unique_ptr<MaterialPropertyBlock> _property_block{};
 };
 
 std::shared_ptr<Material> upcast(const std::shared_ptr<IMaterial> &m);

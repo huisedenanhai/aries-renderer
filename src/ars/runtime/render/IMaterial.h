@@ -186,6 +186,7 @@ class IMaterial : public IRes {
     // If the property with name is not found, return std::nullopt.
     // If the property is found and is not set, return default value.
     // For texture, if the value is nullptr, return default value.
+    // If default texture is nullptr, return default white texture.
     //
     // For backend, when rendering, if a texture property has no value or
     // default value, it should use the default white texture. Other types use

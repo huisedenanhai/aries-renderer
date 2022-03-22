@@ -230,9 +230,9 @@ IContext *MaterialPropertyBlockLayout::context() const {
 MaterialPropertyBlock::MaterialPropertyBlock(
     std::shared_ptr<MaterialPropertyBlockLayout> layout)
     : _layout(std::move(layout)) {
-    auto &info = layout->info();
+    auto &info = _layout->info();
     _texture_owners.resize(info.properties.size());
-    _data_block.resize(layout->data_block_size());
+    _data_block.resize(_layout->data_block_size());
 
     // Init with default value
     for (int i = 0; i < info.properties.size(); i++) {
@@ -345,5 +345,4 @@ MaterialPropertyBlock::get_texture_by_index(uint32_t index) {
     }
     return tex;
 }
-
 } // namespace ars::render

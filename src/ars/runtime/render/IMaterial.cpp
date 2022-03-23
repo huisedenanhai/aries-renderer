@@ -230,6 +230,8 @@ IContext *MaterialPropertyBlockLayout::context() const {
 MaterialPropertyBlock::MaterialPropertyBlock(
     std::shared_ptr<MaterialPropertyBlockLayout> layout)
     : _layout(std::move(layout)) {
+    assert(_layout != nullptr);
+
     auto &info = _layout->info();
     _texture_owners.resize(info.properties.size());
     _data_block.resize(_layout->data_block_size());

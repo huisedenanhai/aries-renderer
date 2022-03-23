@@ -487,8 +487,7 @@ void load_materials(IContext *context,
 
         mat.name = gltf_mat.name;
         auto &m = mat.material =
-            context->material_prototype(MaterialType::MetallicRoughnessPBR)
-                ->create_material();
+            context->create_material(MaterialType::MetallicRoughnessPBR);
         auto &pbr = gltf_mat.pbrMetallicRoughness;
 
         m->set_path(gltf_material_path(path, gltf, mat_index));

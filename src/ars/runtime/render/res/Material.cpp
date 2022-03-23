@@ -14,9 +14,8 @@ load_material(IContext *context, Resources *res, const ResData &data) {
 
     MaterialResMeta meta = data.meta;
     auto properties = nlohmann::json::from_bson(data.data);
-    auto proto = context->material_prototype(meta.type);
-    auto m = proto->create_material();
-    for (auto &prop : proto->info().properties) {
+    auto m = context->create_material(meta.type);
+    for (auto &prop : m->properties()) {
         auto value = properties[prop.name];
         switch (prop.type) {
         case MaterialPropertyType::Texture: {
@@ -46,8 +45,7 @@ load_material(IContext *context, Resources *res, const ResData &data) {
 
 nlohmann::json serialize_material(IMaterial *material) {
     auto js = nlohmann::json::object();
-    auto proto = material->prototype();
-    for (auto &prop : proto->info().properties) {
+    for (auto &prop : material->properties()) {
         auto v = material->get_variant(prop.name);
         if (v.has_value()) {
             std::visit([&](auto &&p) { js[prop.name] = p; }, *v);

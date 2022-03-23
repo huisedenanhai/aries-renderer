@@ -3,62 +3,76 @@
 #include "../IMaterial.h"
 #include "Texture.h"
 #include "Vulkan.h"
+#include "features/Renderer.h"
 
 namespace ars::render::vk {
 class Context;
+class GraphicsPipeline;
 
-class MaterialPass {
-  public:
+struct MaterialPass {
+    GraphicsPipeline *pipeline = nullptr;
+    MaterialPropertyBlock *property_block = nullptr;
 };
 
-class MaterialPrototype : public IMaterialPrototype {
-  public:
-    explicit MaterialPrototype(Context *context,
-                               const MaterialPropertyBlockInfo &info);
-
-    std::shared_ptr<IMaterial> create_material() override;
-    MaterialPropertyBlockInfo info() override;
-
-    std::shared_ptr<MaterialPropertyBlockLayout> property_block_layout() const;
-    [[nodiscard]] Context *context() const;
-
-  private:
-    Context *_context = nullptr;
-    std::shared_ptr<MaterialPropertyBlockLayout> _block_layout = nullptr;
+struct MaterialPassOwned {
+    std::shared_ptr<GraphicsPipeline> pipeline = nullptr;
+    // Can be null if no property is required
+    std::unique_ptr<MaterialPropertyBlock> property_block = nullptr;
 };
 
-MaterialPrototype *upcast(IMaterialPrototype *prototype);
+using MaterialPassArray = std::array<MaterialPassOwned, RenderPassID_Count>;
 
 class Material : public IMaterial {
   public:
-    explicit Material(MaterialPrototype *prototype);
+    Material(MaterialType type,
+             const std::shared_ptr<MaterialPropertyBlockLayout>& property_layout,
+             MaterialPassArray passes);
 
-    IMaterialPrototype *prototype() override;
     void set_variant(const std::string &name,
                      const MaterialPropertyVariant &value) override;
     std::optional<MaterialPropertyVariant>
     get_variant(const std::string &name) override;
 
-    MaterialPropertyBlock *property_block() const;
+    std::vector<MaterialPropertyInfo> properties() override;
+    MaterialType type() override;
 
-    MaterialPrototype *prototype_vk() const;
+    MaterialPass pass(RenderPassID pass_id);
 
   private:
-    MaterialPrototype *_prototype = nullptr;
+    MaterialType _type{};
     std::unique_ptr<MaterialPropertyBlock> _property_block{};
+    MaterialPassArray _passes{};
 };
 
 std::shared_ptr<Material> upcast(const std::shared_ptr<IMaterial> &m);
 
-class MaterialPrototypeRegistry {
-  public:
-    explicit MaterialPrototypeRegistry(Context *context);
-    ~MaterialPrototypeRegistry() = default;
+struct MaterialPassTemplate {
+    std::shared_ptr<MaterialPropertyBlockLayout> property_layout{};
+    std::shared_ptr<GraphicsPipeline> pipeline{};
 
-    [[nodiscard]] IMaterialPrototype *prototype(MaterialType type) const;
+    MaterialPassOwned create();
+};
+
+struct MaterialTemplate {
+    MaterialType type{};
+    std::shared_ptr<MaterialPropertyBlockLayout> property_layout{};
+    std::array<MaterialPassTemplate, RenderPassID_Count> passes{};
+
+    std::shared_ptr<Material> create();
+};
+
+class MaterialFactory {
+  public:
+    explicit MaterialFactory(Context *context);
+
+    std::shared_ptr<Material> create_material(MaterialType type);
 
   private:
-    std::unique_ptr<MaterialPrototype> _unlit_material_prototype{};
-    std::unique_ptr<MaterialPrototype> _metallic_roughness_material_prototype{};
+    void init_unlit_template();
+    void init_metallic_roughness_template();
+
+    Context *_context{};
+    MaterialTemplate _unlit_template{};
+    MaterialTemplate _metallic_roughness_template{};
 };
 } // namespace ars::render::vk

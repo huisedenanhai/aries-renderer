@@ -18,7 +18,7 @@ class Lut;
 class DescriptorArena;
 class Swapchain;
 class Context;
-class MaterialPrototypeRegistry;
+class MaterialFactory;
 class Profiler;
 class ImageBasedLighting;
 class RendererContextData;
@@ -87,7 +87,7 @@ class Context : public IContext {
     std::shared_ptr<ITexture>
     create_texture_impl(const TextureInfo &info) override;
     std::shared_ptr<IMesh> create_mesh(const MeshInfo &info) override;
-    IMaterialPrototype *material_prototype(MaterialType type) override;
+    std::shared_ptr<IMaterial> create_material(MaterialType type) override;
     std::shared_ptr<IPanoramaSky> create_panorama_sky() override;
     std::shared_ptr<IPhysicalSky> create_physical_sky() override;
     [[nodiscard]] Instance *instance() const;
@@ -201,7 +201,7 @@ class Context : public IContext {
     std::set<Swapchain *> _registered_swapchains{};
 
     ContextProperties _properties{};
-    std::unique_ptr<MaterialPrototypeRegistry> _material_prototypes{};
+    std::unique_ptr<MaterialFactory> _material_factory{};
 
     std::array<std::shared_ptr<ITexture>,
                static_cast<size_t>(DefaultTexture::Count)>

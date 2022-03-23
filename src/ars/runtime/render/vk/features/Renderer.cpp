@@ -133,13 +133,10 @@ void RendererContextData::init_render_passes() {
     init_shading_pass();
     init_overlay_pass();
 
-    _subpasses.resize(static_cast<uint32_t>(RenderPassID::Count));
+    _subpasses.resize(RenderPassID_Count);
 
-    _subpasses[static_cast<uint32_t>(RenderPassID::Geometry)] = {
-        _geometry_pass.get(), 0};
-    _subpasses[static_cast<uint32_t>(RenderPassID::Shading)] = {
-        _shading_pass.get(), 0};
-    _subpasses[static_cast<uint32_t>(RenderPassID::Overlay)] = {
-        _overlay_pass.get(), 0};
+    _subpasses[RenderPassID_Geometry] = {_geometry_pass.get(), 0};
+    _subpasses[RenderPassID_Shading] = {_shading_pass.get(), 0};
+    _subpasses[RenderPassID_Overlay] = {_overlay_pass.get(), 0};
 }
 } // namespace ars::render::vk

@@ -21,23 +21,23 @@ enum class MaterialPropertyType { Texture, Float, Float2, Float3, Float4 };
 template <typename T> struct MaterialPropertyTypeTrait;
 
 template <> struct MaterialPropertyTypeTrait<std::shared_ptr<ITexture>> {
-    static constexpr MaterialPropertyType Type = MaterialPropertyType::Texture;
+    static constexpr auto Type = MaterialPropertyType::Texture;
 };
 
 template <> struct MaterialPropertyTypeTrait<float> {
-    static constexpr MaterialPropertyType Type = MaterialPropertyType::Float;
+    static constexpr auto Type = MaterialPropertyType::Float;
 };
 
 template <> struct MaterialPropertyTypeTrait<glm::vec2> {
-    static constexpr MaterialPropertyType Type = MaterialPropertyType::Float2;
+    static constexpr auto Type = MaterialPropertyType::Float2;
 };
 
 template <> struct MaterialPropertyTypeTrait<glm::vec3> {
-    static constexpr MaterialPropertyType Type = MaterialPropertyType::Float3;
+    static constexpr auto Type = MaterialPropertyType::Float3;
 };
 
 template <> struct MaterialPropertyTypeTrait<glm::vec4> {
-    static constexpr MaterialPropertyType Type = MaterialPropertyType::Float4;
+    static constexpr auto Type = MaterialPropertyType::Float4;
 };
 
 struct MaterialPropertyVariant : std::variant<std::shared_ptr<ITexture>,
@@ -64,7 +64,7 @@ struct MaterialPropertyInfo {
     MaterialPropertyVariant default_value{};
 };
 
-enum class MaterialType : uint32_t { Unlit, MetallicRoughnessPBR };
+enum class MaterialType : uint32_t { Unlit = 1, MetallicRoughnessPBR = 2 };
 
 struct MaterialPropertyBlockInfo {
     std::string name;
@@ -151,21 +151,11 @@ class MaterialPropertyBlock {
     std::vector<std::shared_ptr<ITexture>> _texture_owners{};
 };
 
-// IMaterialPrototype is owned by the context.
-class IMaterialPrototype {
-  public:
-    virtual ~IMaterialPrototype() = default;
-
-    virtual std::shared_ptr<IMaterial> create_material() = 0;
-    virtual MaterialPropertyBlockInfo info() = 0;
-};
-
 class IMaterial : public IRes {
+
     RTTR_DERIVE(IRes);
 
   public:
-    virtual IMaterialPrototype *prototype() = 0;
-
     template <typename T> void set(const std::string &name, T &&value) {
         set_variant(name, std::forward<T>(value));
     }
@@ -193,6 +183,9 @@ class IMaterial : public IRes {
     // default zeroed values.
     virtual std::optional<MaterialPropertyVariant>
     get_variant(const std::string &name) = 0;
+
+    virtual std::vector<MaterialPropertyInfo> properties() = 0;
+    virtual MaterialType type() = 0;
 
     static void register_type();
 };

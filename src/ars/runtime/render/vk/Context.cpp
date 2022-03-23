@@ -575,7 +575,7 @@ Context::Context(const WindowInfo *info,
     }
 
     init_default_textures();
-    _material_prototypes = std::make_unique<MaterialPrototypeRegistry>(this);
+    _material_factory = std::make_unique<MaterialFactory>(this);
     _lut = std::make_unique<Lut>(this);
     _ibl = std::make_unique<ImageBasedLighting>(this);
     Context::init_profiler();
@@ -656,7 +656,7 @@ void Context::end_frame() {
 
 Context::~Context() {
     _queue->flush();
-    _material_prototypes.reset();
+    _material_factory.reset();
     gc();
     if (_pipeline_cache != VK_NULL_HANDLE) {
         _device->Destroy(_pipeline_cache);
@@ -924,8 +924,8 @@ void Context::unregister_swapchain(Swapchain *swapchain) {
     _registered_swapchains.erase(swapchain);
 }
 
-IMaterialPrototype *Context::material_prototype(MaterialType type) {
-    return _material_prototypes->prototype(type);
+std::shared_ptr<IMaterial> Context::create_material(MaterialType type) {
+    return _material_factory->create_material(type);
 }
 
 std::shared_ptr<ITexture> Context::default_texture(DefaultTexture tex) {

@@ -36,7 +36,7 @@ void OpaqueGeometry::execute(CommandBuffer *cmd) {
 
     auto draw_requests = _view->scene_vk()->gather_draw_requests();
     _view->drawer()->draw(cmd,
-                          RenderPassID::Geometry,
+                          RenderPassID_Geometry,
                           static_cast<uint32_t>(draw_requests.size()),
                           draw_requests.data());
 
@@ -205,6 +205,6 @@ void OpaqueGeometry::render(RenderGraph &rg) {
 }
 
 SubpassInfo OpaqueGeometry::render_pass() {
-    return _view->context()->renderer_data()->subpass(RenderPassID::Geometry);
+    return _view->context()->renderer_data()->subpass(RenderPassID_Geometry);
 }
 } // namespace ars::render::vk

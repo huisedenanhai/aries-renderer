@@ -273,6 +273,6 @@ void DeferredShading::shade_sun(CommandBuffer *cmd, PhysicalSky *sky) {
 }
 
 SubpassInfo DeferredShading::render_pass() {
-    return _view->context()->renderer_data()->subpass(RenderPassID::Shading);
+    return _view->context()->renderer_data()->subpass(RenderPassID_Shading);
 }
 } // namespace ars::render::vk

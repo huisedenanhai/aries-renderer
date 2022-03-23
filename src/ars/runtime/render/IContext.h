@@ -71,9 +71,7 @@ class IContext {
     virtual std::shared_ptr<ITexture> default_texture(DefaultTexture tex) = 0;
 
     virtual std::shared_ptr<IMesh> create_mesh(const MeshInfo &info) = 0;
-    // Return the prototype for error color material if the material type is not
-    // supported
-    virtual IMaterialPrototype *material_prototype(MaterialType type) = 0;
+    virtual std::shared_ptr<IMaterial> create_material(MaterialType type) = 0;
 
     virtual std::shared_ptr<IPanoramaSky> create_panorama_sky() = 0;
     virtual std::shared_ptr<IPhysicalSky> create_physical_sky() = 0;

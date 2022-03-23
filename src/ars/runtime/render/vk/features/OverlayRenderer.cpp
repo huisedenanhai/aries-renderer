@@ -403,6 +403,6 @@ void OverlayRenderer::render_object_ids(CommandBuffer *cmd) {
 }
 
 SubpassInfo OverlayRenderer::overlay_pass() const {
-    return _view->context()->renderer_data()->subpass(RenderPassID::Overlay);
+    return _view->context()->renderer_data()->subpass(RenderPassID_Overlay);
 }
 } // namespace ars::render::vk

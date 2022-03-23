@@ -14,11 +14,11 @@ class ScreenSpaceReflection;
 class ToneMapping;
 class QuerySelection;
 
-enum class RenderPassID : uint32_t {
-    Geometry,
-    Shading,
-    Overlay,
-    Count,
+enum RenderPassID {
+    RenderPassID_Geometry,
+    RenderPassID_Shading,
+    RenderPassID_Overlay,
+    RenderPassID_Count,
 };
 
 class RendererContextData {

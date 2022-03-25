@@ -61,8 +61,8 @@ ViewTransform get_view() {
     return ars_view;
 }
 
-sampler2D get_sampler_2d(uint index) {
-    return ars_samplers_2d[index];
+vec4 sample_tex_2d(uint index, vec2 uv) {
+    return texture(ars_samplers_2d[index], uv);
 }
 
 // Vertex shader
@@ -109,7 +109,7 @@ layout(location = 2) out vec4 gbuffer2;
 layout(location = 3) out vec4 gbuffer3;
 
 vec3 get_shading_normal_ts(Material m) {
-    vec3 normal = texture(get_sampler_2d(m.normal_tex), in_uv).xyz * 2.0 - 1.0;
+    vec3 normal = sample_tex_2d(m.normal_tex, in_uv).xyz * 2.0 - 1.0;
     return normal * vec3(m.normal_scale, m.normal_scale, 1.0);
 }
 
@@ -124,28 +124,25 @@ vec3 get_shading_normal_vs(Material m) {
 }
 
 float get_occlusion(Material m) {
-    float occlusion = texture(get_sampler_2d(m.occlusion_tex), in_uv).r;
+    float occlusion = sample_tex_2d(m.occlusion_tex, in_uv).r;
     return mix(1.0, occlusion, m.occlusion_strength);
 }
 
 vec3 get_emission(Material m) {
-    return texture(get_sampler_2d(m.emission_tex), in_uv).rgb *
-           m.emission_factor;
+    return sample_tex_2d(m.emission_tex, in_uv).rgb * m.emission_factor;
 }
 
 void main() {
     Material m = get_material();
     GBuffer g;
 
-    g.base_color =
-        texture(get_sampler_2d(m.base_color_tex), in_uv) * m.base_color_factor;
+    g.base_color = sample_tex_2d(m.base_color_tex, in_uv) * m.base_color_factor;
     g.normal_vs = normalize(get_shading_normal_vs(m));
 
     MetallicRoughnessPBRGBuffer pbr;
     pbr.occlusion = get_occlusion(m);
 
-    vec4 metallic_roughness =
-        texture(get_sampler_2d(m.metallic_roughness_tex), in_uv);
+    vec4 metallic_roughness = sample_tex_2d(m.metallic_roughness_tex, in_uv);
     pbr.metallic = metallic_roughness.b * m.metallic_factor;
     pbr.perceptual_roughness = metallic_roughness.g * m.roughness_factor;
 

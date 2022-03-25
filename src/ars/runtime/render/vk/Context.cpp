@@ -163,7 +163,7 @@ bool check_validation_layers() {
 std::unique_ptr<Instance>
 create_vulkan_instance(const ApplicationInfo &app_info,
                        bool enable_validation) {
-    auto api_version = VK_API_VERSION_1_2;
+    auto api_version = VK_API_VERSION_1_1;
     VkApplicationInfo vk_app_info{VK_STRUCTURE_TYPE_APPLICATION_INFO};
     vk_app_info.apiVersion = api_version;
     vk_app_info.pApplicationName = app_info.app_name.c_str();
@@ -335,7 +335,7 @@ std::vector<const char *> get_device_extensions(
     Instance *instance, VkPhysicalDevice physical_device, bool need_swapchain) {
     auto available_extensions =
         enumerate_device_extensions(instance, physical_device);
-    std::vector<const char *> enabled_extensions{};
+    std::vector<const char *> enabled_extensions{"VK_EXT_descriptor_indexing"};
 
     if (need_swapchain) {
         enabled_extensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
@@ -484,6 +484,13 @@ VkPhysicalDevice choose_physical_device(Instance *instance,
 
     return candidate;
 }
+
+std::string dump_version(uint32_t version) {
+    return fmt::format("{}.{}.{}",
+                       VK_VERSION_MAJOR(version),
+                       VK_VERSION_MINOR(version),
+                       VK_VERSION_PATCH(version));
+}
 } // namespace
 
 void Context::init_device_and_queues(Instance *instance,
@@ -503,8 +510,18 @@ void Context::init_device_and_queues(Instance *instance,
     queue_create_info.queueCount = 1;
     queue_create_info.pQueuePriorities = &queue_priority;
 
-    VkPhysicalDeviceFeatures device_features{};
-    instance->GetPhysicalDeviceFeatures(physical_device, &device_features);
+    VkPhysicalDeviceFeatures2 device_features2{
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
+    VkPhysicalDeviceVulkan12Features vk12_features{
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES};
+    VkPhysicalDeviceDescriptorIndexingFeatures desc_indexing_features{
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES};
+    device_features2.pNext = &vk12_features;
+    vk12_features.pNext = &desc_indexing_features;
+
+    instance->GetPhysicalDeviceFeatures2(physical_device, &device_features2);
+
+    VkPhysicalDeviceFeatures device_features = device_features2.features;
 
     VkPhysicalDeviceFeatures enabled_features{};
 
@@ -550,14 +567,26 @@ void Context::init_device_and_queues(Instance *instance,
     _properties.time_stamp_compute_graphics =
         device_properties.limits.timestampComputeAndGraphics;
     _properties.time_stamp_period_ns = device_properties.limits.timestampPeriod;
-    ARS_LOG_INFO("Time Period {}", _properties.time_stamp_period_ns);
 
-#ifdef __APPLE__
-    // Dirty fix for moltenVK, which returns incorrect 41.66 on M1 chips
-    // https://github.com/KhronosGroup/MoltenVK/issues/1438
-    // Remove this after update moltenVK
-    _properties.time_stamp_period_ns = 1.0f;
-#endif
+    // Log info
+    std::stringstream ss;
+    ss << "Vulkan Physical Device" << std::endl;
+    ss << "name: " << device_properties.deviceName << std::endl;
+    ss << "api version: " << dump_version(device_properties.apiVersion)
+       << std::endl;
+    ss << "driver version: " << device_properties.driverVersion << std::endl;
+    ss << "enabled extensions: " << std::endl;
+    for (auto &ext : enabled_extensions) {
+        ss << "\t" << ext << std::endl;
+    }
+    ss << "anisotropic sampler enabled: "
+       << _properties.anisotropic_sampler_enabled << std::endl;
+    ss << "max sampler anisotropy: " << _properties.max_sampler_anisotropy
+       << std::endl;
+    ss << "time stamp period ns: " << _properties.time_stamp_period_ns
+       << std::endl;
+
+    ARS_LOG_INFO(ss.str());
 }
 
 Context::Context(const WindowInfo *info,
@@ -575,11 +604,12 @@ Context::Context(const WindowInfo *info,
     }
 
     init_default_textures();
-    _material_factory = std::make_unique<MaterialFactory>(this);
     _lut = std::make_unique<Lut>(this);
     _ibl = std::make_unique<ImageBasedLighting>(this);
-    Context::init_profiler();
     _renderer_data = std::make_unique<RendererContextData>(this);
+    // Renderer data is required for material initialization
+    _material_factory = std::make_unique<MaterialFactory>(this);
+    Context::init_profiler();
 }
 
 Instance *Context::instance() const {

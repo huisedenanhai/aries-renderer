@@ -24,9 +24,10 @@ using MaterialPassArray = std::array<MaterialPassOwned, RenderPassID_Count>;
 
 class Material : public IMaterial {
   public:
-    Material(MaterialType type,
-             const std::shared_ptr<MaterialPropertyBlockLayout>& property_layout,
-             MaterialPassArray passes);
+    Material(
+        MaterialType type,
+        const std::shared_ptr<MaterialPropertyBlockLayout> &property_layout,
+        MaterialPassArray passes);
 
     void set_variant(const std::string &name,
                      const MaterialPropertyVariant &value) override;
@@ -70,6 +71,8 @@ class MaterialFactory {
   private:
     void init_unlit_template();
     void init_metallic_roughness_template();
+    std::shared_ptr<GraphicsPipeline>
+    create_pipeline(RenderPassID id, const std::string &glsl_file);
 
     Context *_context{};
     MaterialTemplate _unlit_template{};

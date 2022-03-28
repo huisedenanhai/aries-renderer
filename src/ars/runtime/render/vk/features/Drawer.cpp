@@ -1,7 +1,6 @@
 #include "Drawer.h"
 #include "../Context.h"
 #include "../View.h"
-#include <ars/runtime/core/Log.h>
 
 namespace ars::render::vk {
 namespace {
@@ -305,8 +304,13 @@ void Drawer::draw(CommandBuffer *cmd,
             prop_buf->map_once(
                 [&](void *ptr) { bound_property_block->fill_data(ptr); });
             desc.set_buffer(0, 2, prop_buf.get());
-            desc.set_textures(
-                0, 3, bound_property_block->referenced_textures());
+            auto ref_textures = bound_property_block->referenced_textures();
+            // If the material does not reference any textures, it should not
+            // bind to texture slot
+            if (!ref_textures.empty()) {
+                desc.set_textures(
+                    0, 3, bound_property_block->referenced_textures());
+            }
         }
         desc.commit(cmd, bound_pipeline);
 

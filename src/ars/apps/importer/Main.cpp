@@ -431,10 +431,10 @@ void import_gltf_materials(const std::filesystem::path &path,
 
         js["double_sided"] = gltf_mat.doubleSided;
 
-        js["alpha_mode"] = render::MaterialAlphaMode::Opaque;
-        if (gltf_mat.alphaMode == "BLEND") {
-            js["alpha_mode"] = render::MaterialAlphaMode::Blend;
-        }
+        // js["alpha_mode"] = render::MaterialAlphaMode::Opaque;
+        // if (gltf_mat.alphaMode == "BLEND") {
+        //     js["alpha_mode"] = render::MaterialAlphaMode::Blend;
+        // }
 
         auto data = ResData::create<render::IMaterial>();
         nlohmann::json::to_bson(js, data.data);

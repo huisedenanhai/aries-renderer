@@ -490,32 +490,6 @@ DescriptorEncoder::DescriptorEncoder() {
 }
 
 namespace {
-void fill_desc_image(VkWriteDescriptorSet *write,
-                     VkDescriptorImageInfo *image_info,
-                     VkDescriptorSet dst_set,
-                     uint32_t binding,
-                     Texture *texture,
-                     VkDescriptorType type,
-                     std::optional<uint32_t> level) {
-    write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    write->descriptorType = type;
-    write->dstSet = dst_set;
-    write->dstBinding = binding;
-    write->dstArrayElement = 0;
-    write->descriptorCount = 1;
-    write->pBufferInfo = nullptr;
-    write->pImageInfo = image_info;
-    write->pTexelBufferView = nullptr;
-
-    image_info->imageLayout = texture->layout();
-    if (level.has_value()) {
-        image_info->imageView = texture->image_view_of_level(level.value());
-    } else {
-        image_info->imageView = texture->image_view();
-    }
-    image_info->sampler = texture->sampler();
-}
-
 void fill_desc_buffer(VkWriteDescriptorSet *write,
                       VkDescriptorBufferInfo *buffer_info,
                       VkDescriptorSet dst_set,
@@ -551,8 +525,16 @@ void DescriptorEncoder::commit(CommandBuffer *cmd, Pipeline *pipeline) {
     std::vector<VkDescriptorBufferInfo> buffer_infos{};
 
     writes.resize(_bindings.size());
-    image_infos.resize(_bindings.size());
     buffer_infos.resize(_bindings.size());
+
+    size_t image_info_reserve_count = 0;
+    for (auto &b : _bindings) {
+        using ImageInfos = std::vector<ImageInfo>;
+        if (std::holds_alternative<ImageInfos>(b.data)) {
+            image_info_reserve_count += std::get<ImageInfos>(b.data).size();
+        }
+    }
+    image_infos.resize(image_info_reserve_count);
 
     size_t write_count = 0;
     size_t image_count = 0;
@@ -574,17 +556,34 @@ void DescriptorEncoder::commit(CommandBuffer *cmd, Pipeline *pipeline) {
 
         auto desc_type = bind_info->descriptorType;
         std::visit(make_visitor(
-                       [&](const ImageInfo &data) {
+                       [&](const std::vector<ImageInfo> &data) {
                            auto &w = writes[write_count++];
-                           auto &img_info = image_infos[image_count++];
+                           auto img_desc_infos = &image_infos[image_count];
+                           image_count += data.size();
 
-                           fill_desc_image(&w,
-                                           &img_info,
-                                           set,
-                                           b.binding,
-                                           data.texture,
-                                           desc_type,
-                                           data.level);
+                           w.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+                           w.descriptorType = desc_type;
+                           w.dstSet = set;
+                           w.dstBinding = b.binding;
+                           w.dstArrayElement = 0;
+                           w.descriptorCount = data.size();
+                           w.pBufferInfo = nullptr;
+                           w.pImageInfo = img_desc_infos;
+                           w.pTexelBufferView = nullptr;
+
+                           for (int i = 0; i < data.size(); i++) {
+                               auto &image_info = img_desc_infos[i];
+                               auto tex = data[i].texture;
+                               auto level = data[i].level;
+                               image_info.imageLayout = tex->layout();
+                               if (level.has_value()) {
+                                   image_info.imageView =
+                                       tex->image_view_of_level(level.value());
+                               } else {
+                                   image_info.imageView = tex->image_view();
+                               }
+                               image_info.sampler = tex->sampler();
+                           }
                        },
                        [&](const BufferDataInfo &data) {
                            auto &w = writes[write_count++];
@@ -702,10 +701,24 @@ void DescriptorEncoder::set_texture(uint32_t set,
                                     uint32_t binding,
                                     Texture *texture,
                                     std::optional<uint32_t> level) {
-    ImageInfo info{};
-    info.texture = texture;
-    info.level = level;
-    set_binding(set, binding, info);
+    std::vector<ImageInfo> info(1);
+    info[0].texture = texture;
+    info[0].level = level;
+    set_binding(set, binding, std::move(info));
+}
+
+void DescriptorEncoder::set_textures(uint32_t set,
+                                     uint32_t binding,
+                                     ars::Span<Handle<Texture>> textures) {
+    std::vector<ImageInfo> infos{};
+    infos.reserve(textures.size());
+    for (auto &t : textures) {
+        ImageInfo info{};
+        info.texture = t.get();
+        info.level = std::nullopt;
+        infos.push_back(info);
+    }
+    set_binding(set, binding, std::move(infos));
 }
 
 void ShaderLocalSize::dispatch(CommandBuffer *cmd,

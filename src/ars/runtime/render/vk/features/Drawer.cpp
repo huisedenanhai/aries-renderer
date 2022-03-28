@@ -1,6 +1,7 @@
 #include "Drawer.h"
 #include "../Context.h"
 #include "../View.h"
+#include <ars/runtime/core/Log.h>
 
 namespace ars::render::vk {
 namespace {
@@ -230,6 +231,10 @@ void Drawer::draw(CommandBuffer *cmd,
     std::vector<const DrawRequest *> sorted_requests{};
     sorted_requests.reserve(count);
     for (int i = 0; i < count; i++) {
+        if (requests[i].material.pipeline == nullptr ||
+            requests[i].mesh == nullptr) {
+            continue;
+        }
         sorted_requests.push_back(&requests[i]);
     }
 
@@ -249,6 +254,99 @@ void Drawer::draw(CommandBuffer *cmd,
                   }
                   return lhs < rhs;
               });
+
+    auto ctx = _view->context();
+
+    auto inst_buffer = ctx->create_buffer(
+        sizeof(InstanceDrawParam) * sorted_requests.size(),
+        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+        VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+    inst_buffer->map_once([&](void *ptr) {
+        auto inst_ptr = reinterpret_cast<InstanceDrawParam *>(ptr);
+        for (int i = 0; i < sorted_requests.size(); i++) {
+            auto &inst = inst_ptr[i];
+            auto req = sorted_requests[i];
+            inst.MV = V * req->M;
+            inst.I_MV = glm::inverse(inst.MV);
+            inst.material_id = 0;
+            inst.instance_id = i;
+        }
+    });
+
+    GraphicsPipeline *bound_pipeline = nullptr;
+    MaterialPropertyBlock *bound_property_block = nullptr;
+    Mesh *bound_mesh = nullptr;
+    size_t last_flushed_index = 0;
+
+    auto flush = [&](size_t end_index) {
+        if (end_index <= last_flushed_index) {
+            return;
+        }
+
+        auto req = sorted_requests[last_flushed_index];
+        if (req->material.pipeline != bound_pipeline) {
+            bound_pipeline = req->material.pipeline;
+            bound_pipeline->bind(cmd);
+        }
+
+        bound_property_block = req->material.property_block;
+
+        DescriptorEncoder desc{};
+        desc.set_buffer(0, 0, view_transform_buffer.get());
+        desc.set_buffer(0, 1, inst_buffer.get());
+        // The property block can be null, if that happens the shader should not
+        // declare material and texture bindings
+        if (bound_property_block != nullptr) {
+            auto prop_buf = ctx->create_buffer(
+                bound_property_block->layout()->data_block_size(),
+                VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                VMA_MEMORY_USAGE_CPU_TO_GPU);
+            prop_buf->map_once(
+                [&](void *ptr) { bound_property_block->fill_data(ptr); });
+            desc.set_buffer(0, 2, prop_buf.get());
+            desc.set_textures(
+                0, 3, bound_property_block->referenced_textures());
+        }
+        desc.commit(cmd, bound_pipeline);
+
+        if (req->mesh != bound_mesh) {
+            bound_mesh = req->mesh;
+            VkBuffer vertex_buffers[] = {
+                inst_buffer->buffer(),
+                bound_mesh->position_buffer()->buffer(),
+                bound_mesh->normal_buffer()->buffer(),
+                bound_mesh->tangent_buffer()->buffer(),
+                bound_mesh->tex_coord_buffer()->buffer(),
+            };
+            VkDeviceSize vertex_offsets[std::size(vertex_buffers)] = {};
+            cmd->BindVertexBuffers(
+                0,
+                static_cast<uint32_t>(std::size(vertex_buffers)),
+                vertex_buffers,
+                vertex_offsets);
+            cmd->BindIndexBuffer(
+                bound_mesh->index_buffer()->buffer(), 0, VK_INDEX_TYPE_UINT32);
+        }
+
+        cmd->DrawIndexed(bound_mesh->triangle_count() * 3,
+                         end_index - last_flushed_index,
+                         0,
+                         0,
+                         last_flushed_index);
+
+        last_flushed_index = end_index;
+    };
+
+    for (int i = 0; i < sorted_requests.size(); i++) {
+        auto req = sorted_requests[i];
+        if (req->material.pipeline != bound_pipeline ||
+            req->material.property_block != bound_property_block ||
+            req->mesh != bound_mesh) {
+            flush(i);
+        }
+    }
+    flush(sorted_requests.size());
 }
 
 void Drawer::draw(CommandBuffer *cmd, ars::Span<const DrawRequest> requests) {

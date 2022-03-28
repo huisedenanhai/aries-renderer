@@ -3,6 +3,7 @@
 #include "Buffer.h"
 #include "Vulkan.h"
 #include <array>
+#include <ars/runtime/core/misc/Span.h>
 #include <optional>
 #include <string>
 #include <variant>
@@ -232,6 +233,11 @@ struct DescriptorEncoder {
 
     void set_buffer(uint32_t set, uint32_t binding, Buffer *buffer);
 
+    // Does not take the ownership of textures
+    void set_textures(uint32_t set,
+                      uint32_t binding,
+                      ars::Span<Handle<Texture>> textures);
+
     void commit(CommandBuffer *cmd, Pipeline *pipeline);
 
   private:
@@ -251,7 +257,8 @@ struct DescriptorEncoder {
         VkDeviceSize size{};
     };
 
-    using BindingData = std::variant<ImageInfo, BufferDataInfo, BufferInfo>;
+    using BindingData =
+        std::variant<std::vector<ImageInfo>, BufferDataInfo, BufferInfo>;
 
     struct BindingInfo {
         uint32_t set{};

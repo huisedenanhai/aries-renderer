@@ -69,7 +69,8 @@ class MaterialPropertyBlock {
     void set_variant(const std::string &name,
                      const MaterialPropertyVariant &value);
 
-    std::vector<std::shared_ptr<ITexture>> referenced_textures();
+    std::vector<Handle<Texture>> referenced_textures();
+    void fill_data(void *ptr);
 
     template <typename T> void set(const std::string &name, T &&value) {
         set_variant(name, std::forward<T>(value));
@@ -84,6 +85,7 @@ class MaterialPropertyBlock {
     }
 
   private:
+    // Not null
     std::shared_ptr<ITexture> get_texture_by_index(uint32_t index);
     MaterialPropertyVariant get_variant_by_index(uint32_t index);
     void set_variant_by_index(uint32_t index,

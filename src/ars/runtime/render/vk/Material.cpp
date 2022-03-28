@@ -202,16 +202,33 @@ void MaterialPropertyBlock::set_variant_by_index(
                value);
 }
 
-std::vector<std::shared_ptr<ITexture>>
-MaterialPropertyBlock::referenced_textures() {
-    std::vector<std::shared_ptr<ITexture>> textures{};
+// TODO bindless on supported platform, currently the textures are simply return
+// in their property order, and the shader use index of that tex in the returned
+// vector to access them
+std::vector<Handle<Texture>> MaterialPropertyBlock::referenced_textures() {
+    std::vector<Handle<Texture>> textures{};
     auto props = _layout->info().properties;
     for (int i = 0; i < props.size(); i++) {
         if (props[i].type == MaterialPropertyType::Texture) {
-            textures.push_back(get_texture_by_index(i));
+            textures.push_back(upcast(get_texture_by_index(i).get()));
         }
     }
     return textures;
+}
+
+void MaterialPropertyBlock::fill_data(void *ptr) {
+    std::memcpy(ptr, _data_block.data(), _data_block.size());
+
+    auto props = _layout->info().properties;
+    uint32_t tex_id = 0;
+    for (int i = 0; i < props.size(); i++) {
+        if (props[i].type == MaterialPropertyType::Texture) {
+            auto offset = _layout->property_offset(i);
+            auto mem_ptr =
+                reinterpret_cast<uint32_t *>((uint8_t *)(ptr) + offset);
+            *mem_ptr = tex_id++;
+        }
+    }
 }
 
 MaterialPropertyVariant

@@ -8,20 +8,6 @@
 #include <ShadingModel.glsl>
 #include <Transform.glsl>
 
-#ifdef FRILL_SHADER_STAGE_FRAG
-layout(location = 0) flat in uint ars_in_instance_id;
-#else
-layout(location = 0) in uint ars_in_instance_id;
-layout(location = 0) out uint ars_out_instance_id;
-#endif
-
-struct Instance {
-    mat4 MV;
-    mat4 I_MV;
-    uint material_id;
-    uint instance_id;
-};
-
 struct Material {
     vec4 base_color_factor;
     float metallic_factor;
@@ -36,19 +22,36 @@ struct Material {
     uint emission_tex;
 };
 
-layout(binding = 0) uniform View {
+#define MATERIAL_SAMPLER_2D_COUNT 5
+
+#ifdef FRILL_SHADER_STAGE_FRAG
+layout(location = 0) flat in uint ars_in_instance_id;
+#else
+layout(location = 0) in uint ars_in_instance_id;
+layout(location = 0) out uint ars_out_instance_id;
+#endif
+
+struct Instance {
+    mat4 MV;
+    mat4 I_MV;
+    uint material_id;
+    uint instance_id;
+};
+
+layout(set = 0, binding = 0) uniform View {
     ViewTransform ars_view;
 };
 
-layout(binding = 1, std430) buffer Instances {
+layout(set = 0, binding = 1, std430) buffer Instances {
     Instance ars_instances[];
 };
 
-layout(binding = 2, std430) buffer Materials {
+layout(set = 0, binding = 2, std430) buffer Materials {
     Material ars_materials[];
 };
 
-layout(binding = 3) uniform sampler2D ars_samplers_2d[];
+layout(set = 0, binding = 3) uniform sampler2D
+    ars_samplers_2d[MATERIAL_SAMPLER_2D_COUNT];
 
 Instance get_instance() {
     return ars_instances[ars_in_instance_id];

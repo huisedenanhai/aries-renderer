@@ -1,5 +1,6 @@
 #include "Material.h"
 #include "Context.h"
+#include "features/Drawer.h"
 #include <ars/runtime/core/Log.h>
 #include <ars/runtime/core/misc/Visitor.h>
 
@@ -77,7 +78,7 @@ MaterialFactory::create_pipeline(RenderPassID id,
 
     VkVertexInputBindingDescription vert_bindings[5] = {
         {0,
-         static_cast<uint32_t>(sizeof(uint32_t)),
+         static_cast<uint32_t>(sizeof(InstanceDrawParam)),
          VK_VERTEX_INPUT_RATE_INSTANCE},
         {1,
          static_cast<uint32_t>(sizeof(glm::vec3)),
@@ -94,7 +95,7 @@ MaterialFactory::create_pipeline(RenderPassID id,
     };
 
     VkVertexInputAttributeDescription vert_attrs[5] = {
-        {0, 0, VK_FORMAT_R32_UINT, 0},
+        {0, 0, VK_FORMAT_R32_UINT, offsetof(InstanceDrawParam, instance_id)},
         {1, 1, VK_FORMAT_R32G32B32_SFLOAT, 0},
         {2, 2, VK_FORMAT_R32G32B32_SFLOAT, 0},
         {3, 3, VK_FORMAT_R32G32B32A32_SFLOAT, 0},

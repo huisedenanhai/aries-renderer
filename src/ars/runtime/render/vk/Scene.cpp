@@ -27,7 +27,7 @@ Context *Scene::context() const {
     return _context;
 }
 
-std::vector<DrawRequest> Scene::gather_draw_requests() {
+std::vector<DrawRequest> Scene::gather_draw_requests(RenderPassID pass_id) {
     // TODO culling
     auto count = render_objects.size();
     std::vector<DrawRequest> requests{};
@@ -39,9 +39,14 @@ std::vector<DrawRequest> Scene::gather_draw_requests() {
 
     for (int i = 0; i < count; i++) {
         DrawRequest req{};
+        req.material = mat_arr[i]->pass(pass_id);
+
+        if (req.material.pipeline == nullptr) {
+            continue;
+        }
+
         req.M = xform_arr[i];
         req.mesh = mesh_arr[i].get();
-        req.material = mat_arr[i].get();
         requests.push_back(req);
     }
 

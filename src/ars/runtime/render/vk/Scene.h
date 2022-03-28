@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../IScene.h"
+#include "features/Renderer.h"
 #include <ars/runtime/core/misc/SoA.h>
 
 namespace ars::render::vk {
@@ -29,7 +30,7 @@ class Scene : public IScene {
 
     [[nodiscard]] Context *context() const;
 
-    std::vector<DrawRequest> gather_draw_requests();
+    std::vector<DrawRequest> gather_draw_requests(RenderPassID pass_id);
 
     using RenderObjects = SoA<glm::mat4,
                               std::shared_ptr<Mesh>,

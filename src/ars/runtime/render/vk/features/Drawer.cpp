@@ -198,28 +198,22 @@ void Drawer::init_draw_id_billboard_alpha_clip() {
 void Drawer::draw(CommandBuffer *cmd,
                   const glm::mat4 &P,
                   const glm::mat4 &V,
-                  RenderPassID pass_id,
-                  uint32_t count,
-                  const DrawRequest *requests) {
+                  ars::Span<const DrawRequest> requests) {
     auto transform_buffer =
         cmd->context()->create_buffer(sizeof(ViewTransform),
                                       VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                                       VMA_MEMORY_USAGE_CPU_TO_GPU);
     transform_buffer->set_data(ViewTransform::from_V_P(V, P));
-    draw(cmd, P, V, transform_buffer, pass_id, count, requests);
+    draw(cmd, P, V, transform_buffer, requests);
 }
 
 void Drawer::draw(CommandBuffer *cmd,
                   View *view,
-                  RenderPassID pass_id,
-                  uint32_t count,
-                  const DrawRequest *requests) {
+                  ars::Span<const DrawRequest> requests) {
     draw(cmd,
          view->projection_matrix(),
          view->view_matrix(),
          view->transform_buffer(),
-         pass_id,
-         count,
          requests);
 }
 
@@ -227,16 +221,37 @@ void Drawer::draw(CommandBuffer *cmd,
                   const glm::mat4 &P,
                   const glm::mat4 &V,
                   const Handle<Buffer> &view_transform_buffer,
-                  RenderPassID pass_id,
-                  uint32_t count,
-                  const DrawRequest *requests) {
-    // TODO
+                  ars::Span<const DrawRequest> requests) {
+    if (requests.empty()) {
+        return;
+    }
+
+    auto count = requests.size();
+    std::vector<const DrawRequest *> sorted_requests{};
+    sorted_requests.reserve(count);
+    for (int i = 0; i < count; i++) {
+        sorted_requests.push_back(&requests[i]);
+    }
+
+    std::sort(sorted_requests.begin(),
+              sorted_requests.end(),
+              [&](const DrawRequest *lhs, const DrawRequest *rhs) {
+                  if (lhs->material.pipeline != rhs->material.pipeline) {
+                      return lhs->material.pipeline < rhs->material.pipeline;
+                  }
+                  if (lhs->material.property_block !=
+                      rhs->material.property_block) {
+                      return lhs->material.property_block <
+                             rhs->material.property_block;
+                  }
+                  if (lhs->mesh != rhs->mesh) {
+                      return lhs->mesh < rhs->mesh;
+                  }
+                  return lhs < rhs;
+              });
 }
 
-void Drawer::draw(CommandBuffer *cmd,
-                  RenderPassID pass_id,
-                  uint32_t count,
-                  const DrawRequest *requests) {
-    draw(cmd, _view, pass_id, count, requests);
+void Drawer::draw(CommandBuffer *cmd, ars::Span<const DrawRequest> requests) {
+    draw(cmd, _view, requests);
 }
 } // namespace ars::render::vk

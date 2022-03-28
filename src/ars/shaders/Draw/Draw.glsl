@@ -19,6 +19,7 @@ struct Instance {
     mat4 MV;
     mat4 I_MV;
     uint material_id;
+    uint instance_id;
 };
 
 struct Material {

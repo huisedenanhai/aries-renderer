@@ -34,11 +34,9 @@ void OpaqueGeometry::execute(CommandBuffer *cmd) {
     VkClearValue clear_values[5]{};
     auto rp_exec = rp->begin(cmd, fb, clear_values, VK_SUBPASS_CONTENTS_INLINE);
 
-    auto draw_requests = _view->scene_vk()->gather_draw_requests();
-    _view->drawer()->draw(cmd,
-                          RenderPassID_Geometry,
-                          static_cast<uint32_t>(draw_requests.size()),
-                          draw_requests.data());
+    auto draw_requests =
+        _view->scene_vk()->gather_draw_requests(RenderPassID_Geometry);
+    _view->drawer()->draw(cmd, draw_requests);
 
     //    _pipeline->bind(cmd);
     //

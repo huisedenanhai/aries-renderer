@@ -58,7 +58,7 @@ std::string MaterialPropertyBlockInfo::compile_glsl() const {
 }
 
 MaterialPropertyBlockLayout::MaterialPropertyBlockLayout(
-    IContext *context, MaterialPropertyBlockInfo info)
+    Context *context, MaterialPropertyBlockInfo info)
     : _context(context), _info(std::move(info)) {
     init_data_block_layout();
 }
@@ -129,7 +129,7 @@ const MaterialPropertyBlockInfo &MaterialPropertyBlockLayout::info() const {
     return _info;
 }
 
-IContext *MaterialPropertyBlockLayout::context() const {
+Context *MaterialPropertyBlockLayout::context() const {
     return _context;
 }
 

@@ -99,5 +99,4 @@ std::vector<uint8_t> glsl_to_spirv(const std::string &glsl,
     auto end = reinterpret_cast<const char *>(result.end());
     return {beg, end};
 }
-
 } // namespace ars::render

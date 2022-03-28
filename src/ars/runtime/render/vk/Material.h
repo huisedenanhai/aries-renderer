@@ -35,17 +35,17 @@ struct MaterialPropertyBlockInfo {
 
 class MaterialPropertyBlockLayout {
   public:
-    MaterialPropertyBlockLayout(IContext *context,
+    MaterialPropertyBlockLayout(Context *context,
                                 MaterialPropertyBlockInfo info);
     const MaterialPropertyBlockInfo &info() const;
     uint32_t property_offset(uint32_t index) const;
     uint32_t data_block_size() const;
-    IContext *context() const;
+    Context *context() const;
 
   private:
     void init_data_block_layout();
 
-    IContext *_context{};
+    Context *_context{};
     MaterialPropertyBlockInfo _info{};
     std::vector<uint32_t> _property_offsets{};
     uint32_t _data_block_size{};

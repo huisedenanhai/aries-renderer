@@ -73,9 +73,11 @@ vec3 get_transmittance(Atmosphere atm,
                        float mu) {
     vec2 uv = transmittance_lut_r_mu_to_uv(atm, r, mu);
     vec3 s = texture(transmittance_lut, uv).rgb;
+    float epsilon = 1e-4;
     // ray cast to ground introduce floating point precision issue, only do
     // simple check here.
-    bool shadowed = r < atm.bottom_radius || uv.y < 0.0 || uv.y > 1.0;
+    bool shadowed =
+        r < atm.bottom_radius || uv.y < -epsilon || uv.y > (1.0 + epsilon);
     return shadowed ? vec3(0.0) : s;
 }
 

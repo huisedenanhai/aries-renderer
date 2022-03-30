@@ -73,14 +73,49 @@ glm::mat4 Perspective::projection_matrix(float w_div_h) const {
     return perspective_reverse_z(y_fov, w_div_h, z_near, z_far);
 }
 
+Frustum Perspective::frustum(float w_div_h) const {
+    float tan_half_fov_y = std::tan(y_fov * 0.5f);
+    float tan_half_fov_x = tan_half_fov_y * w_div_h;
+
+    Frustum f{};
+    f.planes[0] = {1.0f, 0.0f, tan_half_fov_x, 0.0f};
+    f.planes[1] = {-1.0f, 0.0f, tan_half_fov_x, 0.0f};
+    f.planes[2] = {0.0f, 1.0f, tan_half_fov_y, 0.0f};
+    f.planes[3] = {0.0f, -1.0f, tan_half_fov_y, 0.0f};
+    f.planes[4] = {0.0f, 0.0f, 1.0f, z_near};
+    f.planes[5] = {0.0f, 0.0f, -1.0f, -z_far};
+    if (z_far == 0.0f) {
+        // infinite z far, the far plane rejects nothing
+        f.planes[5] = {};
+    }
+    return f;
+}
+
 glm::mat4 Orthographic::projection_matrix(float w_div_h) const {
     auto x_mag = y_mag * w_div_h;
     return ortho_reverse_z(-x_mag, x_mag, -y_mag, y_mag, z_near, z_far);
 }
 
+Frustum Orthographic::frustum(float w_div_h) const {
+    auto x_mag = y_mag * w_div_h;
+    Frustum f{};
+    f.planes[0] = {1.0f, 0.0f, 0.0f, -x_mag};
+    f.planes[1] = {-1.0f, 0.0f, 0.0f, -x_mag};
+    f.planes[2] = {0.0f, 1.0f, 0.0f, -y_mag};
+    f.planes[3] = {0.0f, -1.0f, 0.0f, -y_mag};
+    f.planes[4] = {0.0f, 0.0f, 1.0f, z_near};
+    f.planes[5] = {0.0f, 0.0f, -1.0f, -z_far};
+    return f;
+}
+
 glm::mat4 CameraData::projection_matrix(float w_div_h) const {
     return std::visit(
         [w_div_h](auto &&d) { return d.projection_matrix(w_div_h); }, *this);
+}
+
+Frustum CameraData::frustum(float w_div_h) const {
+    return std::visit([w_div_h](auto &&d) { return d.frustum(w_div_h); },
+                      *this);
 }
 
 float CameraData::z_far() const {
@@ -148,5 +183,37 @@ void IOverlay::draw_wire_box(const math::XformTRS<float> &xform,
         draw_line(a0, a1, color);
         draw_line(b0, b1, color);
     }
+}
+
+Frustum transform_frustum(const glm::mat4 &mat, const Frustum &frustum) {
+    Frustum f{};
+    for (int i = 0; i < std::size(frustum.planes); i++) {
+        f.planes[i] = math::transform_plane(mat, frustum.planes[i]);
+    }
+    return f;
+}
+
+bool Frustum::culled(const math::AABB<float> &aabb) const {
+    // Conservative culling, some aabb that not intersect with frustum may not
+    // be culled. But those culled are definitely out of view.
+    for (auto &p : planes) {
+        auto culled_point = [&](const glm::vec3 &v) {
+            return glm::dot(p, glm::vec4(aabb.lerp(v), 1.0f)) > 0;
+        };
+
+        bool culled = true;
+        culled = culled && culled_point({0.0f, 0.0f, 0.0f});
+        culled = culled && culled_point({0.0f, 0.0f, 1.0f});
+        culled = culled && culled_point({0.0f, 1.0f, 0.0f});
+        culled = culled && culled_point({0.0f, 1.0f, 1.0f});
+        culled = culled && culled_point({1.0f, 0.0f, 0.0f});
+        culled = culled && culled_point({1.0f, 0.0f, 1.0f});
+        culled = culled && culled_point({1.0f, 1.0f, 0.0f});
+        culled = culled && culled_point({1.0f, 1.0f, 1.0f});
+        if (culled) {
+            return true;
+        }
+    }
+    return false;
 }
 } // namespace ars::render

@@ -1,7 +1,9 @@
 #pragma once
 
-#include "../core/math/Transform.h"
 #include "Common.h"
+#include <array>
+#include <ars/runtime/core/math/AABB.h>
+#include <ars/runtime/core/math/Transform.h>
 #include <memory>
 #include <variant>
 #include <vector>
@@ -89,12 +91,27 @@ class IPointLight {
     virtual IScene *scene() = 0;
 };
 
+struct Frustum {
+    // Planes for frustum culling.
+    // A plane stores (n, c) for plane function dot(n, p) + c = 0.
+    // n is normal, c is a const.
+    // n points out from frustum. If dot(n, p) + c > 0, point p is certainly
+    // not contained by the frustum.
+    // n may be not normalized.
+    glm::vec4 planes[6]{};
+
+    bool culled(const math::AABB<float> &aabb) const;
+};
+
+Frustum transform_frustum(const glm::mat4 &mat, const Frustum &frustum);
+
 struct Perspective {
     float y_fov = glm::radians(45.0f);
     float z_far = 100.0f; // z_far == 0 means infinity z_far
     float z_near = 0.1f;  // must > 0
 
     [[nodiscard]] glm::mat4 projection_matrix(float w_div_h) const;
+    [[nodiscard]] Frustum frustum(float w_div_h) const;
 };
 
 struct Orthographic {
@@ -103,6 +120,7 @@ struct Orthographic {
     float z_near = 0.1f;  // must > 0
 
     [[nodiscard]] glm::mat4 projection_matrix(float w_div_h) const;
+    [[nodiscard]] Frustum frustum(float w_div_h) const;
 };
 
 struct CameraData : std::variant<Perspective, Orthographic> {
@@ -118,6 +136,7 @@ struct CameraData : std::variant<Perspective, Orthographic> {
     // reversed-Z in range [0, 1], with -z_near mapped to 1.0 and -z_far mapped
     // to 0.0 output follows Vulkan spec with +Y axis point down
     [[nodiscard]] glm::mat4 projection_matrix(float w_div_h) const;
+    [[nodiscard]] Frustum frustum(float w_div_h) const;
 };
 
 class IOverlay {

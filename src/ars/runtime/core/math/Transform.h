@@ -113,4 +113,10 @@ glm::vec<3, T> transform_direction(const glm::mat<4, 4, T> &mat,
     return {p.x, p.y, p.z};
 }
 
+template <typename T>
+glm::vec<4, T> transform_plane(const glm::mat<4, 4, T> &mat,
+                               const glm::vec<4, T> &plane) {
+    return plane * glm::inverse(mat);
+}
+
 } // namespace ars::math

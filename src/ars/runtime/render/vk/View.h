@@ -71,7 +71,7 @@ class View : public IView {
     void set_size(const Extent2D &size) override;
 
     IScene *scene() override;
-    void render() override;
+    void render(const RenderOptions &options) override;
 
     ITexture *get_color_texture() override;
 

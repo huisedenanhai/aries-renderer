@@ -58,6 +58,7 @@ class Editor : public engine::IApplication {
     auto reset_edit_scene() {
         _view.reset();
         _scene.reset();
+        _3d_view_state.reset_edit_scene();
         _scene_save_dir = std::nullopt;
         _current_selected_entity = nullptr;
     }
@@ -78,9 +79,6 @@ class Editor : public engine::IApplication {
             render::Perspective cam{};
             cam.z_far = 10000.0f;
             _view->set_camera(cam);
-
-            _3d_view_state.focus_distance = 2.0f;
-
             _view->overlay()->set_light_gizmo(_light_bulb_icon, 0.1f);
 
             auto background = _view->effect()->background();

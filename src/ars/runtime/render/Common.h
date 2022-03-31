@@ -22,5 +22,7 @@ constexpr uint32_t MAX_MIP_LEVELS = std::numeric_limits<uint32_t>::max();
 struct Extent2D {
     uint32_t width;
     uint32_t height;
+
+    float w_div_h() const;
 };
 } // namespace ars::render

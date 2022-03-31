@@ -5,6 +5,7 @@
 #include <ars/runtime/core/math/AABB.h>
 #include <ars/runtime/core/math/Transform.h>
 #include <memory>
+#include <optional>
 #include <variant>
 #include <vector>
 
@@ -99,8 +100,17 @@ struct Frustum {
     // not contained by the frustum.
     // n may be not normalized.
     glm::vec4 planes[6]{};
+    // The first 4 vertices are corners of near plane, the last 4 vertices are
+    // corners of far plane.
+    // The order of vertices is clockwise from the view of camera, i.e. by
+    // looking from the view space origin towards -z axis.
+    // 0 --- 1
+    // |     |
+    // 3 --- 2
+    glm::vec3 vertices[8]{};
 
     bool culled(const math::AABB<float> &aabb) const;
+    static std::array<uint32_t, 24> edges();
 };
 
 Frustum transform_frustum(const glm::mat4 &mat, const Frustum &frustum);
@@ -169,6 +179,16 @@ class IOverlay {
                        const glm::vec4 &color);
 };
 
+struct CullingOptions {
+    math::XformTRS<float> culling_camera_xform{};
+    CameraData culling_camera_data{};
+};
+
+struct RenderOptions {
+    // If not specified, use the view's default camera for culling
+    std::optional<CullingOptions> culling{};
+};
+
 // A rect to render to.
 class IView {
   public:
@@ -187,7 +207,8 @@ class IView {
     virtual void set_size(const Extent2D &size) = 0;
 
     // Render and update the texture
-    virtual void render() = 0;
+    void render();
+    virtual void render(const RenderOptions &options) = 0;
     virtual ITexture *get_color_texture() = 0;
 
     // Return all object user data touched by the scissor region

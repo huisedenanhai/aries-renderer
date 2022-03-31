@@ -1,4 +1,5 @@
 add_library(render
+        Common.cpp
         Common.h
         IEffect.cpp
         IEffect.h

@@ -9,6 +9,31 @@
 
 namespace ars::editor {
 namespace {
+void draw_detached_camera_frustum(const Scene3DViewState &state,
+                                  render::IView *view) {
+
+    if (!state.detach_camera) {
+        return;
+    }
+    auto overlay = view->overlay();
+    auto mat =
+        state.detached_camera_culling.culling_camera_xform.matrix_no_scale();
+    const auto &cam = state.detached_camera_culling.culling_camera_data;
+    auto w_div_h = view->size().w_div_h();
+    auto frustum = cam.frustum(w_div_h);
+    auto frustum_edges = ars::render::Frustum::edges();
+    glm::vec4 color = {0.0f, 1.0f, 0.5f, 0.9f};
+    for (int i = 0; i < 12; i++) {
+        auto from_idx = frustum_edges[2 * i];
+        auto to_idx = frustum_edges[2 * i + 1];
+        glm::vec3 from_p =
+            math::transform_position(mat, frustum.vertices[from_idx]);
+        glm::vec3 to_p =
+            math::transform_position(mat, frustum.vertices[to_idx]);
+        overlay->draw_line(from_p, to_p, color);
+    }
+}
+
 void draw_selected_object_outline(render::IView *view,
                                   engine::Entity *current_selected) {
     if (current_selected == nullptr) {
@@ -166,6 +191,17 @@ void gizmo_menu(Scene3DViewState &state, render::IView *view) {
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Render")) {
+            ImGui::Text("Debug");
+            if (ImGui::Checkbox("Detach Camera", &state.detach_camera) &&
+                state.detach_camera) {
+                // Start detach camera mode
+                state.detached_camera_culling.culling_camera_xform =
+                    view->xform();
+                state.detached_camera_culling.culling_camera_data =
+                    view->camera();
+            }
+            ImGui::Separator();
+            ImGui::Text("Effects");
             gui::input_instance(rttr::instance(view->effect()));
             ImGui::EndMenu();
         }
@@ -326,9 +362,6 @@ void scene_3d_view(Scene3DViewState &state,
 
     gizmo_menu(state, view);
 
-    draw_selected_object_outline(view, current_selected);
-    draw_ground_wire_frame(state, view);
-
     auto size = ImGui::GetContentRegionAvail();
     render::Extent2D framebuffer_size = {
         static_cast<uint32_t>(size.x * framebuffer_scale),
@@ -336,7 +369,16 @@ void scene_3d_view(Scene3DViewState &state,
     };
 
     view->set_size(framebuffer_size);
-    view->render();
+
+    draw_detached_camera_frustum(state, view);
+    draw_selected_object_outline(view, current_selected);
+    draw_ground_wire_frame(state, view);
+
+    render::RenderOptions opts{};
+    if (state.detach_camera) {
+        opts.culling = state.detached_camera_culling;
+    }
+    view->render(opts);
 
     ImGui::Image(view->get_color_texture()->handle(), size);
 
@@ -346,5 +388,10 @@ void scene_3d_view(Scene3DViewState &state,
     }
     control_view_camera(
         state, window, framebuffer_scale, view, current_selected);
+}
+
+void Scene3DViewState::reset_edit_scene() {
+    focus_distance = 2.0f;
+    detach_camera = false;
 }
 } // namespace ars::editor

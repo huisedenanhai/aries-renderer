@@ -88,6 +88,15 @@ Frustum Perspective::frustum(float w_div_h) const {
         // infinite z far, the far plane rejects nothing
         f.planes[5] = {};
     }
+
+    f.vertices[0] = glm::vec3{-tan_half_fov_x, tan_half_fov_y, -1.0f} * z_near;
+    f.vertices[1] = glm::vec3{tan_half_fov_x, tan_half_fov_y, -1.0f} * z_near;
+    f.vertices[2] = glm::vec3{tan_half_fov_x, -tan_half_fov_y, -1.0f} * z_near;
+    f.vertices[3] = glm::vec3{-tan_half_fov_x, -tan_half_fov_y, -1.0f} * z_near;
+    f.vertices[4] = glm::vec3{-tan_half_fov_x, tan_half_fov_y, -1.0f} * z_far;
+    f.vertices[5] = glm::vec3{tan_half_fov_x, tan_half_fov_y, -1.0f} * z_far;
+    f.vertices[6] = glm::vec3{tan_half_fov_x, -tan_half_fov_y, -1.0f} * z_far;
+    f.vertices[7] = glm::vec3{-tan_half_fov_x, -tan_half_fov_y, -1.0f} * z_far;
     return f;
 }
 
@@ -105,6 +114,15 @@ Frustum Orthographic::frustum(float w_div_h) const {
     f.planes[3] = {0.0f, -1.0f, 0.0f, -y_mag};
     f.planes[4] = {0.0f, 0.0f, 1.0f, z_near};
     f.planes[5] = {0.0f, 0.0f, -1.0f, -z_far};
+
+    f.vertices[0] = {-x_mag, y_mag, -z_near};
+    f.vertices[1] = {x_mag, y_mag, -z_near};
+    f.vertices[2] = {x_mag, -y_mag, -z_near};
+    f.vertices[3] = {-x_mag, -y_mag, -z_near};
+    f.vertices[4] = {-x_mag, y_mag, -z_far};
+    f.vertices[5] = {x_mag, y_mag, -z_far};
+    f.vertices[6] = {x_mag, -y_mag, -z_far};
+    f.vertices[7] = {-x_mag, -y_mag, -z_far};
     return f;
 }
 
@@ -151,6 +169,11 @@ glm::mat4 IView::billboard_MV_matrix(const glm::vec3 &center_ws,
     };
 }
 
+void IView::render() {
+    RenderOptions opts{};
+    render(opts);
+}
+
 void IOverlay::draw_wire_box(const math::XformTRS<float> &xform,
                              const glm::vec3 &center,
                              const glm::vec3 &extent,
@@ -186,9 +209,12 @@ void IOverlay::draw_wire_box(const math::XformTRS<float> &xform,
 }
 
 Frustum transform_frustum(const glm::mat4 &mat, const Frustum &frustum) {
-    Frustum f{};
+    Frustum f = frustum;
     for (int i = 0; i < std::size(frustum.planes); i++) {
         f.planes[i] = math::transform_plane(mat, frustum.planes[i]);
+    }
+    for (int i = 0; i < std::size(frustum.vertices); i++) {
+        f.vertices[i] = math::transform_position(mat, frustum.vertices[i]);
     }
     return f;
 }
@@ -215,5 +241,13 @@ bool Frustum::culled(const math::AABB<float> &aabb) const {
         }
     }
     return false;
+}
+
+std::array<uint32_t, 24> Frustum::edges() {
+    return {
+        0, 1, 1, 2, 2, 3, 3, 0, // near plane
+        0, 4, 1, 5, 2, 6, 3, 7, // connections
+        4, 5, 5, 6, 6, 7, 7, 4, // far plane
+    };
 }
 } // namespace ars::render

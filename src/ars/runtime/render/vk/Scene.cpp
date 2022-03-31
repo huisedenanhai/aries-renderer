@@ -27,30 +27,23 @@ Context *Scene::context() const {
     return _context;
 }
 
-std::vector<DrawRequest> Scene::gather_draw_requests(RenderPassID pass_id) {
-    // TODO culling
-    auto count = render_objects.size();
-    std::vector<DrawRequest> requests{};
-    requests.reserve(count);
+CullingResult Scene::cull(const Frustum &frustum_ws) {
+    CullingResult res{};
 
-    auto xform_arr = render_objects.get_array<glm::mat4>();
-    auto mesh_arr = render_objects.get_array<std::shared_ptr<Mesh>>();
-    auto mat_arr = render_objects.get_array<std::shared_ptr<Material>>();
+    res.scene = this;
 
-    for (int i = 0; i < count; i++) {
-        DrawRequest req{};
-        req.material = mat_arr[i]->pass(pass_id);
-
-        if (req.material.pipeline == nullptr) {
-            continue;
+    render_objects.for_each_id([&](auto id) {
+        auto matrix = render_objects.get<glm::mat4>(id);
+        auto mesh = render_objects.get<std::shared_ptr<Mesh>>(id);
+        auto aabb_ws = math::transform_aabb(matrix, mesh->aabb());
+        if (frustum_ws.culled(aabb_ws)) {
+            return;
         }
+        res.objects.push_back(id);
+    });
 
-        req.M = xform_arr[i];
-        req.mesh = mesh_arr[i].get();
-        requests.push_back(req);
-    }
-
-    return requests;
+    // TODO calculate visible aabb
+    return res;
 }
 
 IScene *View::scene() {
@@ -200,5 +193,31 @@ uint64_t PointLight::user_data() {
 
 void PointLight::set_user_data(uint64_t user_data) {
     get<UserData>().value = user_data;
+}
+
+std::vector<DrawRequest>
+CullingResult::gather_draw_requests(RenderPassID pass_id) const {
+    std::vector<DrawRequest> requests{};
+    requests.reserve(objects.size());
+
+    for (auto obj_id : objects) {
+        auto &render_objects = scene->render_objects;
+        auto matrix = render_objects.get<glm::mat4>(obj_id);
+        auto mesh = render_objects.get<std::shared_ptr<Mesh>>(obj_id);
+        auto material = render_objects.get<std::shared_ptr<Material>>(obj_id);
+
+        DrawRequest req{};
+        req.material = material->pass(pass_id);
+
+        if (req.material.pipeline == nullptr) {
+            continue;
+        }
+
+        req.M = matrix;
+        req.mesh = mesh.get();
+        requests.push_back(req);
+    }
+
+    return requests;
 }
 } // namespace ars::render::vk

@@ -30,7 +30,7 @@ void View::render(const RenderOptions &options) {
 
     RenderGraph rg(this);
 
-    auto final_rt = _renderer->render(rg);
+    auto final_rt = _renderer->render(rg, options);
     _overlay_renderer->render(rg, final_rt);
 
     rg.output(final_rt);

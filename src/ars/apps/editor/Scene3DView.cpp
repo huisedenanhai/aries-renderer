@@ -22,7 +22,7 @@ void draw_detached_camera_frustum(const Scene3DViewState &state,
     auto w_div_h = view->size().w_div_h();
     auto frustum = cam.frustum(w_div_h);
     auto frustum_edges = ars::render::Frustum::edges();
-    glm::vec4 color = {0.0f, 1.0f, 0.5f, 0.9f};
+    glm::vec4 color = {0.0f, 1.0f, 0.0f, 0.9f};
     for (int i = 0; i < 12; i++) {
         auto from_idx = frustum_edges[2 * i];
         auto to_idx = frustum_edges[2 * i + 1];

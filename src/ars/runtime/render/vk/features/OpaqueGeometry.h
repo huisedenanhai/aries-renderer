@@ -8,12 +8,14 @@
 #include <array>
 
 namespace ars::render::vk {
+struct CullingResult;
+
 class OpaqueGeometry {
   public:
     explicit OpaqueGeometry(View *view);
 
-    void render(RenderGraph &rg);
-    void execute(CommandBuffer *cmd);
+    void render(RenderGraph &rg, const CullingResult &culling_result);
+    void execute(CommandBuffer *cmd, const CullingResult &culling_result);
 
   private:
     void init_pipeline();

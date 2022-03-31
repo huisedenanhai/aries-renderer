@@ -19,6 +19,8 @@ struct UserData {
     uint64_t value = 0;
 };
 
+struct CullingResult;
+
 class Scene : public IScene {
   public:
     explicit Scene(Context *context);
@@ -30,7 +32,7 @@ class Scene : public IScene {
 
     [[nodiscard]] Context *context() const;
 
-    std::vector<DrawRequest> gather_draw_requests(RenderPassID pass_id);
+    CullingResult cull(const Frustum &frustum_ws);
 
     using RenderObjects = SoA<glm::mat4,
                               std::shared_ptr<Mesh>,
@@ -48,6 +50,14 @@ class Scene : public IScene {
 
   private:
     Context *_context = nullptr;
+};
+
+struct CullingResult {
+    Scene *scene = nullptr;
+    std::vector<Scene::RenderObjects::Id> objects{};
+    math::AABB<float> visible_aabb_ws{};
+
+    std::vector<DrawRequest> gather_draw_requests(RenderPassID pass_id) const;
 };
 
 class DirectionalLight : public IDirectionalLight {

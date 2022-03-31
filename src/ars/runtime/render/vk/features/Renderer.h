@@ -44,7 +44,7 @@ class Renderer {
     explicit Renderer(View *view);
     ~Renderer();
 
-    NamedRT render(RenderGraph &rg);
+    NamedRT render(RenderGraph &rg, const RenderOptions &options);
     std::vector<uint64_t>
     query_selection(uint32_t x, uint32_t y, uint32_t width, uint32_t height);
 

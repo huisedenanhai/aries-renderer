@@ -1,6 +1,7 @@
 #include "Renderer.h"
 #include "../Effect.h"
 #include "../Profiler.h"
+#include "../Scene.h"
 #include "../Sky.h"
 #include "DeferredShading.h"
 #include "OpaqueGeometry.h"
@@ -9,13 +10,26 @@
 #include "ToneMapping.h"
 
 namespace ars::render::vk {
-NamedRT Renderer::render(RenderGraph &rg) {
+NamedRT Renderer::render(RenderGraph &rg, const RenderOptions &options) {
     ARS_PROFILER_SAMPLE("Build Render Graph", 0xFF772641);
+
+    auto w_div_h = _view->size().w_div_h();
+    auto frustum = transform_frustum(_view->xform().matrix_no_scale(),
+                                     _view->camera().frustum(w_div_h));
+
+    // Use custom culling option
+    if (options.culling.has_value()) {
+        frustum = transform_frustum(
+            options.culling->culling_camera_xform.matrix_no_scale(),
+            options.culling->culling_camera_data.frustum(w_div_h));
+    }
+
+    auto culling_result = _view->scene_vk()->cull(frustum);
 
     auto sky = _view->effect_vk()->background_vk()->sky_vk();
 
     sky->update(_view, rg);
-    _opaque_geometry->render(rg);
+    _opaque_geometry->render(rg, culling_result);
     _generate_hierarchy_z->render(rg);
     _screen_space_reflection->render(rg);
     _deferred_shading->render(rg);

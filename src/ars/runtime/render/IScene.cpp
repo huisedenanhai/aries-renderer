@@ -145,8 +145,7 @@ float CameraData::z_near() const {
 }
 
 glm::mat4 IView::projection_matrix() {
-    auto w_div_h =
-        static_cast<float>(size().width) / static_cast<float>(size().height);
+    auto w_div_h = size().w_div_h();
     return camera().projection_matrix(w_div_h);
 }
 

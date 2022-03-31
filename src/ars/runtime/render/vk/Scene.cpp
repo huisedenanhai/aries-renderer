@@ -40,9 +40,13 @@ CullingResult Scene::cull(const Frustum &frustum_ws) {
             return;
         }
         res.objects.push_back(id);
+        if (res.objects.size() == 1) {
+            res.visible_aabb_ws = aabb_ws;
+        } else {
+            res.visible_aabb_ws.extend_aabb(aabb_ws);
+        }
     });
 
-    // TODO calculate visible aabb
     return res;
 }
 

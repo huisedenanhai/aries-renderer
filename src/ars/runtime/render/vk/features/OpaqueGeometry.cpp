@@ -9,9 +9,7 @@
 #include "Renderer.h"
 
 namespace ars::render::vk {
-OpaqueGeometry::OpaqueGeometry(View *view) : _view(view) {
-    init_pipeline();
-}
+OpaqueGeometry::OpaqueGeometry(View *view) : _view(view) {}
 
 void OpaqueGeometry::execute(CommandBuffer *cmd,
                              const CullingResult &culling_result) {
@@ -40,56 +38,6 @@ void OpaqueGeometry::execute(CommandBuffer *cmd,
     _view->drawer()->draw(cmd, draw_requests);
 
     rp->end(rp_exec);
-}
-
-void OpaqueGeometry::init_pipeline() {
-    auto ctx = _view->context();
-    auto vert_shader = Shader::find_precompiled(ctx, "GeometryPass.vert");
-    auto frag_shader = Shader::find_precompiled(ctx, "GeometryPass.frag");
-
-    VkPipelineVertexInputStateCreateInfo vertex_input{
-        VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
-
-    VkVertexInputBindingDescription vert_bindings[4] = {
-        {0,
-         static_cast<uint32_t>(sizeof(glm::vec3)),
-         VK_VERTEX_INPUT_RATE_VERTEX},
-        {1,
-         static_cast<uint32_t>(sizeof(glm::vec3)),
-         VK_VERTEX_INPUT_RATE_VERTEX},
-        {2,
-         static_cast<uint32_t>(sizeof(glm::vec4)),
-         VK_VERTEX_INPUT_RATE_VERTEX},
-        {3,
-         static_cast<uint32_t>(sizeof(glm::vec2)),
-         VK_VERTEX_INPUT_RATE_VERTEX},
-    };
-
-    VkVertexInputAttributeDescription vert_attrs[4] = {
-        {0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0},
-        {1, 1, VK_FORMAT_R32G32B32_SFLOAT, 0},
-        {2, 2, VK_FORMAT_R32G32B32A32_SFLOAT, 0},
-        {3, 3, VK_FORMAT_R32G32_SFLOAT, 0},
-    };
-
-    vertex_input.vertexAttributeDescriptionCount =
-        static_cast<uint32_t>(std::size(vert_attrs));
-    vertex_input.pVertexAttributeDescriptions = vert_attrs;
-    vertex_input.vertexBindingDescriptionCount =
-        static_cast<uint32_t>(std::size(vert_bindings));
-    vertex_input.pVertexBindingDescriptions = vert_bindings;
-
-    auto depth_stencil = enabled_depth_stencil_state();
-
-    GraphicsPipelineInfo info{};
-    info.shaders.push_back(vert_shader.get());
-    info.shaders.push_back(frag_shader.get());
-    info.subpass = render_pass();
-
-    info.vertex_input = &vertex_input;
-    info.depth_stencil = &depth_stencil;
-
-    _pipeline = std::make_unique<GraphicsPipeline>(ctx, info);
 }
 
 std::array<NamedRT, 5> OpaqueGeometry::geometry_pass_rt_names() {

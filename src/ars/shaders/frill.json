@@ -6,8 +6,6 @@
     "ImGui.frag",
     "ObjectId.vert",
     "ObjectId.frag",
-    "GeometryPass.vert",
-    "GeometryPass.frag",
     "ToneMapping.comp",
     "BRDFLut.comp",
     "Outline.comp",

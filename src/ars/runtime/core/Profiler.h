@@ -6,7 +6,7 @@
 // If ARS_PROFILER_ENABLED if not defined, all profiler related macros should be
 // no op, and profiler related methods should take as less runtime overhead as
 // possible.
-#define ARS_PROFILER_ENABLED
+//#define ARS_PROFILER_ENABLED
 
 namespace ars {
 constexpr size_t MAX_PROFILER_GROUP_NUM = 64;

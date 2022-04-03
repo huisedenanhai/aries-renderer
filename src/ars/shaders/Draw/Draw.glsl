@@ -1,7 +1,5 @@
 #version 450 core
 
-#extension GL_EXT_nonuniform_qualifier : require
-
 #include <GBuffer.glsl>
 #include <MetallicRoughnessPBR.glsl>
 #include <Misc.glsl>
@@ -24,6 +22,8 @@ struct Material {
 
 #define MATERIAL_SAMPLER_2D_COUNT 5
 
+#extension GL_EXT_nonuniform_qualifier : require
+
 #ifdef FRILL_SHADER_STAGE_FRAG
 layout(location = 0) flat in uint ars_in_instance_id;
 #else
@@ -42,28 +42,28 @@ layout(set = 0, binding = 0) uniform View {
     ViewTransform ars_view;
 };
 
+ViewTransform get_view() {
+    return ars_view;
+}
+
 layout(set = 0, binding = 1, std430) buffer Instances {
     Instance ars_instances[];
 };
-
-layout(set = 0, binding = 2, std430) buffer Materials {
-    Material ars_materials[];
-};
-
-layout(set = 0, binding = 3) uniform sampler2D
-    ars_samplers_2d[MATERIAL_SAMPLER_2D_COUNT];
 
 Instance get_instance() {
     return ars_instances[ars_in_instance_id];
 }
 
+layout(set = 0, binding = 2, std430) buffer Materials {
+    Material ars_materials[];
+};
+
 Material get_material() {
     return ars_materials[get_instance().material_id];
 }
 
-ViewTransform get_view() {
-    return ars_view;
-}
+layout(set = 0, binding = 3) uniform sampler2D
+    ars_samplers_2d[MATERIAL_SAMPLER_2D_COUNT];
 
 vec4 sample_tex_2d(uint index, vec2 uv) {
     return texture(ars_samplers_2d[index], uv);

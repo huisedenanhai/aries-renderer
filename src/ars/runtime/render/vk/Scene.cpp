@@ -1,6 +1,7 @@
 #include "Scene.h"
 #include "Material.h"
 #include "Mesh.h"
+#include "Profiler.h"
 #include "View.h"
 #include "features/Drawer.h"
 
@@ -48,6 +49,26 @@ CullingResult Scene::cull(const Frustum &frustum_ws) {
     });
 
     return res;
+}
+
+math::AABB<float> Scene::loaded_aabb_ws() const {
+    return _loaded_aabb_ws;
+}
+
+void Scene::update_loaded_aabb() {
+    ARS_PROFILER_SAMPLE("Update Loaded AABB", 0xFF817135);
+    auto obj_count = render_objects.size();
+    if (obj_count == 0) {
+        _loaded_aabb_ws = {};
+        return;
+    }
+    auto matrix_arr = render_objects.get_array<glm::mat4>();
+    auto mesh_arr = render_objects.get_array<std::shared_ptr<Mesh>>();
+    _loaded_aabb_ws = math::transform_aabb(matrix_arr[0], mesh_arr[0]->aabb());
+    for (int i = 1; i < obj_count; i++) {
+        auto aabb_ws = math::transform_aabb(matrix_arr[i], mesh_arr[i]->aabb());
+        _loaded_aabb_ws.extend_aabb(aabb_ws);
+    }
 }
 
 IScene *View::scene() {

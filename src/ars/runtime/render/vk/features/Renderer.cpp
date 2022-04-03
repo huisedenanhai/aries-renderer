@@ -13,6 +13,8 @@ namespace ars::render::vk {
 NamedRT Renderer::render(RenderGraph &rg, const RenderOptions &options) {
     ARS_PROFILER_SAMPLE("Build Render Graph", 0xFF772641);
 
+    _view->scene_vk()->update_loaded_aabb();
+
     auto w_div_h = _view->size().w_div_h();
     auto frustum = transform_frustum(_view->xform().matrix_no_scale(),
                                      _view->camera().frustum(w_div_h));
@@ -24,7 +26,11 @@ NamedRT Renderer::render(RenderGraph &rg, const RenderOptions &options) {
             options.culling->culling_camera_data.frustum(w_div_h));
     }
 
-    auto culling_result = _view->scene_vk()->cull(frustum);
+    CullingResult culling_result{};
+    {
+        ARS_PROFILER_SAMPLE("Frustum Cull Main View", 0xFF534142);
+        culling_result = _view->scene_vk()->cull(frustum);
+    }
 
     auto sky = _view->effect_vk()->background_vk()->sky_vk();
 

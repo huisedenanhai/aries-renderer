@@ -202,9 +202,9 @@ void MaterialPropertyBlock::set_variant_by_index(
                value);
 }
 
-// TODO bindless on supported platform, currently the textures are simply return
-// in their property order, and the shader use index of that tex in the returned
-// vector to access them
+// TODO bindless on supported platform, currently the textures are simply
+// returned in their property order, and the shader use index of that tex in the
+// returned vector to access them
 std::vector<Handle<Texture>> MaterialPropertyBlock::referenced_textures() {
     std::vector<Handle<Texture>> textures{};
     auto props = _layout->info().properties;
@@ -324,20 +324,24 @@ void MaterialFactory::init_metallic_roughness_template() {
     _metallic_roughness_template.property_layout =
         std::make_shared<MaterialPropertyBlockLayout>(_context, pbr);
 
-    auto &geom_pass =
-        _metallic_roughness_template.passes[RenderPassID_Geometry];
-    geom_pass.property_layout = _metallic_roughness_template.property_layout;
-    geom_pass.pipeline =
-        create_pipeline(RenderPassID_Geometry, "Draw/Draw.glsl");
+    {
+        auto vert_shader = Shader::find_precompiled(
+            _context, "Draw/Draw.glsl", {"FRILL_SHADER_STAGE_VERT"});
+        auto frag_shader = Shader::find_precompiled(
+            _context, "Draw/Draw.glsl", {"FRILL_SHADER_STAGE_FRAG"});
+
+        auto &geom_pass =
+            _metallic_roughness_template.passes[RenderPassID_Geometry];
+        geom_pass.property_layout =
+            _metallic_roughness_template.property_layout;
+        geom_pass.pipeline = create_pipeline(
+            RenderPassID_Geometry, {vert_shader.get(), frag_shader.get()});
+    }
 }
 
 std::shared_ptr<GraphicsPipeline>
 MaterialFactory::create_pipeline(RenderPassID id,
-                                 const std::string &glsl_file) {
-    auto vert_shader = Shader::find_precompiled(
-        _context, glsl_file.c_str(), {"FRILL_SHADER_STAGE_VERT"});
-    auto frag_shader = Shader::find_precompiled(
-        _context, glsl_file.c_str(), {"FRILL_SHADER_STAGE_FRAG"});
+                                 const std::vector<Shader *> &shaders) {
 
     VkPipelineVertexInputStateCreateInfo vertex_input{
         VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
@@ -378,8 +382,7 @@ MaterialFactory::create_pipeline(RenderPassID id,
     auto depth_stencil = enabled_depth_stencil_state();
 
     GraphicsPipelineInfo info{};
-    info.shaders.push_back(vert_shader.get());
-    info.shaders.push_back(frag_shader.get());
+    info.shaders = shaders;
     info.subpass = _context->renderer_data()->subpass(id);
 
     info.vertex_input = &vertex_input;

@@ -34,6 +34,9 @@ class Scene : public IScene {
 
     CullingResult cull(const Frustum &frustum_ws);
 
+    void update_loaded_aabb();
+    math::AABB<float> loaded_aabb_ws() const;
+
     using RenderObjects = SoA<glm::mat4,
                               std::shared_ptr<Mesh>,
                               std::shared_ptr<Material>,
@@ -50,6 +53,7 @@ class Scene : public IScene {
 
   private:
     Context *_context = nullptr;
+    math::AABB<float> _loaded_aabb_ws{};
 };
 
 struct CullingResult {

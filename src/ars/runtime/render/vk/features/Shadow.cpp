@@ -66,6 +66,7 @@ void ShadowMap::render(const math::XformTRS<float> &xform,
 
             DrawCallbacks callbacks{};
             callbacks.on_pipeline_bound = [&](CommandBuffer *cmd) {
+                // Negative sign to slope bias because we use inverse z
                 cmd->SetDepthBias(0.0f, 0.0f, -_slope_bias);
             };
             view->drawer()->draw(cmd,

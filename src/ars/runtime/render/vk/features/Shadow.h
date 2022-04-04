@@ -30,6 +30,7 @@ class ShadowMap {
     Handle<Texture> _texture{};
     math::XformTRS<float> _xform{};
     Orthographic _camera{};
+    float _slope_bias = 1.0f;
 };
 
 class Shadow {

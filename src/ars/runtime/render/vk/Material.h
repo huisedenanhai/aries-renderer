@@ -159,7 +159,9 @@ class MaterialFactory {
     void init_unlit_template();
     void init_metallic_roughness_template();
     std::shared_ptr<GraphicsPipeline>
-    create_pipeline(RenderPassID id, const std::vector<Shader *> &shaders);
+    create_pipeline(RenderPassID id,
+                    const std::vector<Shader *> &shaders,
+                    VkPipelineRasterizationStateCreateInfo *raster = nullptr);
 
     Context *_context{};
     MaterialTemplate _unlit_template{};

@@ -63,10 +63,16 @@ void ShadowMap::render(const math::XformTRS<float> &xform,
 
             auto draw_requests =
                 shadow_cull_obj.gather_draw_requests(RenderPassID_Shadow);
+
+            DrawCallbacks callbacks{};
+            callbacks.on_pipeline_bound = [&](CommandBuffer *cmd) {
+                cmd->SetDepthBias(0.0f, 0.0f, -_slope_bias);
+            };
             view->drawer()->draw(cmd,
                                  _camera.projection_matrix(1.0f),
                                  glm::inverse(_xform.matrix_no_scale()),
-                                 draw_requests);
+                                 draw_requests,
+                                 callbacks);
 
             rp->end(rp_exec);
         });

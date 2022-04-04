@@ -198,7 +198,8 @@ void Drawer::init_draw_id_billboard_alpha_clip() {
 void Drawer::draw(CommandBuffer *cmd,
                   const glm::mat4 &P,
                   const glm::mat4 &V,
-                  ars::Span<const DrawRequest> requests) {
+                  ars::Span<const DrawRequest> requests,
+                  const DrawCallbacks &callbacks) {
     if (requests.empty()) {
         return;
     }
@@ -208,7 +209,7 @@ void Drawer::draw(CommandBuffer *cmd,
                                       VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                                       VMA_MEMORY_USAGE_CPU_TO_GPU);
     transform_buffer->set_data(ViewTransform::from_V_P(V, P));
-    draw(cmd, P, V, transform_buffer, requests);
+    draw(cmd, P, V, transform_buffer, requests, callbacks);
 }
 
 void Drawer::draw(CommandBuffer *cmd,
@@ -218,14 +219,16 @@ void Drawer::draw(CommandBuffer *cmd,
          view->projection_matrix(),
          view->view_matrix(),
          view->transform_buffer(),
-         requests);
+         requests,
+         {});
 }
 
 void Drawer::draw(CommandBuffer *cmd,
                   const glm::mat4 &P,
                   const glm::mat4 &V,
                   const Handle<Buffer> &view_transform_buffer,
-                  ars::Span<const DrawRequest> requests) {
+                  ars::Span<const DrawRequest> requests,
+                  const DrawCallbacks &callbacks) {
     if (requests.empty()) {
         return;
     }
@@ -291,6 +294,9 @@ void Drawer::draw(CommandBuffer *cmd,
         if (req->material.pipeline != bound_pipeline) {
             bound_pipeline = req->material.pipeline;
             bound_pipeline->bind(cmd);
+            if (callbacks.on_pipeline_bound) {
+                callbacks.on_pipeline_bound(cmd);
+            }
         }
 
         bound_property_block = req->material.property_block;

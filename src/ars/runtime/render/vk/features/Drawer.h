@@ -30,6 +30,10 @@ struct InstanceDrawParam {
     ARS_PADDING_FIELD(uint32_t);
 };
 
+struct DrawCallbacks {
+    std::function<void(CommandBuffer *)> on_pipeline_bound{};
+};
+
 class Drawer {
   public:
     explicit Drawer(View *view);
@@ -51,7 +55,8 @@ class Drawer {
     void draw(CommandBuffer *cmd,
               const glm::mat4 &P,
               const glm::mat4 &V,
-              ars::Span<const DrawRequest> requests);
+              ars::Span<const DrawRequest> requests,
+              const DrawCallbacks &callbacks = {});
 
     void
     draw(CommandBuffer *cmd, View *view, ars::Span<const DrawRequest> requests);
@@ -68,7 +73,8 @@ class Drawer {
               const glm::mat4 &P,
               const glm::mat4 &V,
               const Handle<Buffer> &view_transform_buffer,
-              ars::Span<const DrawRequest> requests);
+              ars::Span<const DrawRequest> requests,
+              const DrawCallbacks &callbacks);
 
     View *_view = nullptr;
     std::unique_ptr<RenderPass> _render_pass{};

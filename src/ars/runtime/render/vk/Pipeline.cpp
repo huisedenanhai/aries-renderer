@@ -267,7 +267,7 @@ void GraphicsPipeline::init_pipeline(const GraphicsPipelineInfo &info) {
 
     VkPipelineRasterizationStateCreateInfo raster{
         VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO};
-    raster.cullMode = info.cull_mode;
+    raster.cullMode = VK_CULL_MODE_NONE;
     raster.polygonMode = VK_POLYGON_MODE_FILL;
     // Metal hates wide line.
     // https://community.khronos.org/t/macos-vulkan-at-runtime-vkcreatedevice-fails-when-vkphysicaldevicefeatures-widelines-vk-ture-and-doestnt-support-vkcmdsetlinewidth-api-as-well/106443/4
@@ -276,6 +276,9 @@ void GraphicsPipeline::init_pipeline(const GraphicsPipelineInfo &info) {
     raster.lineWidth = 1.0f;
 
     create_info.pRasterizationState = &raster;
+    if (info.raster != nullptr) {
+        create_info.pRasterizationState = info.raster;
+    }
 
     VkPipelineMultisampleStateCreateInfo multisample{
         VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO};
@@ -309,12 +312,17 @@ void GraphicsPipeline::init_pipeline(const GraphicsPipelineInfo &info) {
         create_info.pColorBlendState = info.blend;
     }
 
-    VkDynamicState dyn_states[] = {VK_DYNAMIC_STATE_VIEWPORT,
-                                   VK_DYNAMIC_STATE_SCISSOR};
+    std::vector<VkDynamicState> dyn_states = {VK_DYNAMIC_STATE_VIEWPORT,
+                                              VK_DYNAMIC_STATE_SCISSOR};
+    if (create_info.pRasterizationState->depthBiasEnable) {
+        // dynamic depth bias is enabled by default
+        dyn_states.push_back(VK_DYNAMIC_STATE_DEPTH_BIAS);
+    }
+
     VkPipelineDynamicStateCreateInfo dynamic_state{
         VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO};
     dynamic_state.dynamicStateCount = std::size(dyn_states);
-    dynamic_state.pDynamicStates = dyn_states;
+    dynamic_state.pDynamicStates = dyn_states.data();
 
     create_info.pDynamicState = &dynamic_state;
 

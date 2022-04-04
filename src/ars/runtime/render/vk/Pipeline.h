@@ -152,7 +152,7 @@ struct GraphicsPipelineInfo {
     VkPipelineVertexInputStateCreateInfo *vertex_input = nullptr;
     VkPipelineColorBlendStateCreateInfo *blend = nullptr;
     VkPipelineDepthStencilStateCreateInfo *depth_stencil = nullptr;
-    VkCullModeFlags cull_mode = VK_CULL_MODE_NONE;
+    VkPipelineRasterizationStateCreateInfo *raster = nullptr;
     VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 };
 

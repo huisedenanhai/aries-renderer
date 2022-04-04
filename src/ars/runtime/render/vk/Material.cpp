@@ -348,17 +348,25 @@ void MaterialFactory::init_metallic_roughness_template() {
         auto vert_shader =
             Shader::find_precompiled(_context, "Draw/Depth.vert");
 
+        VkPipelineRasterizationStateCreateInfo raster{
+            VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO};
+        raster.cullMode = VK_CULL_MODE_NONE;
+        raster.lineWidth = 1.0f;
+        raster.polygonMode = VK_POLYGON_MODE_FILL;
+        raster.depthBiasEnable = VK_TRUE;
+
         auto &shadow_pass =
             _metallic_roughness_template.passes[RenderPassID_Shadow];
         shadow_pass.property_layout = nullptr;
         shadow_pass.pipeline =
-            create_pipeline(RenderPassID_Shadow, {vert_shader.get()});
+            create_pipeline(RenderPassID_Shadow, {vert_shader.get()}, &raster);
     }
 }
 
-std::shared_ptr<GraphicsPipeline>
-MaterialFactory::create_pipeline(RenderPassID id,
-                                 const std::vector<Shader *> &shaders) {
+std::shared_ptr<GraphicsPipeline> MaterialFactory::create_pipeline(
+    RenderPassID id,
+    const std::vector<Shader *> &shaders,
+    VkPipelineRasterizationStateCreateInfo *raster) {
 
     VkPipelineVertexInputStateCreateInfo vertex_input{
         VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
@@ -404,6 +412,7 @@ MaterialFactory::create_pipeline(RenderPassID id,
 
     info.vertex_input = &vertex_input;
     info.depth_stencil = &depth_stencil;
+    info.raster = raster;
 
     return std::make_shared<GraphicsPipeline>(_context, info);
 }

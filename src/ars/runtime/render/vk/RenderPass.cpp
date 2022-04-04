@@ -122,7 +122,6 @@ std::unique_ptr<RenderPass> RenderPass::create_with_single_pass(
 
     VkAttachmentReference depth_ref{};
     depth_ref.attachment = color_count;
-    //    depth_ref.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     depth_ref.layout = VK_IMAGE_LAYOUT_GENERAL;
 
     VkSubpassDescription subpass{};

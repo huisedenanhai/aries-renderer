@@ -7,6 +7,7 @@
 #include "OpaqueGeometry.h"
 #include "QuerySelection.h"
 #include "ScreenSpaceReflection.h"
+#include "Shadow.h"
 #include "ToneMapping.h"
 
 namespace ars::render::vk {
@@ -16,25 +17,25 @@ NamedRT Renderer::render(RenderGraph &rg, const RenderOptions &options) {
     _view->scene_vk()->update_loaded_aabb();
 
     auto w_div_h = _view->size().w_div_h();
-    auto frustum = transform_frustum(_view->xform().matrix_no_scale(),
-                                     _view->camera().frustum(w_div_h));
+    auto cull_cam_xform = _view->xform();
+    auto cull_frustum = _view->camera().frustum(w_div_h);
 
     // Use custom culling option
     if (options.culling.has_value()) {
-        frustum = transform_frustum(
-            options.culling->culling_camera_xform.matrix_no_scale(),
-            options.culling->culling_camera_data.frustum(w_div_h));
+        cull_cam_xform = options.culling->culling_camera_xform;
+        cull_frustum = options.culling->culling_camera_data.frustum(w_div_h);
     }
 
     CullingResult culling_result{};
     {
         ARS_PROFILER_SAMPLE("Frustum Cull Main View", 0xFF534142);
-        culling_result = _view->scene_vk()->cull(frustum);
+        culling_result = _view->scene_vk()->cull(cull_cam_xform, cull_frustum);
     }
 
     auto sky = _view->effect_vk()->background_vk()->sky_vk();
 
     sky->update(_view, rg);
+    _shadow->render(rg, culling_result);
     _opaque_geometry->render(rg, culling_result);
     _generate_hierarchy_z->render(rg);
     _screen_space_reflection->render(rg);
@@ -52,6 +53,7 @@ NamedRT Renderer::render(RenderGraph &rg, const RenderOptions &options) {
 }
 
 Renderer::Renderer(View *view) : _view(view) {
+    _shadow = std::make_unique<Shadow>(_view);
     _opaque_geometry = std::make_unique<OpaqueGeometry>(_view);
     _deferred_shading = std::make_unique<DeferredShading>(_view);
     _generate_hierarchy_z = std::make_unique<GenerateHierarchyZ>(_view);
@@ -152,11 +154,26 @@ void RendererContextData::init_render_passes() {
     init_geometry_pass();
     init_shading_pass();
     init_overlay_pass();
+    init_shading_pass();
 
     _subpasses.resize(RenderPassID_Count);
 
     _subpasses[RenderPassID_Geometry] = {_geometry_pass.get(), 0};
     _subpasses[RenderPassID_Shading] = {_shading_pass.get(), 0};
     _subpasses[RenderPassID_Overlay] = {_overlay_pass.get(), 0};
+    _subpasses[RenderPassID_Shadow] = {_shadow_pass.get(), 0};
+}
+
+void RendererContextData::init_shadow_pass() {
+    RenderPassAttachmentInfo depth{};
+    depth.format = RT_FORMAT_DEPTH;
+    depth.samples = VK_SAMPLE_COUNT_1_BIT;
+    depth.initial_layout = VK_IMAGE_LAYOUT_UNDEFINED;
+    depth.final_layout = VK_IMAGE_LAYOUT_GENERAL;
+    depth.load_op = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    depth.store_op = VK_ATTACHMENT_STORE_OP_STORE;
+
+    _shadow_pass =
+        RenderPass::create_with_single_pass(_context, 0, nullptr, &depth);
 }
 } // namespace ars::render::vk

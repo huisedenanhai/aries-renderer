@@ -13,11 +13,13 @@ class GenerateHierarchyZ;
 class ScreenSpaceReflection;
 class ToneMapping;
 class QuerySelection;
+class Shadow;
 
 enum RenderPassID {
     RenderPassID_Geometry,
     RenderPassID_Shading,
     RenderPassID_Overlay,
+    RenderPassID_Shadow,
     RenderPassID_Count,
 };
 
@@ -31,11 +33,13 @@ class RendererContextData {
     void init_geometry_pass();
     void init_shading_pass();
     void init_overlay_pass();
+    void init_shadow_pass();
 
     Context *_context = nullptr;
     std::unique_ptr<RenderPass> _geometry_pass{};
     std::unique_ptr<RenderPass> _shading_pass{};
     std::unique_ptr<RenderPass> _overlay_pass{};
+    std::unique_ptr<RenderPass> _shadow_pass{};
     std::vector<SubpassInfo> _subpasses{};
 };
 
@@ -52,6 +56,7 @@ class Renderer {
     void add_inplace(RenderGraph &rg, NamedRT add_src_rt, NamedRT target_rt);
 
     View *_view = nullptr;
+    std::unique_ptr<Shadow> _shadow{};
     std::unique_ptr<OpaqueGeometry> _opaque_geometry{};
     std::unique_ptr<DeferredShading> _deferred_shading{};
     std::unique_ptr<GenerateHierarchyZ> _generate_hierarchy_z{};

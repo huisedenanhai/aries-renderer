@@ -40,12 +40,12 @@ void DeferredShading::execute(CommandBuffer *cmd) {
         _view->effect_vk()->background_vk()->sky_vk());
 
     // Special shade for sun in physical sky
-    shade_directional_light(cmd, physical_sky != nullptr);
+    shade_directional_lights(cmd, physical_sky != nullptr);
     if (physical_sky != nullptr) {
         shade_sun(cmd, physical_sky);
     }
 
-    shade_point_light(cmd);
+    shade_point_lights(cmd);
 
     rp->end(rp_exec);
 }
@@ -209,8 +209,8 @@ PointLightData get_point_light_data(View *view, Scene::PointLights::Id id) {
 
 } // namespace
 
-void DeferredShading::shade_directional_light(CommandBuffer *cmd,
-                                              bool ignore_sun) {
+void DeferredShading::shade_directional_lights(CommandBuffer *cmd,
+                                               bool ignore_sun) {
     auto scene = _view->scene_vk();
     auto light_count = scene->directional_lights.size();
     if (light_count == 0 ||
@@ -234,7 +234,7 @@ void DeferredShading::shade_directional_light(CommandBuffer *cmd,
     });
 }
 
-void DeferredShading::shade_point_light(CommandBuffer *cmd) {
+void DeferredShading::shade_point_lights(CommandBuffer *cmd) {
     auto scene = _view->scene_vk();
     auto light_count = scene->point_lights.size();
     if (light_count == 0) {

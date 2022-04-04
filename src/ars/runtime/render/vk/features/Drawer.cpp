@@ -199,6 +199,10 @@ void Drawer::draw(CommandBuffer *cmd,
                   const glm::mat4 &P,
                   const glm::mat4 &V,
                   ars::Span<const DrawRequest> requests) {
+    if (requests.empty()) {
+        return;
+    }
+
     auto transform_buffer =
         cmd->context()->create_buffer(sizeof(ViewTransform),
                                       VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,

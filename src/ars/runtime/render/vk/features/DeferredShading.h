@@ -20,8 +20,8 @@ class DeferredShading {
     void set_up_shade(GraphicsPipeline *pipeline, CommandBuffer *cmd);
     void shade_unlit(CommandBuffer *cmd);
     void shade_reflection_emission(CommandBuffer *cmd);
-    void shade_directional_light(CommandBuffer *cmd, bool ignore_sun);
-    void shade_point_light(CommandBuffer *cmd);
+    void shade_directional_lights(CommandBuffer *cmd, bool ignore_sun);
+    void shade_point_lights(CommandBuffer *cmd);
     void shade_sun(CommandBuffer *cmd, PhysicalSky *sky);
     SubpassInfo render_pass();
 

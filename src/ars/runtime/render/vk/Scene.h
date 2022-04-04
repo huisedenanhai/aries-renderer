@@ -2,6 +2,7 @@
 
 #include "../IScene.h"
 #include "features/Renderer.h"
+#include "features/Shadow.h"
 #include <ars/runtime/core/misc/SoA.h>
 
 namespace ars::render::vk {
@@ -32,7 +33,8 @@ class Scene : public IScene {
 
     [[nodiscard]] Context *context() const;
 
-    CullingResult cull(const Frustum &frustum_ws);
+    CullingResult cull(const math::XformTRS<float> &xform,
+                       const Frustum &frustum_local);
 
     void update_loaded_aabb();
     math::AABB<float> loaded_aabb_ws() const;
@@ -43,7 +45,8 @@ class Scene : public IScene {
                               UserData>;
     RenderObjects render_objects{};
 
-    using DirectionalLights = SoA<math::XformTRS<float>, Light, UserData>;
+    using DirectionalLights =
+        SoA<math::XformTRS<float>, Light, UserData, std::unique_ptr<ShadowMap>>;
     DirectionalLights directional_lights{};
 
     using PointLights = SoA<math::XformTRS<float>, Light, UserData>;
@@ -52,6 +55,8 @@ class Scene : public IScene {
     DirectionalLights::Id sun_id{};
 
   private:
+    CullingResult cull(const Frustum &frustum_ws);
+
     Context *_context = nullptr;
     math::AABB<float> _loaded_aabb_ws{};
 };

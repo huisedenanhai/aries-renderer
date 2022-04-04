@@ -1,4 +1,6 @@
 aries_target_sources(render PRIVATE
+        Shadow.cpp
+        Shadow.h
         ScreenSpaceReflection.cpp
         ScreenSpaceReflection.h
         Drawer.cpp

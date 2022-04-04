@@ -131,6 +131,8 @@ struct RenderGraph {
         pass->execute_action = exec;
     }
 
+    View *view() const;
+
   private:
     RenderGraphPass *alloc_pass();
 

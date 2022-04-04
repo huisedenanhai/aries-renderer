@@ -166,6 +166,10 @@ void RenderGraph::output(NamedRT rt) {
     output(_view->rt_id(rt));
 }
 
+View *RenderGraph::view() const {
+    return _view;
+}
+
 std::vector<PassDependency> RenderGraphPass::src_dependencies() const {
     return dependencies;
 }

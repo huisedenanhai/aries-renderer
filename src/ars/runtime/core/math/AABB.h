@@ -35,6 +35,10 @@ template <typename T> struct AABB {
         return max - min;
     }
 
+    T radius() const {
+        return static_cast<T>(0.5) * glm::length(extent());
+    }
+
     // Inclusive
     bool contains(const Vec3 &p) const {
         for (int i = 0; i < 3; i++) {

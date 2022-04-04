@@ -71,6 +71,12 @@ void Scene::update_loaded_aabb() {
     }
 }
 
+CullingResult Scene::cull(const math::XformTRS<float> &xform,
+                          const Frustum &frustum_local) {
+    auto frustum_ws = transform_frustum(xform.matrix_no_scale(), frustum_local);
+    return cull(frustum_ws);
+}
+
 IScene *View::scene() {
     return _scene;
 }
@@ -89,6 +95,8 @@ IScene *DirectionalLight::scene() {
 
 DirectionalLight::DirectionalLight(Scene *scene) : _scene(scene) {
     _id = _scene->directional_lights.alloc();
+    _scene->directional_lights.set(
+        _id, std::make_unique<ShadowMap>(_scene->context(), 1024));
 }
 
 DirectionalLight::~DirectionalLight() {
@@ -222,6 +230,8 @@ void PointLight::set_user_data(uint64_t user_data) {
 
 std::vector<DrawRequest>
 CullingResult::gather_draw_requests(RenderPassID pass_id) const {
+    ARS_PROFILER_SAMPLE("Gather Draw Requests", 0xFF017413);
+
     std::vector<DrawRequest> requests{};
     requests.reserve(objects.size());
 

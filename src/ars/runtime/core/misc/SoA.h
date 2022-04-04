@@ -141,6 +141,11 @@ template <typename... Ts> struct SoA {
         return get_array<T>()[soa_index];
     }
 
+    template <typename T> void set(Id id, T &&v) {
+        using Type = std::remove_cv_t<std::remove_reference_t<T>>;
+        get<Type>(id) = std::forward<T>(v);
+    }
+
     template <typename Func> void for_each_id(Func &&func) const {
         auto count = size();
         for (size_t i = 0; i < count; i++) {

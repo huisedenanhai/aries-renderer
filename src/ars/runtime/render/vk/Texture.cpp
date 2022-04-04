@@ -1,5 +1,6 @@
 #include "Texture.h"
 #include "Context.h"
+#include "Profiler.h"
 #include "RenderGraph.h"
 #include <ars/runtime/core/Log.h>
 #include <cassert>
@@ -98,6 +99,8 @@ void Texture::generate_mipmap(CommandBuffer *cmd,
                               VkAccessFlags src_access_mask,
                               VkPipelineStageFlags dst_stage_mask,
                               VkAccessFlags dst_access_mask) {
+    ARS_PROFILER_SAMPLE_VK(cmd, "Generate Mipmap", 0xFF648123);
+
     VkFormatProperties format_properties;
     _context->instance()->GetPhysicalDeviceFormatProperties(
         _context->device()->physical_device(),

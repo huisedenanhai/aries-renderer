@@ -341,6 +341,7 @@ void PhysicalSky::update_transmittance_lut(RenderGraph &rg) {
             builder.compute_shader_write(_transmittance_lut);
         },
         [=](CommandBuffer *cmd) {
+            ARS_PROFILER_SAMPLE_VK(cmd, "Update Transmittance LUT", 0xFF692627);
             _transmittance_lut_pipeline->bind(cmd);
 
             DescriptorEncoder desc{};
@@ -379,6 +380,8 @@ void PhysicalSky::update_multi_scattering_lut(RenderGraph &rg) {
             builder.compute_shader_write(_multi_scattering_lut);
         },
         [=](CommandBuffer *cmd) {
+            ARS_PROFILER_SAMPLE_VK(
+                cmd, "Update Multi Scattering LUT", 0xFFA13701);
             _multi_scattering_lut_pipeline->bind(cmd);
 
             DescriptorEncoder desc{};
@@ -415,6 +418,8 @@ void PhysicalSky::render_background(View *view, RenderGraph &rg) {
             builder.compute_shader_read_write(NamedRT_LinearColor);
         },
         [=](CommandBuffer *cmd) {
+            ARS_PROFILER_SAMPLE_VK(
+                cmd, "Physical Sky Render Background", 0xFF682614);
             _apply_aerial_perspective_pipeline->bind(cmd);
 
             DescriptorEncoder desc{};
@@ -438,6 +443,8 @@ void PhysicalSky::update_aerial_perspective_lut(View *view, RenderGraph &rg) {
             builder.compute_shader_write(_aerial_perspective_lut);
         },
         [=](CommandBuffer *cmd) {
+            ARS_PROFILER_SAMPLE_VK(
+                cmd, "Update Aerial Perspective LUT", 0xFF999922);
             _aerial_perspective_lut_pipeline->bind(cmd);
 
             DescriptorEncoder desc{};
@@ -504,6 +511,7 @@ void PhysicalSky::ray_march_sky_view(View *view,
             }
         },
         [=](CommandBuffer *cmd) {
+            ARS_PROFILER_SAMPLE_VK(cmd, "Ray March Sky View", 0xFF184371);
             pipeline->bind(cmd);
 
             DescriptorEncoder desc{};
@@ -638,6 +646,8 @@ void SkyBase::render_background(View *view,
             }
         },
         [=](CommandBuffer *cmd) {
+            ARS_PROFILER_SAMPLE_VK(cmd, "Sky Render Background", 0xFF918443);
+
             auto background = view->effect_vk()->background_vk();
             auto final_rt = view->render_target(NamedRT_LinearColor);
             auto ctx = view->context();

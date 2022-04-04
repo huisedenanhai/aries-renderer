@@ -112,12 +112,19 @@ class CommandBuffer : public volk::CommandBuffer {
                       const char *function_name);
     void end_sample();
 
+    void begin_debug_label(const std::string &name, uint32_t color);
+    void end_debug_label();
+
     Context *context() const;
 
   private:
     Context *_context = nullptr;
     VkCommandPool _pool = VK_NULL_HANDLE;
 };
+
+#define ARS_DEBUG_LABEL_VK(cmd, name, color)                                   \
+    (cmd)->begin_debug_label(name, color);                                     \
+    ARS_DEFER_TAGGED(vk_debug_label, [&]() { (cmd)->end_debug_label(); })
 
 // A reference counted handle for resources.
 // The context uses the handle for resource usage tracking and delayed resource

@@ -157,6 +157,12 @@ class Context : public IContext {
                                 VulkanObjectType<T>::value);
     }
 
+    void begin_debug_label(CommandBuffer *cmd,
+                           const std::string &name,
+                           uint32_t color) const;
+
+    void end_debug_label(CommandBuffer *cmd) const;
+
   private:
     // This method init device if not
     std::tuple<GLFWwindow *, VkSurfaceKHR>

@@ -1053,4 +1053,28 @@ Handle<Texture> Context::default_texture_vk(DefaultTexture tex) {
 RendererContextData *Context::renderer_data() const {
     return _renderer_data.get();
 }
+
+void Context::begin_debug_label(CommandBuffer *cmd,
+                                const std::string &name,
+                                uint32_t color) const {
+    if (!s_vulkan->validation_enabled()) {
+        return;
+    }
+
+    VkDebugUtilsLabelEXT label{VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT};
+    label.pLabelName = name.c_str();
+    for (int i = 0; i < 4; i++) {
+        auto v = static_cast<float>((color >> (8 * i)) & 0xFF) / 255.0f;
+        label.color[i] = v;
+    }
+
+    instance()->CmdBeginDebugUtilsLabelEXT(cmd->command_buffer(), &label);
+}
+
+void Context::end_debug_label(CommandBuffer *cmd) const {
+    if (!s_vulkan->validation_enabled()) {
+        return;
+    }
+    instance()->CmdEndDebugUtilsLabelEXT(cmd->command_buffer());
+}
 } // namespace ars::render::vk

@@ -57,9 +57,11 @@ class Profiler {
 #ifdef ARS_PROFILER_ENABLED
 #define ARS_PROFILER_SAMPLE_VK_ONLY(cmd, name, color)                          \
     (cmd)->begin_sample(name, color, __FILE__, __LINE__, __PRETTY_FUNCTION__); \
-    ARS_DEFER_TAGGED(vk_sample, [&]() { (cmd)->end_sample(); })
+    ARS_DEFER_TAGGED(vk_sample, [&]() { (cmd)->end_sample(); });               \
+    ARS_DEBUG_LABEL_VK(cmd, name, color)
 #else
-#define ARS_PROFILER_SAMPLE_VK_ONLY(cmd, name, color)
+#define ARS_PROFILER_SAMPLE_VK_ONLY(cmd, name, color)                          \
+    ARS_DEBUG_LABEL_VK(cmd, name, color)
 #endif
 
 #define ARS_PROFILER_SAMPLE_VK(cmd, name, color)                               \

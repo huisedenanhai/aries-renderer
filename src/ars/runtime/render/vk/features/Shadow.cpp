@@ -1,5 +1,6 @@
 #include "Shadow.h"
 #include "../Context.h"
+#include "../Profiler.h"
 #include "../Scene.h"
 #include "Drawer.h"
 
@@ -49,6 +50,7 @@ void ShadowMap::render(const math::XformTRS<float> &xform,
                                VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT);
         },
         [=](CommandBuffer *cmd) {
+            ARS_PROFILER_SAMPLE_VK(cmd, "Shadow", 0xFF394139);
             auto ctx = view->context();
             auto rp =
                 ctx->renderer_data()->subpass(RenderPassID_Shadow).render_pass;

@@ -148,4 +148,12 @@ void CommandBuffer::end_sample() {
     }
 }
 
+void CommandBuffer::begin_debug_label(const std::string &name, uint32_t color) {
+    _context->begin_debug_label(this, name, color);
+}
+
+void CommandBuffer::end_debug_label() {
+    _context->end_debug_label(this);
+}
+
 } // namespace ars::render::vk

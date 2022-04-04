@@ -154,7 +154,7 @@ void RendererContextData::init_render_passes() {
     init_geometry_pass();
     init_shading_pass();
     init_overlay_pass();
-    init_shading_pass();
+    init_shadow_pass();
 
     _subpasses.resize(RenderPassID_Count);
 

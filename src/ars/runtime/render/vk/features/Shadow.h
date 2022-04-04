@@ -13,6 +13,8 @@ class ShadowMap {
                 RenderGraph &rg,
                 const CullingResult &culling_result);
 
+    Handle<Texture> texture() const;
+
   private:
     void update_camera(const math::XformTRS<float> &xform,
                        Scene *scene,

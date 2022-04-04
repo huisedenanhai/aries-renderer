@@ -103,4 +103,8 @@ void ShadowMap::update_camera(const math::XformTRS<float> &xform,
     _camera.z_far = z_far;
     _camera.y_mag = visible_radius;
 }
+
+Handle<Texture> ShadowMap::texture() const {
+    return _texture;
+}
 } // namespace ars::render::vk

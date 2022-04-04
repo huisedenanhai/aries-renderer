@@ -79,16 +79,18 @@ layout(set = 1, binding = 2) uniform sampler2D transmittance_lut;
 
 #endif
 
-vec3 get_transmittance(vec3 pos_ws, vec3 l_vs) {
+vec3 get_transmittance(ShadingPoint sp, vec3 l_vs) {
+    vec3 t = vec3(1.0);
+
 #if defined(LIT_SUN)
     vec3 l_ws = transform_vector(view.I_V, l_vs);
-    vec3 pos_planet = get_position_planet_coord(atmosphere, pos_ws);
+    vec3 pos_planet = get_position_planet_coord(atmosphere, sp.pos_ws);
     vec3 r_dir = normalize(pos_planet);
-    return get_transmittance(
+    t *= get_transmittance(
         atmosphere, transmittance_lut, length(pos_planet), dot(r_dir, l_ws));
 #endif
 
-    return vec3(1.0);
+    return t;
 }
 
 vec3 shade_metallic_roughness_pbr(GBuffer gbuffer, ShadingPoint sp) {
@@ -126,7 +128,7 @@ vec3 shade_metallic_roughness_pbr(GBuffer gbuffer, ShadingPoint sp) {
     vec3 lr, l_vs;
     radiance_to_point(light, pos_vs, lr, l_vs);
 
-    lr *= get_transmittance(sp.pos_ws, l_vs);
+    lr *= get_transmittance(sp, l_vs);
 
     float NoL = clamp01(dot(n_vs, l_vs));
     vec3 fr = specular_BRDF(brdf, n_vs, v_vs, l_vs);

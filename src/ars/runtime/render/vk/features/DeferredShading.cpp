@@ -79,6 +79,17 @@ void DeferredShading::render(RenderGraph &rg) {
             if (physical_sky != nullptr) {
                 frag_read(physical_sky->transmittance_lut());
             }
+
+            // Read all shadow maps
+            auto &dir_lights = _view->scene_vk()->directional_lights;
+            auto shadow_arr =
+                dir_lights.get_array<std::unique_ptr<ShadowMap>>();
+            for (int i = 0; i < dir_lights.size(); i++) {
+                auto sm = shadow_arr[i].get();
+                if (sm != nullptr) {
+                    frag_read(sm->texture());
+                }
+            }
         },
         [this](CommandBuffer *cmd) { execute(cmd); });
 }

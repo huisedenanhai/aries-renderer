@@ -1,7 +1,7 @@
 {
     "sources": [
         {
-            "file": "Draw.glsl",
+            "file": "MetallicRoughnessPBR.glsl",
             "multi_compile": [
                 {
                     "options": [
@@ -11,6 +11,7 @@
                     "can_off": false
                 }
             ]
-        }
+        },
+        "Depth.vert"
     ]
 }

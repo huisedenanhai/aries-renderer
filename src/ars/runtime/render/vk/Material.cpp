@@ -324,11 +324,16 @@ void MaterialFactory::init_metallic_roughness_template() {
     _metallic_roughness_template.property_layout =
         std::make_shared<MaterialPropertyBlockLayout>(_context, pbr);
 
+    // Geometry pass
     {
-        auto vert_shader = Shader::find_precompiled(
-            _context, "Draw/Draw.glsl", {"FRILL_SHADER_STAGE_VERT"});
-        auto frag_shader = Shader::find_precompiled(
-            _context, "Draw/Draw.glsl", {"FRILL_SHADER_STAGE_FRAG"});
+        auto vert_shader =
+            Shader::find_precompiled(_context,
+                                     "Draw/MetallicRoughnessPBR.glsl",
+                                     {"FRILL_SHADER_STAGE_VERT"});
+        auto frag_shader =
+            Shader::find_precompiled(_context,
+                                     "Draw/MetallicRoughnessPBR.glsl",
+                                     {"FRILL_SHADER_STAGE_FRAG"});
 
         auto &geom_pass =
             _metallic_roughness_template.passes[RenderPassID_Geometry];
@@ -336,6 +341,18 @@ void MaterialFactory::init_metallic_roughness_template() {
             _metallic_roughness_template.property_layout;
         geom_pass.pipeline = create_pipeline(
             RenderPassID_Geometry, {vert_shader.get(), frag_shader.get()});
+    }
+
+    // Shadow pass
+    {
+        auto vert_shader =
+            Shader::find_precompiled(_context, "Draw/Depth.vert");
+
+        auto &shadow_pass =
+            _metallic_roughness_template.passes[RenderPassID_Shadow];
+        shadow_pass.property_layout = nullptr;
+        shadow_pass.pipeline =
+            create_pipeline(RenderPassID_Shadow, {vert_shader.get()});
     }
 }
 

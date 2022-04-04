@@ -6,6 +6,10 @@
 namespace ars::render::vk {
 struct CullingResult;
 
+struct ShadowData {
+    glm::mat4 view_to_shadow_hclip;
+};
+
 class ShadowMap {
   public:
     ShadowMap(Context *context, uint32_t resolution);
@@ -14,6 +18,8 @@ class ShadowMap {
                 const CullingResult &culling_result);
 
     Handle<Texture> texture() const;
+
+    ShadowData data(View *view) const;
 
   private:
     void update_camera(const math::XformTRS<float> &xform,

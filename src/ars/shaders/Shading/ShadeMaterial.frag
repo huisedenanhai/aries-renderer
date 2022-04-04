@@ -65,6 +65,13 @@ layout(set = 1, binding = 0) uniform Param {
 layout(set = 1, binding = 0) uniform Param {
     DirectionalLight light;
 };
+
+layout(set = 2, binding = 0) uniform ShadowParam {
+    mat4 view_to_shadow_hclip;
+};
+
+layout(set = 2, binding = 1) uniform sampler2D shadow_map_tex;
+
 #endif
 
 #if defined(LIT_SUN)
@@ -88,6 +95,13 @@ vec3 get_transmittance(ShadingPoint sp, vec3 l_vs) {
     vec3 r_dir = normalize(pos_planet);
     t *= get_transmittance(
         atmosphere, transmittance_lut, length(pos_planet), dot(r_dir, l_ws));
+#endif
+
+#if defined(LIT_DIRECTIONAL_LIGHT) || defined(LIT_SUN)
+    vec4 pos_shadow_hclip = transform_position(view_to_shadow_hclip, sp.pos_vs);
+    vec3 pos_shadow_ss = transform_position_hclip_to_ss(pos_shadow_hclip);
+    float shadow01 = texture(shadow_map_tex, pos_shadow_ss.xy).r;
+    t *= shadow01 <= pos_shadow_ss.z ? 1.0 : 0.0;
 #endif
 
     return t;

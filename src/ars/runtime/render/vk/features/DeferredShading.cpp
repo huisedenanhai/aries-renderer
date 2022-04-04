@@ -218,6 +218,19 @@ PointLightData get_point_light_data(View *view, Scene::PointLights::Id id) {
     return data;
 }
 
+void set_up_directional_shadow(DescriptorEncoder &desc,
+                               View *view,
+                               Scene::DirectionalLights::Id id) {
+    auto sm = view->scene_vk()
+                  ->directional_lights.get<std::unique_ptr<ShadowMap>>(id)
+                  .get();
+    if (sm == nullptr) {
+        return;
+    }
+    desc.set_buffer_data(2, 0, sm->data(view));
+    desc.set_texture(2, 1, sm->texture().get());
+}
+
 } // namespace
 
 void DeferredShading::shade_directional_lights(CommandBuffer *cmd,
@@ -239,6 +252,7 @@ void DeferredShading::shade_directional_lights(CommandBuffer *cmd,
         auto data = get_directional_light_data(_view, id);
         DescriptorEncoder desc{};
         desc.set_buffer_data(1, 0, data);
+        set_up_directional_shadow(desc, _view, id);
         desc.commit(cmd, _lit_directional_light_pipeline.get());
 
         cmd->Draw(3, 1, 0, 0);
@@ -278,6 +292,7 @@ void DeferredShading::shade_sun(CommandBuffer *cmd, PhysicalSky *sky) {
     desc.set_buffer_data(1, 0, data);
     desc.set_buffer(1, 1, sky->atmosphere_settings_buffer().get());
     desc.set_texture(1, 2, sky->transmittance_lut().get());
+    set_up_directional_shadow(desc, _view, scene->sun_id);
     desc.commit(cmd, _lit_sun_pipeline.get());
 
     cmd->Draw(3, 1, 0, 0);

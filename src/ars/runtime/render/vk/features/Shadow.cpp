@@ -107,4 +107,16 @@ void ShadowMap::update_camera(const math::XformTRS<float> &xform,
 Handle<Texture> ShadowMap::texture() const {
     return _texture;
 }
+
+ShadowData ShadowMap::data(View *view) const {
+    ShadowData d{};
+    auto PS = _camera.projection_matrix(1.0f);
+    auto VS = glm::inverse(_xform.matrix_no_scale());
+    auto I_V = glm::inverse(view->view_matrix());
+
+    d.view_to_shadow_hclip = PS * VS * I_V;
+
+    return d;
+}
+
 } // namespace ars::render::vk

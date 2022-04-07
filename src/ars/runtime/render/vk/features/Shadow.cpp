@@ -84,33 +84,32 @@ void ShadowMap::render(const math::XformTRS<float> &xform,
 void ShadowMap::update_camera(const math::XformTRS<float> &xform,
                               Scene *scene,
                               const CullingResult &culling_result) {
-    auto scene_aabb = scene->loaded_aabb_ws();
-    auto visible_aabb = culling_result.visible_aabb_ws;
-    auto visible_center = visible_aabb.center();
-    auto visible_radius = visible_aabb.radius();
-    auto scene_center = scene_aabb.center();
-    auto scene_radius = scene_aabb.radius();
-    auto light_backward = -glm::normalize(xform.forward());
+    auto ls_to_ws = xform.matrix_no_scale();
+    auto ws_to_ls = glm::inverse(ls_to_ws);
+    auto scene_aabb_ls =
+        math::transform_aabb(ws_to_ls, scene->loaded_aabb_ws());
+    auto visible_aabb_ls =
+        math::transform_aabb(ws_to_ls, culling_result.visible_aabb_ws);
+    auto visible_center_ls = visible_aabb_ls.center();
+    auto visible_extent_ls = visible_aabb_ls.extent();
 
-    // Make near plane externally tangent to scene bounding sphere
+    // Make near plane fits scene aabb
     auto z_near = 0.01f;
-    auto light_from_visible_center =
-        scene_radius - glm::dot(light_backward, visible_center - scene_center) +
-        z_near;
+    auto light_z = scene_aabb_ls.max.z + z_near;
+    // Make far plane contains visible aabb
+    auto z_far = light_z - visible_aabb_ls.min.z;
 
-    auto light_center =
-        visible_center + light_backward * light_from_visible_center;
-
-    // Make far plane externally tangent to visible bounding sphere
-    auto z_far = light_from_visible_center + visible_radius;
+    auto light_center_ls =
+        glm::vec3(visible_center_ls.x, visible_center_ls.y, light_z);
+    auto light_center_ws = math::transform_position(ls_to_ws, light_center_ls);
 
     // Update fields
     _xform = xform;
-    _xform.set_translation(light_center);
+    _xform.set_translation(light_center_ws);
 
     _camera.z_near = z_near;
     _camera.z_far = z_far;
-    _camera.y_mag = visible_radius;
+    _camera.y_mag = std::max(visible_extent_ls.x, visible_extent_ls.y) * 0.5f;
 }
 
 Handle<Texture> ShadowMap::texture() const {

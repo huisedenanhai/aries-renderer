@@ -13,6 +13,7 @@ A very coarse plan for development.
         + [ ] Hair
         + [ ] Eye
     + [ ] Shadow
+        + [x] Vanilla Shadow Map
     + [ ] Shader Graph
     + [ ] Dynamic GI
     + [ ] GPU Driven Pipeline
@@ -30,6 +31,7 @@ A very coarse plan for development.
         + [x] Pass Culling
         + [ ] Virtual Resource Management
         + [ ] Scheduling
+    + [ ] Virtual Texture
 4. System
    > Build on top of existing rendering features
     + [ ] Particle

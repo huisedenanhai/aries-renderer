@@ -23,7 +23,7 @@ class ShadowMap {
 
   private:
     void update_camera(const math::XformTRS<float> &xform,
-                       Scene *scene,
+                       View *view,
                        const CullingResult &culling_result);
 
     Context *_context = nullptr;

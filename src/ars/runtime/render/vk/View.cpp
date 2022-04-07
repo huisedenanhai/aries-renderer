@@ -203,7 +203,7 @@ TextureCreateInfo View::rt_info(NamedRT name) const {
     }
     case NamedRT_HiZBuffer: {
         info = TextureCreateInfo::sampled_2d(
-            VK_FORMAT_R32_SFLOAT, 1, 1, MAX_MIP_LEVELS);
+            VK_FORMAT_R32G32_SFLOAT, 1, 1, MAX_MIP_LEVELS);
         info.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
         info.min_filter = VK_FILTER_NEAREST;
         info.mag_filter = VK_FILTER_NEAREST;

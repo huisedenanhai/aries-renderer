@@ -40,7 +40,7 @@ void ShadowMap::render(const math::XformTRS<float> &xform,
     auto view = rg.view();
     auto scene = view->scene_vk();
 
-    update_camera(xform, scene, culling_result);
+    update_camera(xform, view, culling_result);
 
     rg.add_pass(
         [&](RenderGraphPassBuilder &builder) {
@@ -82,8 +82,10 @@ void ShadowMap::render(const math::XformTRS<float> &xform,
 }
 
 void ShadowMap::update_camera(const math::XformTRS<float> &xform,
-                              Scene *scene,
+                              View *view,
                               const CullingResult &culling_result) {
+    auto scene = view->scene_vk();
+   
     auto ls_to_ws = xform.matrix_no_scale();
     auto ws_to_ls = glm::inverse(ls_to_ws);
     auto scene_aabb_ls =

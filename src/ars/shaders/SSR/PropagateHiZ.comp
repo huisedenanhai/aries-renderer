@@ -5,7 +5,7 @@
 layout(local_size_x = 32, local_size_y = 32) in;
 
 layout(set = 0, binding = 0) uniform sampler2D last_level;
-layout(set = 0, binding = 1, r32f) writeonly uniform image2D cur_level;
+layout(set = 0, binding = 1, rg32f) writeonly uniform image2D cur_level;
 
 void main() {
     ivec2 index = ivec2(gl_GlobalInvocationID.xy);
@@ -22,6 +22,8 @@ void main() {
 
     float max_depth01 =
         max_comp_value(textureGather(last_level, last_level_uv, 0));
+    float min_depth01 =
+        min_comp_value(textureGather(last_level, last_level_uv, 1));
 
     // For NPOT(none power of two) texture
     bool pad_width = (cur_level_size.x * 2 < last_level_size.x) &&
@@ -30,26 +32,44 @@ void main() {
                       (index.y + 1 == cur_level_size.y);
 
     if (pad_width) {
-        float pad_max_depth01 = max_comp_value(
-            textureGather(last_level,
-                          last_level_uv + vec2(last_level_grid_size.x, 0.0))
-                .yz);
-        max_depth01 = max(max_depth01, pad_max_depth01);
+#define PAD(m, c)                                                              \
+    float pad_##m##_depth01 = m##_comp_value(                                  \
+        textureGather(                                                         \
+            last_level, last_level_uv + vec2(last_level_grid_size.x, 0.0), c)  \
+            .yz);                                                              \
+    m##_depth01 = m(m##_depth01, pad_##m##_depth01)
+
+        PAD(max, 0);
+        PAD(min, 1);
+
+#undef PAD
     }
 
     if (pad_height) {
-        float pad_max_depth01 = max_comp_value(
-            textureGather(last_level,
-                          last_level_uv + vec2(0.0, last_level_grid_size.y))
-                .xy);
-        max_depth01 = max(max_depth01, pad_max_depth01);
+#define PAD(m, c)                                                              \
+    float pad_##m##_depth01 = m##_comp_value(                                  \
+        textureGather(                                                         \
+            last_level, last_level_uv + vec2(0.0, last_level_grid_size.y), c)  \
+            .xy);                                                              \
+    m##_depth01 = m(m##_depth01, pad_##m##_depth01)
+
+        PAD(max, 0);
+        PAD(min, 1);
+
+#undef PAD
     }
 
     if (pad_width && pad_height) {
-        float pad_max_depth01 =
-            texture(last_level, last_level_uv + 1.5 * last_level_grid_size).r;
-        max_depth01 = max(max_depth01, pad_max_depth01);
+#define PAD(m, c)                                                              \
+    float pad_##m##_depth01 =                                                  \
+        texture(last_level, last_level_uv + 1.5 * last_level_grid_size).c;     \
+    m##_depth01 = m(m##_depth01, pad_##m##_depth01)
+
+        PAD(max, r);
+        PAD(min, g);
+
+#undef PAD
     }
 
-    imageStore(cur_level, index, vec4(max_depth01, 0, 0, 0));
+    imageStore(cur_level, index, vec4(max_depth01, min_depth01, 0, 0));
 }

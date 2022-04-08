@@ -41,6 +41,8 @@ class Shadow {
     void read_back_hiz(RenderGraph &rg);
 
   private:
+    void calculate_sample_distribution();
+
     View *_view = nullptr;
     Handle<Buffer> _last_frame_hiz_data{};
     // Width and height in pixels

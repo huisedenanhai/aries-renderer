@@ -3,12 +3,14 @@
 #include "../Profiler.h"
 #include "../Scene.h"
 #include "Drawer.h"
-#include "ars/runtime/core/Log.h"
+#include <ars/runtime/core/Log.h>
 
 namespace ars::render::vk {
 Shadow::Shadow(View *view) : _view(view) {}
 
 void Shadow::render(RenderGraph &rg, const CullingResult &culling_result) {
+    calculate_sample_distribution();
+
     auto &dir_lights = _view->scene_vk()->directional_lights;
     auto light_cnt = dir_lights.size();
     auto shadow_maps = dir_lights.get_array<std::unique_ptr<ShadowMap>>();
@@ -70,6 +72,30 @@ void Shadow::read_back_hiz(RenderGraph &rg) {
                                    1,
                                    &region);
         });
+}
+
+void Shadow::calculate_sample_distribution() {
+    ARS_PROFILER_SAMPLE("Calculate Depth Sample Dist", 0xFF999411);
+    if (_last_frame_hiz_data == nullptr) {
+        return;
+    }
+
+    _last_frame_hiz_data->map_once([&](void *ptr) {
+        auto hiz_pixels = reinterpret_cast<glm::vec2 *>(ptr);
+        auto min_depth01 = 1.0f;
+        auto max_depth01 = 0.0f;
+        ARS_LOG_INFO("HiZ size {}x{}", _hiz_buffer_width, _hiz_buffer_height);
+        for (int y = 0; y < _hiz_buffer_height; y++) {
+            for (int x = 0; x < _hiz_buffer_width; x++) {
+                auto i = y * _hiz_buffer_width + x;
+                auto depth01 = hiz_pixels[i];
+                assert(depth01.x >= depth01.y);
+                max_depth01 = std::max(max_depth01, depth01.x);
+                min_depth01 = std::min(min_depth01, depth01.y);
+            }
+        }
+        ARS_LOG_INFO("Depth min {}, max {}", min_depth01, max_depth01);
+    });
 }
 
 ShadowMap::ShadowMap(Context *context, uint32_t resolution)

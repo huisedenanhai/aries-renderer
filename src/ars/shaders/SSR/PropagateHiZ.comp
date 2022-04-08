@@ -11,7 +11,14 @@ float reduce_max(float a, float b) {
     return max(a, b);
 }
 
+// HiZ encodes min depth that is not background
 float reduce_min(float a, float b) {
+    if (a == 0) {
+        return b;
+    }
+    if (b == 0) {
+        return a;
+    }
     return min(a, b);
 }
 

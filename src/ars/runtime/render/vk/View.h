@@ -28,7 +28,7 @@ enum NamedRT {
     NamedRT_PostProcessing0,
     NamedRT_PostProcessing1,
 
-    // Stores max value in mip levels
+    // Stores max value in r channel, min value WITHOUT background in g channel
     NamedRT_HiZBuffer,
     NamedRT_Reflection,
     // Auto swapped with NamedRT_Reflection on frame end

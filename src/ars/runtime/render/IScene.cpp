@@ -218,6 +218,11 @@ Frustum transform_frustum(const glm::mat4 &mat, const Frustum &frustum) {
     return f;
 }
 
+float depth01_to_linear_z(const glm::mat4 &I_P, float depth01) {
+    auto pos = math::transform_position(I_P, {0.0f, 0.0f, depth01});
+    return -pos.z / pos.w;
+}
+
 bool Frustum::culled(const math::AABB<float> &aabb) const {
     // Conservative culling, some aabb that not intersect with frustum may not
     // be culled. But those culled are definitely out of view.

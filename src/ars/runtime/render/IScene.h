@@ -149,6 +149,9 @@ struct CameraData : std::variant<Perspective, Orthographic> {
     [[nodiscard]] Frustum frustum(float w_div_h) const;
 };
 
+// Returns positive value for depth01 in range [0, 1]
+float depth01_to_linear_z(const glm::mat4 &I_P, float depth01);
+
 class IOverlay {
   public:
     virtual ~IOverlay() = default;

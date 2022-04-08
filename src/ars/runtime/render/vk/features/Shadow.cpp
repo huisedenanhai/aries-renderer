@@ -84,17 +84,36 @@ void Shadow::calculate_sample_distribution() {
         auto hiz_pixels = reinterpret_cast<glm::vec2 *>(ptr);
         auto min_depth01 = 1.0f;
         auto max_depth01 = 0.0f;
-        ARS_LOG_INFO("HiZ size {}x{}", _hiz_buffer_width, _hiz_buffer_height);
         for (int y = 0; y < _hiz_buffer_height; y++) {
             for (int x = 0; x < _hiz_buffer_width; x++) {
                 auto i = y * _hiz_buffer_width + x;
                 auto depth01 = hiz_pixels[i];
                 assert(depth01.x >= depth01.y);
                 max_depth01 = std::max(max_depth01, depth01.x);
-                min_depth01 = std::min(min_depth01, depth01.y);
+                if (depth01.y != 0) {
+                    min_depth01 = std::min(min_depth01, depth01.y);
+                }
             }
         }
-        ARS_LOG_INFO("Depth min {}, max {}", min_depth01, max_depth01);
+        // At this point, min_depth01 == 1.0f when
+        // 1. Nothing is rendered on screen
+        // 2. All fragments are snapped to the near plane
+        if (min_depth01 == 1.0f && max_depth01 < min_depth01) {
+            min_depth01 = 0.0f;
+        }
+        assert(min_depth01 <= max_depth01);
+
+        auto last_frame_P = _view->last_frame_projection_matrix();
+        auto last_frame_I_P = glm::inverse(last_frame_P);
+        auto z_near = depth01_to_linear_z(last_frame_I_P, max_depth01);
+        auto z_far = depth01_to_linear_z(last_frame_I_P, min_depth01);
+        ARS_LOG_INFO("HiZ size {}x{}, Depth01 [{}, {}], Depth [{}, {}]",
+                     _hiz_buffer_width,
+                     _hiz_buffer_height,
+                     min_depth01,
+                     max_depth01,
+                     z_near,
+                     z_far);
     });
 }
 

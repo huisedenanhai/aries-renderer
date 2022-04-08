@@ -40,6 +40,7 @@ NamedRT Renderer::render(RenderGraph &rg, const RenderOptions &options) {
     _generate_hierarchy_z->render(rg);
     _screen_space_reflection->render(rg);
     _deferred_shading->render(rg);
+    _shadow->read_back_hiz(rg);
     sky->render_background(_view, rg);
 
     Texture::generate_mipmap(_view->render_target(NamedRT_LinearColor), rg);

@@ -3,6 +3,7 @@
 #include "../Profiler.h"
 #include "../Scene.h"
 #include "Drawer.h"
+#include "ars/runtime/core/Log.h"
 
 namespace ars::render::vk {
 Shadow::Shadow(View *view) : _view(view) {}
@@ -18,6 +19,57 @@ void Shadow::render(RenderGraph &rg, const CullingResult &culling_result) {
             sm->render(xform_arr[i], rg, culling_result);
         }
     }
+}
+
+void Shadow::read_back_hiz(RenderGraph &rg) {
+    rg.add_pass(
+        [&](RenderGraphPassBuilder &builder) {
+            builder.access(NamedRT_HiZBuffer,
+                           VK_ACCESS_TRANSFER_READ_BIT,
+                           VK_PIPELINE_STAGE_TRANSFER_BIT,
+                           false,
+                           VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+            builder.has_side_effect(true);
+        },
+        [=](CommandBuffer *cmd) {
+            ARS_PROFILER_SAMPLE_VK(cmd, "Read Back HiZ", 0xFF17B13A);
+            auto hiz = _view->render_target(NamedRT_HiZBuffer);
+            auto hiz_info = hiz->info();
+            // Calculate level size
+            _hiz_buffer_width = std::max(
+                1u, hiz_info.extent.width >> _hiz_buffer_capture_level);
+            _hiz_buffer_height = std::max(
+                1u, hiz_info.extent.height >> _hiz_buffer_capture_level);
+            auto level =
+                std::min(hiz_info.mip_levels - 1, _hiz_buffer_capture_level);
+
+            // Reserve buffer space
+            auto buffer_size_in_bytes =
+                _hiz_buffer_width * _hiz_buffer_height * 2 * sizeof(float);
+            if (_last_frame_hiz_data == nullptr ||
+                _last_frame_hiz_data->size() < buffer_size_in_bytes) {
+                _last_frame_hiz_data = _view->context()->create_buffer(
+                    buffer_size_in_bytes,
+                    VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                    VMA_MEMORY_USAGE_GPU_TO_CPU);
+            }
+
+            // Do copy
+            VkBufferImageCopy region{};
+            region.imageExtent.width = _hiz_buffer_width;
+            region.imageExtent.height = _hiz_buffer_height;
+            region.imageExtent.depth = 1;
+            region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            region.imageSubresource.baseArrayLayer = 0;
+            region.imageSubresource.layerCount = 1;
+            region.imageSubresource.mipLevel = level;
+
+            cmd->CopyImageToBuffer(hiz->image(),
+                                   hiz->layout(),
+                                   _last_frame_hiz_data->buffer(),
+                                   1,
+                                   &region);
+        });
 }
 
 ShadowMap::ShadowMap(Context *context, uint32_t resolution)
@@ -85,7 +137,7 @@ void ShadowMap::update_camera(const math::XformTRS<float> &xform,
                               View *view,
                               const CullingResult &culling_result) {
     auto scene = view->scene_vk();
-   
+
     auto ls_to_ws = xform.matrix_no_scale();
     auto ws_to_ls = glm::inverse(ls_to_ws);
     auto scene_aabb_ls =

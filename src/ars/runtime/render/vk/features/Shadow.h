@@ -38,8 +38,14 @@ class Shadow {
   public:
     explicit Shadow(View *view);
     void render(RenderGraph &rg, const CullingResult &culling_result);
+    void read_back_hiz(RenderGraph &rg);
 
   private:
     View *_view = nullptr;
+    Handle<Buffer> _last_frame_hiz_data{};
+    // Width and height in pixels
+    uint32_t _hiz_buffer_width = 0;
+    uint32_t _hiz_buffer_height = 0;
+    uint32_t _hiz_buffer_capture_level = 6; // Split screen into 64x64 block
 };
 } // namespace ars::render::vk

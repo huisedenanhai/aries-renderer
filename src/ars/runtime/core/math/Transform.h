@@ -119,4 +119,14 @@ glm::vec<4, T> transform_plane(const glm::mat<4, 4, T> &mat,
     return plane * glm::inverse(mat);
 }
 
+// Form a plane based on 3 vertices. Vertices are right hand ordered.
+template <typename T>
+glm::vec<4, T> calculate_plane_from_points(const glm::vec<3, T> &v0,
+                                           const glm::vec<3, T> &v1,
+                                           const glm::vec<3, T> &v2) {
+    auto n = glm::normalize(glm::cross(v1 - v0, v2 - v1));
+    auto c = -glm::dot(n, v0);
+    return {n, c};
+}
+
 } // namespace ars::math

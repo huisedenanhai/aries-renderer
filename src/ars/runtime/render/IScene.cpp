@@ -78,17 +78,6 @@ Frustum Perspective::frustum(float w_div_h) const {
     float tan_half_fov_x = tan_half_fov_y * w_div_h;
 
     Frustum f{};
-    f.planes[0] = {1.0f, 0.0f, tan_half_fov_x, 0.0f};
-    f.planes[1] = {-1.0f, 0.0f, tan_half_fov_x, 0.0f};
-    f.planes[2] = {0.0f, 1.0f, tan_half_fov_y, 0.0f};
-    f.planes[3] = {0.0f, -1.0f, tan_half_fov_y, 0.0f};
-    f.planes[4] = {0.0f, 0.0f, 1.0f, z_near};
-    f.planes[5] = {0.0f, 0.0f, -1.0f, -z_far};
-    if (z_far == 0.0f) {
-        // infinite z far, the far plane rejects nothing
-        f.planes[5] = {};
-    }
-
     f.vertices[0] = glm::vec3{-tan_half_fov_x, tan_half_fov_y, -1.0f} * z_near;
     f.vertices[1] = glm::vec3{tan_half_fov_x, tan_half_fov_y, -1.0f} * z_near;
     f.vertices[2] = glm::vec3{tan_half_fov_x, -tan_half_fov_y, -1.0f} * z_near;
@@ -97,6 +86,9 @@ Frustum Perspective::frustum(float w_div_h) const {
     f.vertices[5] = glm::vec3{tan_half_fov_x, tan_half_fov_y, -1.0f} * z_far;
     f.vertices[6] = glm::vec3{tan_half_fov_x, -tan_half_fov_y, -1.0f} * z_far;
     f.vertices[7] = glm::vec3{-tan_half_fov_x, -tan_half_fov_y, -1.0f} * z_far;
+
+    f.update_planes_by_vertices();
+
     return f;
 }
 
@@ -108,13 +100,6 @@ glm::mat4 Orthographic::projection_matrix(float w_div_h) const {
 Frustum Orthographic::frustum(float w_div_h) const {
     auto x_mag = y_mag * w_div_h;
     Frustum f{};
-    f.planes[0] = {1.0f, 0.0f, 0.0f, -x_mag};
-    f.planes[1] = {-1.0f, 0.0f, 0.0f, -x_mag};
-    f.planes[2] = {0.0f, 1.0f, 0.0f, -y_mag};
-    f.planes[3] = {0.0f, -1.0f, 0.0f, -y_mag};
-    f.planes[4] = {0.0f, 0.0f, 1.0f, z_near};
-    f.planes[5] = {0.0f, 0.0f, -1.0f, -z_far};
-
     f.vertices[0] = {-x_mag, y_mag, -z_near};
     f.vertices[1] = {x_mag, y_mag, -z_near};
     f.vertices[2] = {x_mag, -y_mag, -z_near};
@@ -123,6 +108,9 @@ Frustum Orthographic::frustum(float w_div_h) const {
     f.vertices[5] = {x_mag, y_mag, -z_far};
     f.vertices[6] = {x_mag, -y_mag, -z_far};
     f.vertices[7] = {-x_mag, -y_mag, -z_far};
+
+    f.update_planes_by_vertices();
+
     return f;
 }
 
@@ -253,5 +241,57 @@ std::array<uint32_t, 24> Frustum::edges() {
         0, 4, 1, 5, 2, 6, 3, 7, // connections
         4, 5, 5, 6, 6, 7, 7, 4, // far plane
     };
+}
+
+Frustum Frustum::crop(const math::AABB<float> &proportion) const {
+    glm::vec3 coords[8] = {
+        {0.0f, 0.0f, 0.0f},
+        {1.0f, 0.0f, 0.0f},
+        {1.0f, 1.0f, 0.0f},
+        {0.0f, 1.0f, 0.0f},
+        {0.0f, 0.0f, 1.0f},
+        {1.0f, 0.0f, 1.0f},
+        {1.0f, 1.0f, 1.0f},
+        {0.0f, 1.0f, 1.0f},
+    };
+
+    Frustum f{};
+    for (int i = 0; i < 8; i++) {
+        f.vertices[i] = lerp(proportion.lerp(coords[i]));
+    }
+    f.update_planes_by_vertices();
+
+    return f;
+}
+
+void Frustum::update_planes_by_vertices() {
+    auto form_plane = [&](uint32_t v0, uint32_t v1, uint32_t v2) {
+        return math::calculate_plane_from_points(
+            vertices[v0], vertices[v1], vertices[v2]);
+    };
+
+    // +X
+    planes[0] = form_plane(1, 2, 5);
+    // -X
+    planes[1] = form_plane(3, 0, 4);
+    // +Y
+    planes[2] = form_plane(0, 1, 5);
+    // -Y
+    planes[3] = form_plane(2, 3, 7);
+    // +Z
+    planes[4] = form_plane(2, 1, 0);
+    // -Z
+    planes[5] = form_plane(7, 4, 5);
+}
+
+glm::vec3 Frustum::lerp(const glm::vec3 &p) const {
+    auto p_near = glm::mix(glm::mix(vertices[0], vertices[1], p.x),
+                           glm::mix(vertices[3], vertices[2], p.x),
+                           p.y);
+    auto p_far = glm::mix(glm::mix(vertices[4], vertices[5], p.x),
+                          glm::mix(vertices[7], vertices[6], p.x),
+                          p.y);
+
+    return glm::mix(p_near, p_far, p.z);
 }
 } // namespace ars::render

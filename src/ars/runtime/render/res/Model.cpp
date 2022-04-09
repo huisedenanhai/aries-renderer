@@ -350,6 +350,13 @@ void load_cameras(const std::filesystem::path &path,
             pers.y_fov = static_cast<float>(gltf_pers.yfov);
             pers.z_near = static_cast<float>(gltf_pers.znear);
             pers.z_far = static_cast<float>(gltf_pers.zfar);
+            if (pers.z_far == 0.0f) {
+                pers.z_far = 10000.0f;
+                std::stringstream ss;
+                ss << "Infinite Z Far is not supported, use default z far "
+                   << pers.z_far;
+                gltf_warn(path, ss.str());
+            }
 
             camera.data = pers;
         } else if (gltf_camera.type == "orthographic") {

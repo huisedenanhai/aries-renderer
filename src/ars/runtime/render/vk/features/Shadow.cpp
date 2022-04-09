@@ -9,7 +9,7 @@ namespace ars::render::vk {
 Shadow::Shadow(View *view) : _view(view) {}
 
 void Shadow::render(RenderGraph &rg, const CullingResult &culling_result) {
-    calculate_sample_distribution();
+    auto sample_dist = calculate_sample_distribution();
 
     auto &dir_lights = _view->scene_vk()->directional_lights;
     auto light_cnt = dir_lights.size();
@@ -18,7 +18,7 @@ void Shadow::render(RenderGraph &rg, const CullingResult &culling_result) {
     for (int i = 0; i < light_cnt; i++) {
         auto sm = shadow_maps[i].get();
         if (sm != nullptr) {
-            sm->render(xform_arr[i], rg, culling_result);
+            sm->render(xform_arr[i], rg, culling_result, sample_dist);
         }
     }
 }
@@ -74,11 +74,13 @@ void Shadow::read_back_hiz(RenderGraph &rg) {
         });
 }
 
-void Shadow::calculate_sample_distribution() {
+SampleDistribution Shadow::calculate_sample_distribution() {
     ARS_PROFILER_SAMPLE("Calculate Depth Sample Dist", 0xFF999411);
     if (_last_frame_hiz_data == nullptr) {
-        return;
+        return {};
     }
+
+    SampleDistribution dist{};
 
     _last_frame_hiz_data->map_once([&](void *ptr) {
         auto hiz_pixels = reinterpret_cast<glm::vec2 *>(ptr);
@@ -105,16 +107,11 @@ void Shadow::calculate_sample_distribution() {
 
         auto last_frame_P = _view->last_frame_projection_matrix();
         auto last_frame_I_P = glm::inverse(last_frame_P);
-        auto z_near = depth01_to_linear_z(last_frame_I_P, max_depth01);
-        auto z_far = depth01_to_linear_z(last_frame_I_P, min_depth01);
-        ARS_LOG_INFO("HiZ size {}x{}, Depth01 [{}, {}], Depth [{}, {}]",
-                     _hiz_buffer_width,
-                     _hiz_buffer_height,
-                     min_depth01,
-                     max_depth01,
-                     z_near,
-                     z_far);
+        dist.z_near = depth01_to_linear_z(last_frame_I_P, max_depth01);
+        dist.z_far = depth01_to_linear_z(last_frame_I_P, min_depth01);
     });
+
+    return dist;
 }
 
 ShadowMap::ShadowMap(Context *context, uint32_t resolution)
@@ -133,11 +130,12 @@ ShadowMap::ShadowMap(Context *context, uint32_t resolution)
 
 void ShadowMap::render(const math::XformTRS<float> &xform,
                        RenderGraph &rg,
-                       const CullingResult &culling_result) {
+                       const CullingResult &culling_result,
+                       const SampleDistribution &sample_dist) {
     auto view = rg.view();
     auto scene = view->scene_vk();
 
-    update_camera(xform, view, culling_result);
+    update_camera(xform, view, culling_result, sample_dist);
 
     rg.add_pass(
         [&](RenderGraphPassBuilder &builder) {
@@ -180,7 +178,8 @@ void ShadowMap::render(const math::XformTRS<float> &xform,
 
 void ShadowMap::update_camera(const math::XformTRS<float> &xform,
                               View *view,
-                              const CullingResult &culling_result) {
+                              const CullingResult &culling_result,
+                              const SampleDistribution &sample_dist) {
     auto scene = view->scene_vk();
 
     auto ls_to_ws = xform.matrix_no_scale();

@@ -99,6 +99,7 @@ struct Frustum {
     // n points out from frustum. If dot(n, p) + c > 0, point p is certainly
     // not contained by the frustum.
     // n may be not normalized.
+    // Planes are ordered as +X, -X, +Y, -Y, +Z, -Z
     glm::vec4 planes[6]{};
     // The first 4 vertices are corners of near plane, the last 4 vertices are
     // corners of far plane.
@@ -111,13 +112,22 @@ struct Frustum {
 
     bool culled(const math::AABB<float> &aabb) const;
     static std::array<uint32_t, 24> edges();
+    // Get a vertex based on normalized coord.
+    // p.z == 0.0f return points on the near plane, p.z == 1.0f return points on
+    // the far plane.
+    // p.xy == 0 return the upper left corner, p.xy == 1.0 return lower right
+    // corner.
+    // Vertices are interpolated linearly
+    glm::vec3 lerp(const glm::vec3 &p) const;
+    Frustum crop(const math::AABB<float> &proportion) const;
+    void update_planes_by_vertices();
 };
 
 Frustum transform_frustum(const glm::mat4 &mat, const Frustum &frustum);
 
 struct Perspective {
     float y_fov = glm::radians(45.0f);
-    float z_far = 100.0f; // z_far == 0 means infinity z_far
+    float z_far = 100.0f; // z_far > 0
     float z_near = 0.1f;  // must > 0
 
     [[nodiscard]] glm::mat4 projection_matrix(float w_div_h) const;

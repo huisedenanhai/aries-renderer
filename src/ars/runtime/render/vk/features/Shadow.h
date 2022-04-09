@@ -10,12 +10,18 @@ struct ShadowData {
     glm::mat4 view_to_shadow_hclip;
 };
 
+struct SampleDistribution {
+    float z_near = 0.0f;
+    float z_far = 0.0f;
+};
+
 class ShadowMap {
   public:
     ShadowMap(Context *context, uint32_t resolution);
     void render(const math::XformTRS<float> &xform,
                 RenderGraph &rg,
-                const CullingResult &culling_result);
+                const CullingResult &culling_result,
+                const SampleDistribution &sample_dist);
 
     Handle<Texture> texture() const;
 
@@ -24,7 +30,8 @@ class ShadowMap {
   private:
     void update_camera(const math::XformTRS<float> &xform,
                        View *view,
-                       const CullingResult &culling_result);
+                       const CullingResult &culling_result,
+                       const SampleDistribution &sample_dist);
 
     Context *_context = nullptr;
     Handle<Texture> _texture{};
@@ -41,7 +48,7 @@ class Shadow {
     void read_back_hiz(RenderGraph &rg);
 
   private:
-    void calculate_sample_distribution();
+    SampleDistribution calculate_sample_distribution();
 
     View *_view = nullptr;
     Handle<Buffer> _last_frame_hiz_data{};

@@ -186,8 +186,24 @@ void ShadowMap::update_camera(const math::XformTRS<float> &xform,
     auto ws_to_ls = glm::inverse(ls_to_ws);
     auto scene_aabb_ls =
         math::transform_aabb(ws_to_ls, scene->loaded_aabb_ws());
-    auto visible_aabb_ls =
-        math::transform_aabb(ws_to_ls, culling_result.visible_aabb_ws);
+
+    auto frustum_vs = view->camera().frustum(view->size().w_div_h());
+    auto frustum_ws =
+        transform_frustum(view->xform().matrix_no_scale(), frustum_vs);
+    auto cam_z_near = view->camera().z_near();
+    auto cam_z_far = view->camera().z_far();
+    auto effective_frustum_ws = frustum_ws.crop({
+        {0.0f,
+         0.0f,
+         math::inverse_lerp(cam_z_near, cam_z_far, sample_dist.z_near)},
+        {1.0f,
+         1.0f,
+         math::inverse_lerp(cam_z_near, cam_z_far, sample_dist.z_far)},
+    });
+    auto effective_frustum_ls =
+        transform_frustum(ws_to_ls, effective_frustum_ws);
+
+    auto visible_aabb_ls = effective_frustum_ls.aabb();
     auto visible_center_ls = visible_aabb_ls.center();
     auto visible_extent_ls = visible_aabb_ls.extent();
 

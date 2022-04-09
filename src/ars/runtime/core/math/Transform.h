@@ -129,4 +129,8 @@ glm::vec<4, T> calculate_plane_from_points(const glm::vec<3, T> &v0,
     return {n, c};
 }
 
+inline float inverse_lerp(float a, float b, float v) {
+    return (v - a) / (b - a);
+}
+
 } // namespace ars::math

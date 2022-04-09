@@ -121,6 +121,7 @@ struct Frustum {
     glm::vec3 lerp(const glm::vec3 &p) const;
     Frustum crop(const math::AABB<float> &proportion) const;
     void update_planes_by_vertices();
+    math::AABB<float> aabb() const;
 };
 
 Frustum transform_frustum(const glm::mat4 &mat, const Frustum &frustum);

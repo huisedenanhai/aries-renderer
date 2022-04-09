@@ -294,4 +294,9 @@ glm::vec3 Frustum::lerp(const glm::vec3 &p) const {
 
     return glm::mix(p_near, p_far, p.z);
 }
+
+math::AABB<float> Frustum::aabb() const {
+    return math::AABB<float>::from_points(std::begin(vertices),
+                                          std::end(vertices));
+}
 } // namespace ars::render

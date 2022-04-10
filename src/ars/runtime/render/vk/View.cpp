@@ -24,7 +24,7 @@ VkExtent2D translate(const Extent2D &size) {
 void View::render(const RenderOptions &options) {
     ARS_PROFILER_SAMPLE("Render View", 0xFFAA6611);
     auto ctx = context();
-    _rt_manager->update(translate(_size));
+    _rt_manager->update(translate(_data.size));
 
     update_transform_buffer();
 
@@ -42,15 +42,16 @@ void View::render(const RenderOptions &options) {
     // Finalize render
     update_color_tex_adapter(final_rt);
     flip_history_buffer();
-    _last_frame_projection_matrix = projection_matrix();
-    _last_frame_xform = _xform;
+    _last_frame_data = _data;
 }
 
 ITexture *View::get_color_texture() {
     return _color_tex_adapter.get();
 }
 
-View::View(Scene *scene, const Extent2D &size) : _scene(scene), _size(size) {
+View::View(Scene *scene, const Extent2D &size) : _scene(scene) {
+    _data.size = size;
+
     _rt_manager = std::make_unique<RenderTargetManager>(scene->context());
     _rt_manager->update(translate(size));
 
@@ -67,27 +68,27 @@ View::View(Scene *scene, const Extent2D &size) : _scene(scene), _size(size) {
 }
 
 math::XformTRS<float> View::xform() {
-    return _xform;
+    return _data.xform;
 }
 
 void View::set_xform(const math::XformTRS<float> &xform) {
-    _xform = xform;
+    _data.xform = xform;
 }
 
 void View::set_camera(const CameraData &camera) {
-    _camera = camera;
+    _data.camera = camera;
 }
 
 CameraData View::camera() {
-    return _camera;
+    return _data.camera;
 }
 
 Extent2D View::size() {
-    return _size;
+    return _data.size;
 }
 
 void View::set_size(const Extent2D &size) {
-    _size = size;
+    _data.size = size;
 }
 
 void View::update_color_tex_adapter(NamedRT rt) {
@@ -110,8 +111,8 @@ void View::update_color_tex_adapter(NamedRT rt) {
 TextureInfo View::color_tex_info() const {
     TextureInfo info{};
     info.format = Format::B10G11R11_UFLOAT_PACK32;
-    info.width = _size.width;
-    info.height = _size.height;
+    info.width = _data.size.width;
+    info.height = _data.size.height;
     info.mip_levels = 1;
     info.mipmap_mode = MipmapMode::Linear;
     return info;
@@ -301,15 +302,19 @@ void View::flip_history_buffer() {
               _rt_ids[NamedRT_LinearColorHistory]);
 }
 
-glm::mat4 View::last_frame_projection_matrix() {
-    return _last_frame_projection_matrix.value_or(projection_matrix());
+glm::mat4 ViewData::projection_matrix() const {
+    auto w_div_h = size.w_div_h();
+    return camera.projection_matrix(w_div_h);
 }
 
-glm::mat4 View::last_frame_view_matrix() {
-    if (_last_frame_xform.has_value()) {
-        return glm::inverse(_last_frame_xform->matrix_no_scale());
-    }
-    return view_matrix();
+glm::mat4 ViewData::view_matrix() const {
+    return glm::inverse(xform.matrix_no_scale());
+}
+
+Frustum ViewData::frustum_ws() const {
+    auto frustum_vs = camera.frustum(size.w_div_h());
+    auto frustum_ws = transform_frustum(xform.matrix_no_scale(), frustum_vs);
+    return frustum_ws;
 }
 
 Effect *View::effect_vk() {
@@ -327,12 +332,20 @@ void View::update_transform_buffer() {
     t.P = projection_matrix();
     t.I_V = glm::inverse(t.V);
     t.I_P = glm::inverse(t.P);
-    t.reproject_IV_VP =
-        last_frame_projection_matrix() * last_frame_view_matrix() * t.I_V;
+    t.reproject_IV_VP = last_frame_data().projection_matrix() *
+                        last_frame_data().view_matrix() * t.I_V;
     t.z_near = camera().z_near();
     t.z_far = camera().z_far();
 
     _transform_buffer->set_data(t);
+}
+
+ViewData View::data() const {
+    return _data;
+}
+
+ViewData View::last_frame_data() const {
+    return _last_frame_data.value_or(_data);
 }
 
 ViewTransform ViewTransform::from_V_P(const glm::mat4 &V, const glm::mat4 &P) {

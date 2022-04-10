@@ -56,6 +56,16 @@ struct ViewTransform {
     static ViewTransform from_V_P(const glm::mat4 &V, const glm::mat4 &P);
 };
 
+struct ViewData {
+    math::XformTRS<float> xform{};
+    CameraData camera = Perspective{};
+    Extent2D size{};
+
+    glm::mat4 projection_matrix() const;
+    glm::mat4 view_matrix() const;
+    Frustum frustum_ws() const;
+};
+
 class View : public IView {
   public:
     View(Scene *scene, const Extent2D &size);
@@ -99,8 +109,8 @@ class View : public IView {
 
     [[nodiscard]] Drawer *drawer() const;
 
-    [[nodiscard]] glm::mat4 last_frame_projection_matrix();
-    [[nodiscard]] glm::mat4 last_frame_view_matrix();
+    [[nodiscard]] ViewData data() const;
+    [[nodiscard]] ViewData last_frame_data() const;
 
     [[nodiscard]] Handle<Buffer> transform_buffer();
 
@@ -112,9 +122,8 @@ class View : public IView {
     [[nodiscard]] TextureInfo color_tex_info() const;
 
     Scene *_scene = nullptr;
-    math::XformTRS<float> _xform{};
-    CameraData _camera = Perspective{};
-    Extent2D _size{};
+    ViewData _data{};
+    std::optional<ViewData> _last_frame_data{};
 
     std::unique_ptr<RenderTargetManager> _rt_manager{};
     RenderTargetId _rt_ids[NamedRT_Count]{};
@@ -125,9 +134,6 @@ class View : public IView {
     std::unique_ptr<OverlayRenderer> _overlay_renderer{};
     std::unique_ptr<Drawer> _drawer{};
     std::unique_ptr<Effect> _effect{};
-
-    std::optional<glm::mat4> _last_frame_projection_matrix;
-    std::optional<math::XformTRS<float>> _last_frame_xform{};
 
     Handle<Buffer> _transform_buffer{};
 };

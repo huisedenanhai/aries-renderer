@@ -105,7 +105,7 @@ SampleDistribution Shadow::calculate_sample_distribution() {
         }
         assert(min_depth01 <= max_depth01);
 
-        auto last_frame_P = _view->last_frame_projection_matrix();
+        auto last_frame_P = _view->last_frame_data().projection_matrix();
         auto last_frame_I_P = glm::inverse(last_frame_P);
         dist.z_near = depth01_to_linear_z(last_frame_I_P, max_depth01);
         dist.z_far = depth01_to_linear_z(last_frame_I_P, min_depth01);

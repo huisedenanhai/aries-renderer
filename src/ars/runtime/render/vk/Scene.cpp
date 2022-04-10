@@ -96,7 +96,7 @@ IScene *DirectionalLight::scene() {
 DirectionalLight::DirectionalLight(Scene *scene) : _scene(scene) {
     _id = _scene->directional_lights.alloc();
     _scene->directional_lights.set(
-        _id, std::make_unique<ShadowMap>(_scene->context(), 1024));
+        _id, std::make_unique<ShadowMap>(_scene->context(), 2048));
 }
 
 DirectionalLight::~DirectionalLight() {

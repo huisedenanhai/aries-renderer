@@ -10,6 +10,9 @@ constexpr uint32_t SHADOW_CASCADE_COUNT = 4;
 
 struct ShadowCascadeData {
     glm::mat4 view_to_shadow_hclip;
+    // Apply one pixel clamping to avoid atlas interpolation artifact
+    // {x_min, y_min, x_max, y_max}
+    glm::vec4 uv_clamp;
     float z_near;
     float z_far;
     ARS_PADDING_FIELD(float);

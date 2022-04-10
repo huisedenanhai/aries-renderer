@@ -118,6 +118,7 @@ DeferredShading::create_pipeline(const std::string &flag) {
 }
 
 void DeferredShading::shade_unlit(CommandBuffer *cmd) {
+    ARS_PROFILER_SAMPLE_VK(cmd, "Shade Unlit", 0xFF824851);
     set_up_shade(_unlit_pipeline.get(), cmd);
     cmd->Draw(3, 1, 0, 0);
 }
@@ -142,6 +143,7 @@ void DeferredShading::set_up_shade(GraphicsPipeline *pipeline,
 }
 
 void DeferredShading::shade_reflection_emission(CommandBuffer *cmd) {
+    ARS_PROFILER_SAMPLE_VK(cmd, "Shade Reflection Emission", 0xFF029405);
     set_up_shade(_lit_reflection_pipeline.get(), cmd);
 
     DescriptorEncoder desc{};
@@ -235,6 +237,7 @@ void set_up_directional_shadow(DescriptorEncoder &desc,
 
 void DeferredShading::shade_directional_lights(CommandBuffer *cmd,
                                                bool ignore_sun) {
+    ARS_PROFILER_SAMPLE_VK(cmd, "Shade Directional Lights", 0xFF461741);
     auto scene = _view->scene_vk();
     auto light_count = scene->directional_lights.size();
     if (light_count == 0 ||
@@ -260,6 +263,7 @@ void DeferredShading::shade_directional_lights(CommandBuffer *cmd,
 }
 
 void DeferredShading::shade_point_lights(CommandBuffer *cmd) {
+    ARS_PROFILER_SAMPLE_VK(cmd, "Shade Point Lights", 0xFF113422);
     auto scene = _view->scene_vk();
     auto light_count = scene->point_lights.size();
     if (light_count == 0) {
@@ -279,6 +283,7 @@ void DeferredShading::shade_point_lights(CommandBuffer *cmd) {
 }
 
 void DeferredShading::shade_sun(CommandBuffer *cmd, PhysicalSky *sky) {
+    ARS_PROFILER_SAMPLE_VK(cmd, "Shade Sun", 0xFF537181);
     auto scene = _view->scene_vk();
     if (!scene->sun_id.valid()) {
         return;

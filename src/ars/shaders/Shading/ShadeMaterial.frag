@@ -70,6 +70,7 @@ const int SHADOW_CASCADE_COUNT = 4;
 
 struct ShadowCascade {
     mat4 view_to_shadow_hclip;
+    vec4 uv_clamp;
     float z_near;
     float z_far;
 };
@@ -90,7 +91,15 @@ vec3 get_shadow_factor(ShadingPoint sp) {
         vec4 pos_shadow_hclip =
             transform_position(cascade.view_to_shadow_hclip, sp.pos_vs);
         vec3 pos_shadow_ss = transform_position_hclip_to_ss(pos_shadow_hclip);
-        float shadow01 = texture(shadow_map_tex, pos_shadow_ss.xy).r;
+
+        // Avoid atlas interpolation artifacts
+        float shadow01 = textureLod(shadow_map_tex,
+                                    clamp(pos_shadow_ss.xy,
+                                          cascade.uv_clamp.xy,
+                                          cascade.uv_clamp.zw),
+                                    0.0)
+                             .r;
+
         return vec3(shadow01 <= pos_shadow_ss.z ? 1.0 : 0.0);
     }
     return vec3(1.0);

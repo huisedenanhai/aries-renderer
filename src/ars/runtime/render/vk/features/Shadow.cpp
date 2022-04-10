@@ -215,12 +215,19 @@ void ShadowMap::update_cascade_cameras(const math::XformTRS<float> &xform,
         static_cast<uint32_t>(std::floor(sm_atlas_size / sm_atlas_divide));
 
     for (int i = 0; i < SHADOW_CASCADE_COUNT; i++) {
-        auto partition_z_near =
-            sample_dist.z_near *
-            std::pow(z_partition_scale, static_cast<float>(i));
+        auto get_partition_z = [&](float r) {
+            return std::clamp(sample_dist.z_near *
+                                  std::pow(z_partition_scale, r),
+                              sample_dist.z_near,
+                              sample_dist.z_far);
+        };
+        auto partition_z_near = get_partition_z(static_cast<float>(i));
+        auto z_far_padding = 0.1f;
+        auto z_far_start_fade_padding = 0.01f;
         auto partition_z_far =
-            sample_dist.z_near *
-            std::pow(z_partition_scale, static_cast<float>(i) + 1.0f);
+            get_partition_z(static_cast<float>(i) + 1.0f + z_far_padding);
+        auto partition_z_far_start_fade = get_partition_z(
+            static_cast<float>(i) + 1.0f + z_far_start_fade_padding);
 
         auto effective_frustum_ws = frustum_ws.crop({
             {0.0f,
@@ -279,6 +286,9 @@ Handle<Texture> ShadowMap::texture() const {
 
 ShadowData ShadowMap::data(View *view) const {
     ShadowData d{};
+    auto sm_pixel_size =
+        1.0f / static_cast<float>(_texture->info().extent.width);
+
     for (int i = 0; i < SHADOW_CASCADE_COUNT; i++) {
         auto &cam = _cascade_cameras[i];
         auto &cascade = d.cascades[i];
@@ -298,6 +308,13 @@ ShadowData ShadowMap::data(View *view) const {
         cascade.view_to_shadow_hclip = atlas_matrix * PS * VS * I_V;
         cascade.z_near = cam.partition_z_near;
         cascade.z_far = cam.partition_z_far;
+
+        cascade.uv_clamp = {
+            cam.viewport.x + sm_pixel_size,
+            cam.viewport.y + sm_pixel_size,
+            cam.viewport.x + cam.viewport.w - sm_pixel_size,
+            cam.viewport.y + cam.viewport.h - sm_pixel_size,
+        };
     }
 
     return d;

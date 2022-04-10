@@ -68,6 +68,9 @@ class Framebuffer {
     [[nodiscard]] VkFramebuffer framebuffer() const;
 
     void set_viewport_scissor(CommandBuffer *cmd) const;
+    // x, y, w, h in normalized coord
+    void set_viewport_scissor(
+        CommandBuffer *cmd, float x, float y, float w, float h) const;
 
   private:
     void init_framebuffer(VkRenderPass render_pass);

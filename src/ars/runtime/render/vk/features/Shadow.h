@@ -6,8 +6,18 @@
 namespace ars::render::vk {
 struct CullingResult;
 
-struct ShadowData {
+constexpr uint32_t SHADOW_CASCADE_COUNT = 4;
+
+struct ShadowCascadeData {
     glm::mat4 view_to_shadow_hclip;
+    float z_near;
+    float z_far;
+    ARS_PADDING_FIELD(float);
+    ARS_PADDING_FIELD(float);
+};
+
+struct ShadowData {
+    ShadowCascadeData cascades[SHADOW_CASCADE_COUNT];
 };
 
 struct SampleDistribution {
@@ -28,17 +38,26 @@ class ShadowMap {
     ShadowData data(View *view) const;
 
   private:
-    void update_camera(const math::XformTRS<float> &xform,
-                       View *view,
-                       const CullingResult &culling_result,
-                       const SampleDistribution &sample_dist);
+    struct CascadeCamera {
+        math::XformTRS<float> xform{};
+        Orthographic camera{};
+        float partition_z_near{};
+        float partition_z_far{};
+
+        struct Viewport {
+            float x, y, w, h;
+        } viewport{};
+    };
+
+    void update_cascade_cameras(const math::XformTRS<float> &xform,
+                                View *view,
+                                const SampleDistribution &sample_dist);
 
     Context *_context = nullptr;
     Handle<Texture> _texture{};
-    math::XformTRS<float> _xform{};
-    Orthographic _camera{};
     float _slope_bias = 1.0f;
     float _constant_bias = 100.0f;
+    CascadeCamera _cascade_cameras[SHADOW_CASCADE_COUNT]{};
 };
 
 class Shadow {

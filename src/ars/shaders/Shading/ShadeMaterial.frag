@@ -66,11 +66,35 @@ layout(set = 1, binding = 0) uniform Param {
     DirectionalLight light;
 };
 
-layout(set = 2, binding = 0) uniform ShadowParam {
+const int SHADOW_CASCADE_COUNT = 4;
+
+struct ShadowCascade {
     mat4 view_to_shadow_hclip;
+    float z_near;
+    float z_far;
+};
+
+layout(set = 2, binding = 0) uniform ShadowParam {
+    ShadowCascade shadow_cascades[SHADOW_CASCADE_COUNT];
 };
 
 layout(set = 2, binding = 1) uniform sampler2D shadow_map_tex;
+
+vec3 get_shadow_factor(ShadingPoint sp) {
+    int i = 0;
+    for (; i < SHADOW_CASCADE_COUNT; i++) {
+        ShadowCascade cascade = shadow_cascades[i];
+        if (-sp.pos_vs.z < cascade.z_near || -sp.pos_vs.z > cascade.z_far) {
+            continue;
+        }
+        vec4 pos_shadow_hclip =
+            transform_position(cascade.view_to_shadow_hclip, sp.pos_vs);
+        vec3 pos_shadow_ss = transform_position_hclip_to_ss(pos_shadow_hclip);
+        float shadow01 = texture(shadow_map_tex, pos_shadow_ss.xy).r;
+        return vec3(shadow01 <= pos_shadow_ss.z ? 1.0 : 0.0);
+    }
+    return vec3(1.0);
+}
 
 #endif
 
@@ -98,10 +122,7 @@ vec3 get_transmittance(ShadingPoint sp, vec3 l_vs) {
 #endif
 
 #if defined(LIT_DIRECTIONAL_LIGHT) || defined(LIT_SUN)
-    vec4 pos_shadow_hclip = transform_position(view_to_shadow_hclip, sp.pos_vs);
-    vec3 pos_shadow_ss = transform_position_hclip_to_ss(pos_shadow_hclip);
-    float shadow01 = texture(shadow_map_tex, pos_shadow_ss.xy).r;
-    t *= shadow01 <= pos_shadow_ss.z ? 1.0 : 0.0;
+    t *= get_shadow_factor(sp);
 #endif
 
     return t;

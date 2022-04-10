@@ -206,16 +206,28 @@ VkFramebuffer Framebuffer::framebuffer() const {
 }
 
 void Framebuffer::set_viewport_scissor(CommandBuffer *cmd) const {
+    set_viewport_scissor(cmd, 0.0f, 0.0f, 1.0f, 1.0f);
+}
+
+void Framebuffer::set_viewport_scissor(
+    CommandBuffer *cmd, float x, float y, float w, float h) const {
+    auto ext_width_f = static_cast<float>(_extent.width);
+    auto ext_height_f = static_cast<float>(_extent.height);
     VkViewport viewport;
-    viewport.x = 0;
-    viewport.y = 0;
-    viewport.width = (float)_extent.width;
-    viewport.height = (float)_extent.height;
+    viewport.x = ext_width_f * x;
+    viewport.y = ext_height_f * y;
+    viewport.width = ext_width_f * w;
+    viewport.height = ext_height_f * h;
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
     cmd->SetViewport(0, 1, &viewport);
 
-    VkRect2D scissor{{0, 0}, _extent};
+    VkRect2D scissor{};
+    scissor.offset.x = static_cast<int32_t>(viewport.x);
+    scissor.offset.y = static_cast<int32_t>(viewport.y);
+    scissor.extent.width = static_cast<uint32_t>(viewport.width);
+    scissor.extent.height = static_cast<uint32_t>(viewport.height);
+
     cmd->SetScissor(0, 1, &scissor);
 }
 } // namespace ars::render::vk

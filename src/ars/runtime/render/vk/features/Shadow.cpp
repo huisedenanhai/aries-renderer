@@ -135,7 +135,7 @@ void ShadowMap::render(const math::XformTRS<float> &xform,
     auto view = rg.view();
     auto scene = view->scene_vk();
 
-    update_camera(xform, view, culling_result, sample_dist);
+    update_cascade_cameras(xform, view, sample_dist);
 
     rg.add_pass(
         [&](RenderGraphPassBuilder &builder) {
@@ -150,36 +150,46 @@ void ShadowMap::render(const math::XformTRS<float> &xform,
             auto rp =
                 ctx->renderer_data()->subpass(RenderPassID_Shadow).render_pass;
             Framebuffer *fb = ctx->create_tmp_framebuffer(rp, {_texture});
-
             // clear all rts to zero
             VkClearValue clear_values[1]{};
             auto rp_exec =
                 rp->begin(cmd, fb, clear_values, VK_SUBPASS_CONTENTS_INLINE);
 
-            auto shadow_cull_obj = scene->cull(_xform, _camera.frustum(1.0f));
+            // Render each cascades
+            for (auto &cam : _cascade_cameras) {
+                fb->set_viewport_scissor(cmd,
+                                         cam.viewport.x,
+                                         cam.viewport.y,
+                                         cam.viewport.w,
+                                         cam.viewport.h);
 
-            auto draw_requests =
-                shadow_cull_obj.gather_draw_requests(RenderPassID_Shadow);
+                float w_div_h = cam.viewport.w / cam.viewport.h;
+                auto shadow_cull_obj =
+                    scene->cull(cam.xform, cam.camera.frustum(w_div_h));
 
-            DrawCallbacks callbacks{};
-            callbacks.on_pipeline_bound = [&](CommandBuffer *cmd) {
-                // Negative sign to bias because we use inverse z
-                cmd->SetDepthBias(-_constant_bias, 0.0f, -_slope_bias);
-            };
-            view->drawer()->draw(cmd,
-                                 _camera.projection_matrix(1.0f),
-                                 glm::inverse(_xform.matrix_no_scale()),
-                                 draw_requests,
-                                 callbacks);
+                auto draw_requests =
+                    shadow_cull_obj.gather_draw_requests(RenderPassID_Shadow);
+
+                DrawCallbacks callbacks{};
+                callbacks.on_pipeline_bound = [&](CommandBuffer *cmd) {
+                    // Negative sign to bias because we use inverse z
+                    cmd->SetDepthBias(-_constant_bias, 0.0f, -_slope_bias);
+                };
+
+                view->drawer()->draw(cmd,
+                                     cam.camera.projection_matrix(w_div_h),
+                                     glm::inverse(cam.xform.matrix_no_scale()),
+                                     draw_requests,
+                                     callbacks);
+            }
 
             rp->end(rp_exec);
         });
 }
 
-void ShadowMap::update_camera(const math::XformTRS<float> &xform,
-                              View *view,
-                              const CullingResult &culling_result,
-                              const SampleDistribution &sample_dist) {
+void ShadowMap::update_cascade_cameras(const math::XformTRS<float> &xform,
+                                       View *view,
+                                       const SampleDistribution &sample_dist) {
     auto scene = view->scene_vk();
 
     auto ls_to_ws = xform.matrix_no_scale();
@@ -192,38 +202,75 @@ void ShadowMap::update_camera(const math::XformTRS<float> &xform,
         transform_frustum(view->xform().matrix_no_scale(), frustum_vs);
     auto cam_z_near = view->camera().z_near();
     auto cam_z_far = view->camera().z_far();
-    auto effective_frustum_ws = frustum_ws.crop({
-        {0.0f,
-         0.0f,
-         math::inverse_lerp(cam_z_near, cam_z_far, sample_dist.z_near)},
-        {1.0f,
-         1.0f,
-         math::inverse_lerp(cam_z_near, cam_z_far, sample_dist.z_far)},
-    });
-    auto effective_frustum_ls =
-        transform_frustum(ws_to_ls, effective_frustum_ws);
 
-    auto visible_aabb_ls = effective_frustum_ls.aabb();
-    auto visible_center_ls = visible_aabb_ls.center();
-    auto visible_extent_ls = visible_aabb_ls.extent();
+    // Log partition Z
+    float z_partition_scale =
+        std::pow(sample_dist.z_far / sample_dist.z_near,
+                 1.0f / static_cast<float>(SHADOW_CASCADE_COUNT));
 
-    // Make near plane fits scene aabb
-    auto z_near = 0.01f;
-    auto light_z = scene_aabb_ls.max.z + z_near;
-    // Make far plane contains visible aabb
-    auto z_far = light_z - visible_aabb_ls.min.z;
+    auto sm_atlas_divide =
+        static_cast<uint32_t>(std::ceil(std::sqrt(SHADOW_CASCADE_COUNT)));
+    auto sm_atlas_size = _texture->info().extent.width;
+    auto sm_atlas_grid_size =
+        static_cast<uint32_t>(std::floor(sm_atlas_size / sm_atlas_divide));
 
-    auto light_center_ls =
-        glm::vec3(visible_center_ls.x, visible_center_ls.y, light_z);
-    auto light_center_ws = math::transform_position(ls_to_ws, light_center_ls);
+    for (int i = 0; i < SHADOW_CASCADE_COUNT; i++) {
+        auto partition_z_near =
+            sample_dist.z_near *
+            std::pow(z_partition_scale, static_cast<float>(i));
+        auto partition_z_far =
+            sample_dist.z_near *
+            std::pow(z_partition_scale, static_cast<float>(i) + 1.0f);
 
-    // Update fields
-    _xform = xform;
-    _xform.set_translation(light_center_ws);
+        auto effective_frustum_ws = frustum_ws.crop({
+            {0.0f,
+             0.0f,
+             math::inverse_lerp(cam_z_near, cam_z_far, partition_z_near)},
+            {1.0f,
+             1.0f,
+             math::inverse_lerp(cam_z_near, cam_z_far, partition_z_far)},
+        });
+        auto effective_frustum_ls =
+            transform_frustum(ws_to_ls, effective_frustum_ws);
 
-    _camera.z_near = z_near;
-    _camera.z_far = z_far;
-    _camera.y_mag = std::max(visible_extent_ls.x, visible_extent_ls.y) * 0.5f;
+        auto visible_aabb_ls = effective_frustum_ls.aabb();
+        auto visible_center_ls = visible_aabb_ls.center();
+        auto visible_extent_ls = visible_aabb_ls.extent();
+
+        // Make near plane fits scene aabb
+        auto z_near = 0.01f;
+        auto light_z = scene_aabb_ls.max.z + z_near;
+        // Make far plane contains visible aabb
+        auto z_far = light_z - visible_aabb_ls.min.z;
+
+        auto light_center_ls =
+            glm::vec3(visible_center_ls.x, visible_center_ls.y, light_z);
+        auto light_center_ws =
+            math::transform_position(ls_to_ws, light_center_ls);
+
+        auto &cam = _cascade_cameras[i];
+        // Update fields
+        cam.xform = xform;
+        cam.xform.set_translation(light_center_ws);
+
+        cam.camera.z_near = z_near;
+        cam.camera.z_far = z_far;
+        cam.camera.y_mag =
+            std::max(visible_extent_ls.x, visible_extent_ls.y) * 0.5f;
+
+        auto sm_atlas_x = i % sm_atlas_divide;
+        auto sm_atlas_y = i / sm_atlas_divide;
+        auto grid_vp_size = static_cast<float>(sm_atlas_grid_size) /
+                            static_cast<float>(sm_atlas_size);
+
+        cam.viewport.x = static_cast<float>(sm_atlas_x) * grid_vp_size;
+        cam.viewport.y = static_cast<float>(sm_atlas_y) * grid_vp_size;
+        cam.viewport.w = grid_vp_size;
+        cam.viewport.h = grid_vp_size;
+
+        cam.partition_z_near = partition_z_near;
+        cam.partition_z_far = partition_z_far;
+    }
 }
 
 Handle<Texture> ShadowMap::texture() const {
@@ -232,13 +279,27 @@ Handle<Texture> ShadowMap::texture() const {
 
 ShadowData ShadowMap::data(View *view) const {
     ShadowData d{};
-    auto PS = _camera.projection_matrix(1.0f);
-    auto VS = glm::inverse(_xform.matrix_no_scale());
-    auto I_V = glm::inverse(view->view_matrix());
+    for (int i = 0; i < SHADOW_CASCADE_COUNT; i++) {
+        auto &cam = _cascade_cameras[i];
+        auto &cascade = d.cascades[i];
 
-    d.view_to_shadow_hclip = PS * VS * I_V;
+        auto w_div_h = cam.viewport.w / cam.viewport.h;
+        auto offset = glm::vec2(cam.viewport.x, cam.viewport.y);
+        auto scale = glm::vec2(cam.viewport.w, cam.viewport.h);
+        auto atlas_matrix =
+            glm::translate(glm::identity<glm::mat4>(),
+                           {scale + 2.0f * offset - 1.0f, 0.0f}) *
+            glm::scale(glm::identity<glm::mat4>(), {scale, 1.0f});
+
+        auto PS = cam.camera.projection_matrix(w_div_h);
+        auto VS = glm::inverse(cam.xform.matrix_no_scale());
+        auto I_V = glm::inverse(view->view_matrix());
+
+        cascade.view_to_shadow_hclip = atlas_matrix * PS * VS * I_V;
+        cascade.z_near = cam.partition_z_near;
+        cascade.z_far = cam.partition_z_far;
+    }
 
     return d;
 }
-
 } // namespace ars::render::vk

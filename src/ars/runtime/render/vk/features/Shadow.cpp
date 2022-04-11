@@ -74,42 +74,95 @@ void Shadow::read_back_hiz(RenderGraph &rg) {
         });
 }
 
+namespace {
+void calculate_hiz_depth01_range(glm::vec2 *hiz_pixels,
+                                 uint32_t hiz_buffer_width,
+                                 uint32_t hiz_buffer_height,
+                                 float &min_depth01,
+                                 float &max_depth01) {
+    min_depth01 = 1.0f;
+    max_depth01 = 0.0f;
+    for (int y = 0; y < hiz_buffer_height; y++) {
+        for (int x = 0; x < hiz_buffer_width; x++) {
+            auto i = y * hiz_buffer_width + x;
+            auto depth01 = hiz_pixels[i];
+            assert(depth01.x >= depth01.y);
+            max_depth01 = std::max(max_depth01, depth01.x);
+            if (depth01.y != 0) {
+                min_depth01 = std::min(min_depth01, depth01.y);
+            }
+        }
+    }
+    // At this point, min_depth01 == 1.0f when
+    // 1. Nothing is rendered on screen
+    // 2. All fragments are snapped to the near plane
+    if (min_depth01 == 1.0f && max_depth01 < min_depth01) {
+        min_depth01 = 0.0f;
+    }
+    assert(min_depth01 <= max_depth01);
+}
+} // namespace
+
 SampleDistribution Shadow::calculate_sample_distribution() {
     ARS_PROFILER_SAMPLE("Calculate Depth Sample Dist", 0xFF999411);
     if (_last_frame_hiz_data == nullptr) {
         return {};
     }
 
+    auto hiz_pixels =
+        reinterpret_cast<glm::vec2 *>(_last_frame_hiz_data->map());
+    ARS_DEFER([&]() { _last_frame_hiz_data->unmap(); });
+
+    float min_depth01, max_depth01;
+    calculate_hiz_depth01_range(hiz_pixels,
+                                _hiz_buffer_width,
+                                _hiz_buffer_height,
+                                min_depth01,
+                                max_depth01);
+
     SampleDistribution dist{};
 
-    _last_frame_hiz_data->map_once([&](void *ptr) {
-        auto hiz_pixels = reinterpret_cast<glm::vec2 *>(ptr);
-        auto min_depth01 = 1.0f;
-        auto max_depth01 = 0.0f;
-        for (int y = 0; y < _hiz_buffer_height; y++) {
-            for (int x = 0; x < _hiz_buffer_width; x++) {
-                auto i = y * _hiz_buffer_width + x;
-                auto depth01 = hiz_pixels[i];
-                assert(depth01.x >= depth01.y);
-                max_depth01 = std::max(max_depth01, depth01.x);
-                if (depth01.y != 0) {
-                    min_depth01 = std::min(min_depth01, depth01.y);
-                }
-            }
-        }
-        // At this point, min_depth01 == 1.0f when
-        // 1. Nothing is rendered on screen
-        // 2. All fragments are snapped to the near plane
-        if (min_depth01 == 1.0f && max_depth01 < min_depth01) {
-            min_depth01 = 0.0f;
-        }
-        assert(min_depth01 <= max_depth01);
+    auto last_frame_view = _view->last_frame_data();
+    auto last_frame_P = last_frame_view.projection_matrix();
+    auto last_frame_I_P = glm::inverse(last_frame_P);
+    auto last_frame_frustum_ws = last_frame_view.frustum_ws();
+    dist.z_near = depth01_to_linear_z(last_frame_I_P, max_depth01);
+    dist.z_far = depth01_to_linear_z(last_frame_I_P, min_depth01);
+    auto cam_z_near = last_frame_view.camera.z_near();
+    auto cam_z_far = last_frame_view.camera.z_far();
 
-        auto last_frame_P = _view->last_frame_data().projection_matrix();
-        auto last_frame_I_P = glm::inverse(last_frame_P);
-        dist.z_near = depth01_to_linear_z(last_frame_I_P, max_depth01);
-        dist.z_far = depth01_to_linear_z(last_frame_I_P, min_depth01);
-    });
+    // Log partition Z
+    float z_partition_scale =
+        std::pow(dist.z_far / dist.z_near,
+                 1.0f / static_cast<float>(SHADOW_CASCADE_COUNT));
+
+    for (int i = 0; i < SHADOW_CASCADE_COUNT; i++) {
+        auto get_partition_z = [&](float r) {
+            return std::clamp(dist.z_near * std::pow(z_partition_scale, r),
+                              dist.z_near,
+                              dist.z_far);
+        };
+        auto partition_z_near = get_partition_z(static_cast<float>(i));
+        auto z_far_padding = 0.1f;
+        auto z_far_start_fade_padding = 0.01f;
+        auto partition_z_far =
+            get_partition_z(static_cast<float>(i) + 1.0f + z_far_padding);
+        auto partition_z_far_start_fade = get_partition_z(
+            static_cast<float>(i) + 1.0f + z_far_start_fade_padding);
+
+        auto effective_frustum_ws = last_frame_frustum_ws.crop({
+            {0.0f,
+             0.0f,
+             math::inverse_lerp(cam_z_near, cam_z_far, partition_z_near)},
+            {1.0f,
+             1.0f,
+             math::inverse_lerp(cam_z_near, cam_z_far, partition_z_far)},
+        });
+
+        dist.cascades[i].frustum_ws = effective_frustum_ws;
+        dist.cascades[i].partition_z_near = partition_z_near;
+        dist.cascades[i].partition_z_far = partition_z_far;
+    }
 
     return dist;
 }
@@ -197,17 +250,6 @@ void ShadowMap::update_cascade_cameras(const math::XformTRS<float> &xform,
     auto scene_aabb_ls =
         math::transform_aabb(ws_to_ls, scene->loaded_aabb_ws());
 
-    auto frustum_vs = view->camera().frustum(view->size().w_div_h());
-    auto frustum_ws =
-        transform_frustum(view->xform().matrix_no_scale(), frustum_vs);
-    auto cam_z_near = view->camera().z_near();
-    auto cam_z_far = view->camera().z_far();
-
-    // Log partition Z
-    float z_partition_scale =
-        std::pow(sample_dist.z_far / sample_dist.z_near,
-                 1.0f / static_cast<float>(SHADOW_CASCADE_COUNT));
-
     auto sm_atlas_divide =
         static_cast<uint32_t>(std::ceil(std::sqrt(SHADOW_CASCADE_COUNT)));
     auto sm_atlas_size = _texture->info().extent.width;
@@ -215,30 +257,9 @@ void ShadowMap::update_cascade_cameras(const math::XformTRS<float> &xform,
         static_cast<uint32_t>(std::floor(sm_atlas_size / sm_atlas_divide));
 
     for (int i = 0; i < SHADOW_CASCADE_COUNT; i++) {
-        auto get_partition_z = [&](float r) {
-            return std::clamp(sample_dist.z_near *
-                                  std::pow(z_partition_scale, r),
-                              sample_dist.z_near,
-                              sample_dist.z_far);
-        };
-        auto partition_z_near = get_partition_z(static_cast<float>(i));
-        auto z_far_padding = 0.1f;
-        auto z_far_start_fade_padding = 0.01f;
-        auto partition_z_far =
-            get_partition_z(static_cast<float>(i) + 1.0f + z_far_padding);
-        auto partition_z_far_start_fade = get_partition_z(
-            static_cast<float>(i) + 1.0f + z_far_start_fade_padding);
-
-        auto effective_frustum_ws = frustum_ws.crop({
-            {0.0f,
-             0.0f,
-             math::inverse_lerp(cam_z_near, cam_z_far, partition_z_near)},
-            {1.0f,
-             1.0f,
-             math::inverse_lerp(cam_z_near, cam_z_far, partition_z_far)},
-        });
+        auto &cascade = sample_dist.cascades[i];
         auto effective_frustum_ls =
-            transform_frustum(ws_to_ls, effective_frustum_ws);
+            transform_frustum(ws_to_ls, cascade.frustum_ws);
 
         auto visible_aabb_ls = effective_frustum_ls.aabb();
         auto visible_center_ls = visible_aabb_ls.center();
@@ -275,8 +296,8 @@ void ShadowMap::update_cascade_cameras(const math::XformTRS<float> &xform,
         cam.viewport.w = grid_vp_size;
         cam.viewport.h = grid_vp_size;
 
-        cam.partition_z_near = partition_z_near;
-        cam.partition_z_far = partition_z_far;
+        cam.partition_z_near = cascade.partition_z_near;
+        cam.partition_z_far = cascade.partition_z_far;
     }
 }
 

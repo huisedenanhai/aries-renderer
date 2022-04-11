@@ -27,8 +27,8 @@ struct SampleDistribution {
     float z_near = 0.0f;
     float z_far = 0.0f;
     struct Cascade {
-        float partition_z_near{};
-        float partition_z_far{};
+        float transition_z_near{};
+        float transition_z_far{};
         Frustum frustum_ws{};
     } cascades[SHADOW_CASCADE_COUNT];
 };
@@ -49,8 +49,8 @@ class ShadowMap {
     struct CascadeCamera {
         math::XformTRS<float> xform{};
         Orthographic camera{};
-        float partition_z_near{};
-        float partition_z_far{};
+        float transition_z_near{};
+        float transition_z_far{};
 
         struct Viewport {
             float x, y, w, h;

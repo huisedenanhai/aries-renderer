@@ -3,7 +3,6 @@
 #include "../Profiler.h"
 #include "../Scene.h"
 #include "Drawer.h"
-#include <ars/runtime/core/Log.h>
 
 namespace ars::render::vk {
 Shadow::Shadow(View *view) : _view(view) {}
@@ -192,11 +191,22 @@ SampleDistribution Shadow::calculate_sample_distribution() {
             return dist.z_near * std::pow(z_partition_scale, r);
         };
 
+        // The padding used for frustum partition
         auto padding = 0.1f;
         auto partition_z_near =
             get_partition_z(static_cast<float>(i) - padding);
         auto partition_z_far =
             get_partition_z(static_cast<float>(i) + 1.0f + padding);
+
+        // The padding used for cascade selection. The transition padding is
+        // smaller than partition padding, so the reprojected z may have more
+        // chance to be valid.
+        auto transition_padding = 0.05f;
+        auto transition_z_near =
+            get_partition_z(static_cast<float>(i) - transition_padding);
+        auto transition_z_far =
+            get_partition_z(static_cast<float>(i) + 1.0f + transition_padding);
+
         auto viewport = calculate_valid_viewport(
             hiz_pixels,
             _hiz_buffer_width,
@@ -214,9 +224,18 @@ SampleDistribution Shadow::calculate_sample_distribution() {
              math::inverse_lerp(cam_z_near, cam_z_far, partition_z_far)},
         });
 
+        auto reproject_IV_V =
+            _view->view_matrix() * glm::inverse(last_frame_view.view_matrix());
+
+        auto reproject_z = [&](float last_frame_z) {
+            auto pos =
+                reproject_IV_V * glm::vec4(0.0f, 0.0f, -last_frame_z, 1.0f);
+            return -pos.z / pos.w;
+        };
+
         dist.cascades[i].frustum_ws = effective_frustum_ws;
-        dist.cascades[i].partition_z_near = partition_z_near;
-        dist.cascades[i].partition_z_far = partition_z_far;
+        dist.cascades[i].transition_z_near = reproject_z(transition_z_near);
+        dist.cascades[i].transition_z_far = reproject_z(transition_z_far);
     }
 
     return dist;
@@ -351,8 +370,8 @@ void ShadowMap::update_cascade_cameras(const math::XformTRS<float> &xform,
         cam.viewport.w = grid_vp_size;
         cam.viewport.h = grid_vp_size;
 
-        cam.partition_z_near = cascade.partition_z_near;
-        cam.partition_z_far = cascade.partition_z_far;
+        cam.transition_z_near = cascade.transition_z_near;
+        cam.transition_z_far = cascade.transition_z_far;
     }
 }
 
@@ -382,8 +401,8 @@ ShadowData ShadowMap::data(View *view) const {
         auto I_V = glm::inverse(view->view_matrix());
 
         cascade.view_to_shadow_hclip = atlas_matrix * PS * VS * I_V;
-        cascade.z_near = cam.partition_z_near;
-        cascade.z_far = cam.partition_z_far;
+        cascade.z_near = cam.transition_z_near;
+        cascade.z_far = cam.transition_z_far;
 
         cascade.uv_clamp = {
             cam.viewport.x + sm_pixel_size,

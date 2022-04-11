@@ -162,6 +162,7 @@ struct CameraData : std::variant<Perspective, Orthographic> {
 
 // Returns positive value for depth01 in range [0, 1]
 float depth01_to_linear_z(const glm::mat4 &I_P, float depth01);
+float linear_z_to_depth01(const glm::mat4 &P, float linear_z);
 
 class IOverlay {
   public:

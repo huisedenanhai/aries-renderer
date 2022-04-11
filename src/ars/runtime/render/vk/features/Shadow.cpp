@@ -42,6 +42,12 @@ void Shadow::read_back_hiz(RenderGraph &rg) {
                 1u, hiz_info.extent.width >> _hiz_buffer_capture_level);
             _hiz_buffer_height = std::max(
                 1u, hiz_info.extent.height >> _hiz_buffer_capture_level);
+            auto block_extent = 1u << _hiz_buffer_capture_level;
+            _hiz_block_uv_size.x = static_cast<float>(block_extent) /
+                                   static_cast<float>(hiz_info.extent.width);
+            _hiz_block_uv_size.y = static_cast<float>(block_extent) /
+                                   static_cast<float>(hiz_info.extent.height);
+
             auto level =
                 std::min(hiz_info.mip_levels - 1, _hiz_buffer_capture_level);
 
@@ -101,6 +107,50 @@ void calculate_hiz_depth01_range(glm::vec2 *hiz_pixels,
     }
     assert(min_depth01 <= max_depth01);
 }
+
+// Return (min_x, min_y, max_x, max_y)
+glm::vec4 calculate_valid_viewport(glm::vec2 *hiz_pixels,
+                                   uint32_t hiz_buffer_width,
+                                   uint32_t hiz_buffer_height,
+                                   glm::vec2 hiz_block_uv_size,
+                                   float min_depth01,
+                                   float max_depth01) {
+    float min_x = 1.0f, max_x = 0.0f;
+    float min_y = 1.0f, max_y = 0.0f;
+    for (int y = 0; y < hiz_buffer_height; y++) {
+        for (int x = 0; x < hiz_buffer_width; x++) {
+            auto i = y * hiz_buffer_width + x;
+            auto depth01 = hiz_pixels[i];
+            assert(depth01.x >= depth01.y);
+            // Check if there is any sample is inside the depth range
+            if (depth01.x < min_depth01 || depth01.y > max_depth01) {
+                continue;
+            }
+            auto block_min_x = static_cast<float>(x) * hiz_block_uv_size.x;
+            auto block_max_x = static_cast<float>(x + 1) * hiz_block_uv_size.x;
+            auto block_min_y = static_cast<float>(y) * hiz_block_uv_size.y;
+            auto block_max_y = static_cast<float>(y + 1) * hiz_block_uv_size.y;
+
+            min_x = std::min(block_min_x, min_x);
+            max_x = std::max(block_max_x, max_x);
+            min_y = std::min(block_min_y, min_y);
+            max_y = std::max(block_max_y, max_y);
+        }
+    }
+
+    // Empty viewport
+    if (min_x > max_x || min_y > max_y) {
+        min_x = max_x = min_y = max_y = 0.0f;
+    }
+
+    // Clamp in range, block resolution is of power of 2.
+    min_x = std::max(0.0f, min_x);
+    max_x = std::min(1.0f, max_x);
+    min_y = std::max(0.0f, min_y);
+    max_y = std::min(1.0f, max_y);
+
+    return {min_x, min_y, max_x, max_y};
+}
 } // namespace
 
 SampleDistribution Shadow::calculate_sample_distribution() {
@@ -126,10 +176,11 @@ SampleDistribution Shadow::calculate_sample_distribution() {
     auto last_frame_P = last_frame_view.projection_matrix();
     auto last_frame_I_P = glm::inverse(last_frame_P);
     auto last_frame_frustum_ws = last_frame_view.frustum_ws();
-    dist.z_near = depth01_to_linear_z(last_frame_I_P, max_depth01);
-    dist.z_far = depth01_to_linear_z(last_frame_I_P, min_depth01);
     auto cam_z_near = last_frame_view.camera.z_near();
     auto cam_z_far = last_frame_view.camera.z_far();
+
+    dist.z_near = depth01_to_linear_z(last_frame_I_P, max_depth01);
+    dist.z_far = depth01_to_linear_z(last_frame_I_P, min_depth01);
 
     // Log partition Z
     float z_partition_scale =
@@ -138,24 +189,28 @@ SampleDistribution Shadow::calculate_sample_distribution() {
 
     for (int i = 0; i < SHADOW_CASCADE_COUNT; i++) {
         auto get_partition_z = [&](float r) {
-            return std::clamp(dist.z_near * std::pow(z_partition_scale, r),
-                              dist.z_near,
-                              dist.z_far);
+            return dist.z_near * std::pow(z_partition_scale, r);
         };
-        auto partition_z_near = get_partition_z(static_cast<float>(i));
-        auto z_far_padding = 0.1f;
-        auto z_far_start_fade_padding = 0.01f;
+
+        auto padding = 0.1f;
+        auto partition_z_near =
+            get_partition_z(static_cast<float>(i) - padding);
         auto partition_z_far =
-            get_partition_z(static_cast<float>(i) + 1.0f + z_far_padding);
-        auto partition_z_far_start_fade = get_partition_z(
-            static_cast<float>(i) + 1.0f + z_far_start_fade_padding);
+            get_partition_z(static_cast<float>(i) + 1.0f + padding);
+        auto viewport = calculate_valid_viewport(
+            hiz_pixels,
+            _hiz_buffer_width,
+            _hiz_buffer_height,
+            _hiz_block_uv_size,
+            linear_z_to_depth01(last_frame_P, partition_z_far),
+            linear_z_to_depth01(last_frame_P, partition_z_near));
 
         auto effective_frustum_ws = last_frame_frustum_ws.crop({
-            {0.0f,
-             0.0f,
+            {viewport.x,
+             viewport.y,
              math::inverse_lerp(cam_z_near, cam_z_far, partition_z_near)},
-            {1.0f,
-             1.0f,
+            {viewport.z,
+             viewport.w,
              math::inverse_lerp(cam_z_near, cam_z_far, partition_z_far)},
         });
 

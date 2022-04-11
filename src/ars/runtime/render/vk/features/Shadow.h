@@ -83,5 +83,6 @@ class Shadow {
     uint32_t _hiz_buffer_width = 0;
     uint32_t _hiz_buffer_height = 0;
     uint32_t _hiz_buffer_capture_level = 6; // Split screen into 64x64 block
+    glm::vec2 _hiz_block_uv_size = {};
 };
 } // namespace ars::render::vk

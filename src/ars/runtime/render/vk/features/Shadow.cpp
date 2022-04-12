@@ -215,12 +215,14 @@ SampleDistribution Shadow::calculate_sample_distribution() {
             linear_z_to_depth01(last_frame_P, partition_z_far),
             linear_z_to_depth01(last_frame_P, partition_z_near));
 
+        auto viewport_padding = 0.5f * _hiz_block_uv_size;
+
         auto effective_frustum_ws = last_frame_frustum_ws.crop({
-            {viewport.x,
-             viewport.y,
+            {viewport.x - viewport_padding.x,
+             viewport.y - viewport_padding.y,
              math::inverse_lerp(cam_z_near, cam_z_far, partition_z_near)},
-            {viewport.z,
-             viewport.w,
+            {viewport.z + viewport_padding.x,
+             viewport.w + viewport_padding.y,
              math::inverse_lerp(cam_z_near, cam_z_far, partition_z_far)},
         });
 

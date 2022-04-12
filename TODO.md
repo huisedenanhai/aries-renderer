@@ -13,7 +13,7 @@ A very coarse plan for development.
         + [ ] Hair
         + [ ] Eye
     + [ ] Shadow
-        + [x] Vanilla Shadow Map
+        + [x] Sample Distribution Shadow Map
     + [ ] Shader Graph
     + [ ] Dynamic GI
     + [ ] GPU Driven Pipeline

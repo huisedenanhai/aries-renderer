@@ -85,7 +85,7 @@ vec3 get_shadow_factor(ShadingPoint sp) {
     int i = 0;
     for (; i < SHADOW_CASCADE_COUNT; i++) {
         ShadowCascade cascade = shadow_cascades[i];
-        if (-sp.pos_vs.z < cascade.z_near || -sp.pos_vs.z > cascade.z_far) {
+        if (-sp.pos_vs.z > cascade.z_far) {
             continue;
         }
         vec4 pos_shadow_hclip =
@@ -100,7 +100,9 @@ vec3 get_shadow_factor(ShadingPoint sp) {
                                     0.0)
                              .r;
 
-        return vec3(shadow01 <= pos_shadow_ss.z ? 1.0 : 0.0);
+        // clamp pos_shadow_ss.z to positive to avoid incorrect shadow when
+        // point is out of light far plane.
+        return vec3(shadow01 <= max(pos_shadow_ss.z, 0.0) ? 1.0 : 0.0);
     }
     return vec3(1.0);
 }

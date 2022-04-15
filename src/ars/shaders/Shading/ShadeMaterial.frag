@@ -86,22 +86,22 @@ vec3 sample_shadow_pcf(vec2 uv, float ref_z) {
     // clamp ref_z to positive to avoid incorrect shadow when
     // point is out of light far plane.
     ref_z = max(ref_z, 0.0);
-    vec2 shadow_texel_size = 1.0 / textureSize(shadow_map_tex, 0);
+    vec2 index = uv * textureSize(shadow_map_tex, 0);
+    vec2 center = floor(index);
 
     float visibility_acc = 0.0;
     float weight_acc = 0.0;
-    float noise = interleaved_gradient_noise(gl_FragCoord.xy);
-    mat2 rot = rotate2d(noise * 2.0 * PI);
+
     for (int x = -1; x <= 1; x++) {
         for (int y = -1; y <= 1; y++) {
-            // Avoid atlas interpolation artifacts
             float shadow01 =
-                textureLod(shadow_map_tex,
-                           uv + rot * shadow_texel_size * vec2(x, y),
-                           0.0)
-                    .r;
-            visibility_acc += (shadow01 <= ref_z ? 1.0 : 0.0);
-            weight_acc += 1.0;
+                texelFetch(shadow_map_tex, ivec2(center) + ivec2(x, y), 0).r;
+            // 3x3 tent filter
+            float weight = max(
+                1.5 - max_comp_value(abs(vec2(x, y) + center + 0.5 - index)),
+                0.0);
+            visibility_acc += (shadow01 <= ref_z ? weight : 0.0);
+            weight_acc += weight;
         }
     }
     return vec3(visibility_acc / weight_acc);

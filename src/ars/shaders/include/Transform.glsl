@@ -114,4 +114,10 @@ float linear_z_to_depth01(ViewTransform view, float linear_z) {
     return zw.z / zw.w;
 }
 
+mat2 rotate2d(float rad) {
+    float c = cos(rad);
+    float s = sin(rad);
+    return mat2(c, s, -s, c);
+}
+
 #endif

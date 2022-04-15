@@ -4,6 +4,7 @@
 #include <Light.glsl>
 #include <MetallicRoughnessPBR.glsl>
 #include <Misc.glsl>
+#include <Sampling.glsl>
 #include <ShadingModel.glsl>
 #include <Transform.glsl>
 
@@ -89,13 +90,16 @@ vec3 sample_shadow_pcf(vec2 uv, float ref_z) {
 
     float visibility_acc = 0.0;
     float weight_acc = 0.0;
+    float noise = interleaved_gradient_noise(gl_FragCoord.xy);
+    mat2 rot = rotate2d(noise * 2.0 * PI);
     for (int x = -1; x <= 1; x++) {
         for (int y = -1; y <= 1; y++) {
             // Avoid atlas interpolation artifacts
-            float shadow01 = textureLod(shadow_map_tex,
-                                        uv + shadow_texel_size * vec2(x, y),
-                                        0.0)
-                                 .r;
+            float shadow01 =
+                textureLod(shadow_map_tex,
+                           uv + rot * shadow_texel_size * vec2(x, y),
+                           0.0)
+                    .r;
             visibility_acc += (shadow01 <= ref_z ? 1.0 : 0.0);
             weight_acc += 1.0;
         }

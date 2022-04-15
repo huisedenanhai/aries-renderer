@@ -241,6 +241,10 @@ CullingResult::gather_draw_requests(RenderPassID pass_id) const {
         auto mesh = render_objects.get<std::shared_ptr<Mesh>>(obj_id);
         auto material = render_objects.get<std::shared_ptr<Material>>(obj_id);
 
+        if (material == nullptr) {
+            continue;
+        }
+
         DrawRequest req{};
         req.material = material->pass(pass_id);
 

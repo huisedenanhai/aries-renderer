@@ -81,6 +81,28 @@ layout(set = 2, binding = 0) uniform ShadowParam {
 
 layout(set = 2, binding = 1) uniform sampler2D shadow_map_tex;
 
+vec3 sample_shadow_pcf(vec2 uv, float ref_z) {
+    // clamp ref_z to positive to avoid incorrect shadow when
+    // point is out of light far plane.
+    ref_z = max(ref_z, 0.0);
+    vec2 shadow_texel_size = 1.0 / textureSize(shadow_map_tex, 0);
+
+    float visibility_acc = 0.0;
+    float weight_acc = 0.0;
+    for (int x = -1; x <= 1; x++) {
+        for (int y = -1; y <= 1; y++) {
+            // Avoid atlas interpolation artifacts
+            float shadow01 = textureLod(shadow_map_tex,
+                                        uv + shadow_texel_size * vec2(x, y),
+                                        0.0)
+                                 .r;
+            visibility_acc += (shadow01 <= ref_z ? 1.0 : 0.0);
+            weight_acc += 1.0;
+        }
+    }
+    return vec3(visibility_acc / weight_acc);
+}
+
 vec3 get_shadow_factor(ShadingPoint sp) {
     int i = 0;
     for (; i < SHADOW_CASCADE_COUNT; i++) {
@@ -91,18 +113,9 @@ vec3 get_shadow_factor(ShadingPoint sp) {
         vec4 pos_shadow_hclip =
             transform_position(cascade.view_to_shadow_hclip, sp.pos_vs);
         vec3 pos_shadow_ss = transform_position_hclip_to_ss(pos_shadow_hclip);
-
-        // Avoid atlas interpolation artifacts
-        float shadow01 = textureLod(shadow_map_tex,
-                                    clamp(pos_shadow_ss.xy,
-                                          cascade.uv_clamp.xy,
-                                          cascade.uv_clamp.zw),
-                                    0.0)
-                             .r;
-
-        // clamp pos_shadow_ss.z to positive to avoid incorrect shadow when
-        // point is out of light far plane.
-        return vec3(shadow01 <= max(pos_shadow_ss.z, 0.0) ? 1.0 : 0.0);
+        return sample_shadow_pcf(
+            clamp(pos_shadow_ss.xy, cascade.uv_clamp.xy, cascade.uv_clamp.zw),
+            pos_shadow_ss.z);
     }
     return vec3(1.0);
 }

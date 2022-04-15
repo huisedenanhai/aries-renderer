@@ -63,7 +63,7 @@ class ShadowMap {
 
     Context *_context = nullptr;
     Handle<Texture> _texture{};
-    float _slope_bias = 1.0f;
+    float _slope_bias = 3.0f;
     float _constant_bias = 100.0f;
     CascadeCamera _cascade_cameras[SHADOW_CASCADE_COUNT]{};
 };

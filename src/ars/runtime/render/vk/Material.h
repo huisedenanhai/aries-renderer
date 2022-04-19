@@ -154,10 +154,12 @@ class MaterialFactory {
     explicit MaterialFactory(Context *context);
 
     std::shared_ptr<Material> create_material(MaterialType type);
+    std::shared_ptr<Material> default_material();
 
   private:
     void init_unlit_template();
     void init_metallic_roughness_template();
+    void init_default_material();
     std::shared_ptr<GraphicsPipeline>
     create_pipeline(RenderPassID id,
                     const std::vector<Shader *> &shaders,
@@ -166,5 +168,6 @@ class MaterialFactory {
     Context *_context{};
     MaterialTemplate _unlit_template{};
     MaterialTemplate _metallic_roughness_template{};
+    std::shared_ptr<Material> _default_material{};
 };
 } // namespace ars::render::vk

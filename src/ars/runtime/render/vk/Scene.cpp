@@ -1,4 +1,5 @@
 #include "Scene.h"
+#include "Context.h"
 #include "Material.h"
 #include "Mesh.h"
 #include "Profiler.h"
@@ -242,7 +243,7 @@ CullingResult::gather_draw_requests(RenderPassID pass_id) const {
         auto material = render_objects.get<std::shared_ptr<Material>>(obj_id);
 
         if (material == nullptr) {
-            continue;
+            material = scene->context()->default_material_vk();
         }
 
         DrawRequest req{};

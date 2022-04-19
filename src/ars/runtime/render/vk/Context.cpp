@@ -1077,4 +1077,8 @@ void Context::end_debug_label(CommandBuffer *cmd) const {
     }
     instance()->CmdEndDebugUtilsLabelEXT(cmd->command_buffer());
 }
+
+std::shared_ptr<Material> Context::default_material_vk() {
+    return _material_factory->default_material();
+}
 } // namespace ars::render::vk

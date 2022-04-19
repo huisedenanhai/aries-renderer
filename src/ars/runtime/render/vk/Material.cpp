@@ -274,6 +274,7 @@ MaterialPropertyBlock::get_texture_by_index(uint32_t index) {
 MaterialFactory::MaterialFactory(Context *context) : _context(context) {
     init_unlit_template();
     init_metallic_roughness_template();
+    init_default_material();
 }
 
 std::shared_ptr<Material> MaterialFactory::create_material(MaterialType type) {
@@ -415,6 +416,17 @@ std::shared_ptr<GraphicsPipeline> MaterialFactory::create_pipeline(
     info.raster = raster;
 
     return std::make_shared<GraphicsPipeline>(_context, info);
+}
+
+std::shared_ptr<Material> MaterialFactory::default_material() {
+    return _default_material;
+}
+
+void MaterialFactory::init_default_material() {
+    _default_material = create_material(MaterialType::MetallicRoughnessPBR);
+    _default_material->set("base_color_factor",
+                           glm::vec4(0.8f, 0.8f, 0.8f, 1.0f));
+    _default_material->set("metallic_factor", 0.0f);
 }
 
 void Material::set_variant(const std::string &name,

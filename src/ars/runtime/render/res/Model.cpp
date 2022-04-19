@@ -13,18 +13,43 @@ void gltf_warn(const std::filesystem::path &path, const std::string &info) {
     ARS_LOG_WARN("Loading {}: {}", path.string(), info);
 }
 
-template <typename T, typename R> R cast_value(const unsigned char *ptr) {
-    return static_cast<R>(*reinterpret_cast<const T *>(ptr));
+template <typename T, typename R>
+R cast_value(const unsigned char *ptr, bool normalized) {
+    auto r = static_cast<R>(*reinterpret_cast<const T *>(ptr));
+    if constexpr (std::is_floating_point_v<R> && std::is_integral_v<T>) {
+        if (normalized) {
+            auto max_value = std::numeric_limits<T>::max();
+            return r / static_cast<R>(max_value);
+        }
+    }
+    return r;
 }
 
-template <typename T, typename Reader>
-std::vector<T> read_to_vec(Reader &&reader, size_t n) {
-    std::vector<T> v{};
-    v.resize(n);
-    for (int i = 0; i < n; i++) {
-        std::memcpy(&v[i], reader(i), sizeof(T));
+template <typename R>
+R cast_value(const unsigned char *ptr,
+             int gltf_component_type,
+             bool normalized) {
+    switch (gltf_component_type) {
+    case TINYGLTF_COMPONENT_TYPE_BYTE:
+        return cast_value<int8_t, R>(ptr, normalized);
+    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+        return cast_value<uint8_t, R>(ptr, normalized);
+    case TINYGLTF_COMPONENT_TYPE_SHORT:
+        return cast_value<int16_t, R>(ptr, normalized);
+    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+        return cast_value<uint16_t, R>(ptr, normalized);
+    case TINYGLTF_COMPONENT_TYPE_INT:
+        return cast_value<int32_t, R>(ptr, normalized);
+    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+        return cast_value<uint32_t, R>(ptr, normalized);
+    case TINYGLTF_COMPONENT_TYPE_FLOAT:
+        return cast_value<float, R>(ptr, normalized);
+    case TINYGLTF_COMPONENT_TYPE_DOUBLE:
+        return cast_value<double, R>(ptr, normalized);
+    default:
+        break;
     }
-    return v;
+    return {};
 }
 
 std::string name_or_index(const std::string &name, int index) {
@@ -66,21 +91,259 @@ std::string gltf_material_path(const std::filesystem::path &path,
         name_or_index(gltf.materials[mat_index].name, mat_index));
 }
 
+template <typename T> constexpr int get_gltf_component_type() {
+    if constexpr (std::is_same_v<T, int8_t>) {
+        return TINYGLTF_COMPONENT_TYPE_BYTE;
+    }
+    if constexpr (std::is_same_v<T, uint8_t>) {
+        return TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE;
+    }
+    if constexpr (std::is_same_v<T, int16_t>) {
+        return TINYGLTF_COMPONENT_TYPE_SHORT;
+    }
+    if constexpr (std::is_same_v<T, uint16_t>) {
+        return TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT;
+    }
+    if constexpr (std::is_same_v<T, int32_t>) {
+        return TINYGLTF_COMPONENT_TYPE_INT;
+    }
+    if constexpr (std::is_same_v<T, uint32_t>) {
+        return TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT;
+    }
+    if constexpr (std::is_same_v<T, float>) {
+        return TINYGLTF_COMPONENT_TYPE_FLOAT;
+    }
+    if constexpr (std::is_same_v<T, double>) {
+        return TINYGLTF_COMPONENT_TYPE_DOUBLE;
+    }
+
+    return 0;
+}
+
+size_t gltf_component_type_size(int gltf_component_type) {
+    switch (gltf_component_type) {
+    case TINYGLTF_COMPONENT_TYPE_BYTE:
+        return sizeof(int8_t);
+    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+        return sizeof(uint8_t);
+    case TINYGLTF_COMPONENT_TYPE_SHORT:
+        return sizeof(int16_t);
+    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+        return sizeof(uint16_t);
+    case TINYGLTF_COMPONENT_TYPE_INT:
+        return sizeof(int32_t);
+    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+        return sizeof(uint32_t);
+    case TINYGLTF_COMPONENT_TYPE_FLOAT:
+        return sizeof(float);
+    case TINYGLTF_COMPONENT_TYPE_DOUBLE:
+        return sizeof(double);
+    default:
+        break;
+    }
+    return 0;
+}
+
+size_t gltf_type_component_count(int type) {
+    switch (type) {
+    case TINYGLTF_TYPE_VEC2:
+        return 2;
+    case TINYGLTF_TYPE_VEC3:
+        return 3;
+    case TINYGLTF_TYPE_VEC4:
+        return 4;
+    case TINYGLTF_TYPE_MAT2:
+        return 4;
+    case TINYGLTF_TYPE_MAT3:
+        return 9;
+    case TINYGLTF_TYPE_MAT4:
+        return 16;
+    case TINYGLTF_TYPE_SCALAR:
+        return 1;
+    default:
+        break;
+    }
+    return 0;
+}
+
+template <typename T>
+std::vector<T> read_buffer_to_vector(const tinygltf::Model &gltf,
+                                     int accessor_index,
+                                     int gltf_expected_type = 0,
+                                     T default_value = {}) {
+    auto &accessor = gltf.accessors[accessor_index];
+    auto &buffer_view = gltf.bufferViews[accessor.bufferView];
+    auto stride = accessor.ByteStride(buffer_view);
+    auto offset = accessor.byteOffset + buffer_view.byteOffset;
+    auto &buffer = gltf.buffers[buffer_view.buffer];
+
+    auto component_count = gltf_type_component_count(accessor.type);
+    auto component_size = gltf_component_type_size(accessor.componentType);
+    auto expected_component_count =
+        gltf_expected_type != 0 ? gltf_type_component_count(gltf_expected_type)
+                                : component_count;
+
+    constexpr auto target_component_type = get_gltf_component_type<T>();
+    static_assert(target_component_type != 0);
+    auto tight_packed = stride == (component_size * component_count);
+    auto need_cast = target_component_type != accessor.componentType;
+
+    std::vector<T> result{};
+    result.resize(expected_component_count * accessor.count);
+
+    auto available_component_count =
+        std::min(component_count, expected_component_count);
+    auto pad_element = [&](int i) {
+        for (int j = static_cast<int>(available_component_count);
+             j < expected_component_count;
+             j++) {
+            result[i * expected_component_count + j] = default_value;
+        }
+    };
+
+    if (tight_packed && !need_cast &&
+        expected_component_count == component_count) {
+        std::memcpy(result.data(),
+                    &buffer.data[offset],
+                    component_size * expected_component_count * accessor.count);
+    } else if (!need_cast) {
+        for (int i = 0; i < accessor.count; i++) {
+            std::memcpy(&result[i * expected_component_count],
+                        &buffer.data[offset + i * stride],
+                        available_component_count * component_size);
+            pad_element(i);
+        }
+    } else {
+        for (int i = 0; i < accessor.count; i++) {
+            for (int j = 0; j < available_component_count; j++) {
+                result[i * expected_component_count + j] = cast_value<T>(
+                    &buffer.data[offset + i * stride + j * component_size],
+                    accessor.componentType,
+                    accessor.normalized);
+            }
+            pad_element(i);
+        }
+    }
+
+    return result;
+}
+
+template <typename T>
+void read_buffer_to_vector(std::vector<T> &result,
+                           const tinygltf::Model &gltf,
+                           int accessor_index,
+                           int gltf_expected_type = 0,
+                           T default_value = {}) {
+    result = read_buffer_to_vector<T>(
+        gltf, accessor_index, gltf_expected_type, default_value);
+}
+
+struct PrimitiveData {
+    std::vector<float> position{};
+    std::vector<float> normal{};
+    std::vector<float> tangent{};
+    std::vector<float> tex_coord{};
+    std::vector<uint16_t> joint{};
+    std::vector<float> weight{};
+    std::vector<uint32_t> indices{};
+
+    void canonicalize() {
+        while (indices.size() % 3 != 0) {
+            indices.push_back(0);
+        }
+    }
+
+    std::shared_ptr<IMesh> upload_mesh(IContext *context) {
+        MeshInfo info{};
+
+        info.vertex_capacity = position.size() / 3;
+        if (!indices.empty()) {
+            info.triangle_capacity = indices.size() / 3;
+        }
+        info.skinned = !joint.empty() && !weight.empty();
+
+        auto m = context->create_mesh(info);
+
+        auto aabb = math::AABB<float>::from_points(
+            reinterpret_cast<glm::vec3 *>(&position[0]),
+            reinterpret_cast<glm::vec3 *>(&position[0]) + info.vertex_capacity);
+        m->set_aabb(aabb);
+        m->set_position(reinterpret_cast<glm::vec3 *>(position.data()),
+                        0,
+                        info.vertex_capacity);
+        m->set_normal(reinterpret_cast<glm::vec3 *>(normal.data()),
+                      0,
+                      info.vertex_capacity);
+        m->set_tangent(reinterpret_cast<glm::vec4 *>(tangent.data()),
+                       0,
+                       info.vertex_capacity);
+        m->set_tex_coord(reinterpret_cast<glm::vec2 *>(tex_coord.data()),
+                         0,
+                         info.vertex_capacity);
+        if (info.skinned) {
+            m->set_joint(reinterpret_cast<glm::u16vec4 *>(joint.data()),
+                         0,
+                         info.vertex_capacity);
+            m->set_weight(reinterpret_cast<glm::vec4 *>(weight.data()),
+                          0,
+                          info.vertex_capacity);
+        }
+
+        m->set_indices(reinterpret_cast<glm::u32vec3 *>(indices.data()),
+                       0,
+                       info.triangle_capacity);
+        m->set_triangle_count(info.triangle_capacity);
+
+        return m;
+    }
+};
+
+PrimitiveData gltf_read_primitive_data(const tinygltf::Model &gltf,
+                                       const tinygltf::Primitive &gltf_prim) {
+    PrimitiveData data{};
+    constexpr const char *ATTR_NAME_POSITION = "POSITION";
+    constexpr const char *ATTR_NAME_NORMAL = "NORMAL";
+    constexpr const char *ATTR_NAME_TANGENT = "TANGENT";
+    constexpr const char *ATTR_NAME_TEX_COORD_0 = "TEXCOORD_0";
+    constexpr const char *ATTR_NAME_JOINTS_0 = "JOINTS_0";
+    constexpr const char *ATTR_NAME_WEIGHTS_0 = "WEIGHTS_0";
+
+    auto read_attr = [&](const char *name,
+                         auto &v,
+                         int gltf_expected_type,
+                         const auto &default_value) {
+        auto it = gltf_prim.attributes.find(name);
+        if (it == gltf_prim.attributes.end()) {
+            return;
+        }
+        auto accessor_index = it->second;
+        if (accessor_index < 0) {
+            return;
+        }
+        read_buffer_to_vector(
+            v, gltf, accessor_index, gltf_expected_type, default_value);
+    };
+
+    read_attr("POSITION", data.position, TINYGLTF_TYPE_VEC3, 0.0f);
+    read_attr("NORMAL", data.normal, TINYGLTF_TYPE_VEC3, 0.0f);
+    read_attr("TANGENT", data.tangent, TINYGLTF_TYPE_VEC4, 0.0f);
+    read_attr("TEXCOORD_0", data.tex_coord, TINYGLTF_TYPE_VEC2, 0.0f);
+    read_attr(
+        "JOINTS_0", data.joint, TINYGLTF_TYPE_VEC4, static_cast<uint16_t>(0));
+    read_attr("WEIGHTS_0", data.weight, TINYGLTF_TYPE_VEC4, 0.0f);
+
+    if (gltf_prim.indices >= 0) {
+        data.indices = read_buffer_to_vector<uint32_t>(gltf, gltf_prim.indices);
+    }
+
+    data.canonicalize();
+    return data;
+}
+
 void load_meshes(IContext *context,
                  const std::filesystem::path &path,
                  const tinygltf::Model &gltf,
                  Model &model) {
-    auto make_reader = [&](int accessor_index) {
-        auto &accessor = gltf.accessors[accessor_index];
-        auto &buffer_view = gltf.bufferViews[accessor.bufferView];
-        auto stride = accessor.ByteStride(buffer_view);
-        auto offset = accessor.byteOffset + buffer_view.byteOffset;
-        auto &buffer = gltf.buffers[buffer_view.buffer];
-        return [offset, &buffer, stride](int index) {
-            return &buffer.data[offset + index * stride];
-        };
-    };
-
     model.meshes.reserve(gltf.meshes.size());
     for (int mesh_index = 0; mesh_index < gltf.meshes.size(); mesh_index++) {
         auto &gltf_mesh = gltf.meshes[mesh_index];
@@ -89,153 +352,11 @@ void load_meshes(IContext *context,
 
         auto &primitives = mesh.primitives;
         primitives.reserve(gltf_mesh.primitives.size());
-
         for (int prim_index = 0; prim_index < gltf_mesh.primitives.size();
              prim_index++) {
             auto &gltf_prim = gltf_mesh.primitives[prim_index];
-            auto visit_attr = [&](const std::string &attr_name,
-                                  auto &&func,
-                                  int accessor_type,
-                                  bool report_warn) {
-                auto it = gltf_prim.attributes.find(attr_name);
-                if (it == gltf_prim.attributes.end()) {
-                    return;
-                }
-                auto accessor_index = it->second;
-                if (accessor_index < 0) {
-                    return;
-                }
-                auto warn = [&](const std::string &info) {
-                    if (report_warn) {
-                        gltf_warn(path, info);
-                    }
-                };
-                auto accessor = gltf.accessors[accessor_index];
-                if (accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT) {
-                    warn("Only support float vertex attribute");
-                    return;
-                }
-                if (accessor.type != accessor_type) {
-                    warn("Accessor type not support for attribute " +
-                         attr_name);
-                    return;
-                }
-                auto reader = make_reader(accessor_index);
-                func(reader, accessor.count);
-            };
-
-            constexpr const char *ATTR_NAME_POSITION = "POSITION";
-            constexpr const char *ATTR_NAME_NORMAL = "NORMAL";
-            constexpr const char *ATTR_NAME_TANGENT = "TANGENT";
-            constexpr const char *ATTR_NAME_TEX_COORD_0 = "TEXCOORD_0";
-
-            auto visit_all_attrs = [&](auto &&func, bool report_warn) {
-                auto visit = [&](const std::string &attr, int accessor_type) {
-                    visit_attr(
-                        attr,
-                        [&](auto &&reader, auto &&num) {
-                            func(attr, reader, num);
-                        },
-                        accessor_type,
-                        report_warn);
-                };
-
-                // for all attributes see
-                // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/README.md
-                // we only visit what we need
-                visit(ATTR_NAME_POSITION, TINYGLTF_TYPE_VEC3);
-                visit(ATTR_NAME_NORMAL, TINYGLTF_TYPE_VEC3);
-                visit(ATTR_NAME_TANGENT, TINYGLTF_TYPE_VEC4);
-                visit(ATTR_NAME_TEX_COORD_0, TINYGLTF_TYPE_VEC2);
-            };
-
-            MeshInfo info{};
-
-            visit_all_attrs(
-                [&](auto &&attr, auto &&reader, size_t num) {
-                    info.vertex_capacity = std::max(info.vertex_capacity, num);
-                },
-                true);
-
-            if (gltf_prim.indices >= 0) {
-                info.triangle_capacity =
-                    (gltf.accessors[gltf_prim.indices].count + 2) / 3;
-            }
-
-            auto m = context->create_mesh(info);
-
-            visit_all_attrs(
-                [&](const std::string &attr, auto &&reader, size_t num) {
-                    if (attr == ATTR_NAME_POSITION) {
-                        auto v = read_to_vec<glm::vec3>(reader, num);
-                        auto aabb =
-                            math::AABB<float>::from_points(v.begin(), v.end());
-                        m->set_aabb(aabb);
-                        m->set_position(v.data(), 0, num);
-                    }
-                    if (attr == ATTR_NAME_NORMAL) {
-                        auto v = read_to_vec<glm::vec3>(reader, num);
-                        m->set_normal(v.data(), 0, num);
-                    }
-                    if (attr == ATTR_NAME_TANGENT) {
-                        auto v = read_to_vec<glm::vec4>(reader, num);
-                        m->set_tangent(v.data(), 0, num);
-                    }
-                    if (attr == ATTR_NAME_TEX_COORD_0) {
-                        auto v = read_to_vec<glm::vec2>(reader, num);
-                        m->set_tex_coord(v.data(), 0, num);
-                    }
-                },
-                false);
-
-            std::vector<uint32_t> indices;
-            {
-                auto accessor_index = gltf_prim.indices;
-                if (accessor_index >= 0) {
-                    auto &accessor = gltf.accessors[accessor_index];
-                    auto reader = make_reader(accessor_index);
-                    indices.resize(accessor.count);
-                    for (int i = 0; i < accessor.count; i++) {
-                        switch (accessor.componentType) {
-                        case TINYGLTF_COMPONENT_TYPE_BYTE:
-                            indices[i] =
-                                cast_value<int8_t, uint32_t>(reader(i));
-                            break;
-                        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
-                            indices[i] =
-                                cast_value<uint8_t, uint32_t>(reader(i));
-                            break;
-                        case TINYGLTF_COMPONENT_TYPE_SHORT:
-                            indices[i] =
-                                cast_value<int16_t, uint32_t>(reader(i));
-                            break;
-                        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-                            indices[i] =
-                                cast_value<uint16_t, uint32_t>(reader(i));
-                            break;
-                        case TINYGLTF_COMPONENT_TYPE_INT:
-                            indices[i] =
-                                cast_value<int32_t, uint32_t>(reader(i));
-                            break;
-                        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-                            indices[i] =
-                                cast_value<uint32_t, uint32_t>(reader(i));
-                            break;
-                        default:
-                            throw std::runtime_error(
-                                "invalid type for indices");
-                        }
-                    }
-                }
-            }
-            while (indices.size() % 3 != 0) {
-                indices.push_back(0);
-            }
-            auto triangle_count = indices.size() / 3;
-            m->set_indices(reinterpret_cast<glm::u32vec3 *>(indices.data()),
-                           0,
-                           triangle_count);
-            m->set_triangle_count(triangle_count);
+            auto prim_data = gltf_read_primitive_data(gltf, gltf_prim);
+            auto m = prim_data.upload_mesh(context);
             m->set_path(gltf_mesh_path(path, gltf, mesh_index, prim_index));
 
             Model::Primitive prim{};

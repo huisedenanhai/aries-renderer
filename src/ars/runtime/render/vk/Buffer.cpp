@@ -55,6 +55,10 @@ VkDeviceSize Buffer::size() const {
 }
 
 void Buffer::set_data_raw(void *value, size_t byte_offset, size_t byte_count) {
+    if (value == nullptr) {
+        return;
+    }
+
     assert(byte_offset + byte_count <= _size);
 
     map_once([&](void *ptr) {

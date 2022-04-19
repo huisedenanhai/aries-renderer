@@ -27,6 +27,14 @@ class Mesh : public IMesh {
                        size_t elem_offset,
                        size_t elem_count) override;
 
+    void set_joint(const glm::u16vec4 *joints,
+                   size_t elem_offset,
+                   size_t elem_count) override;
+
+    void set_weight(const glm::vec4 *weights,
+                    size_t elem_offset,
+                    size_t elem_count) override;
+
     [[nodiscard]] size_t triangle_count() const override;
 
     void set_triangle_count(size_t count) override;
@@ -50,6 +58,8 @@ class Mesh : public IMesh {
     Handle<Buffer> _normal_buffer{};
     Handle<Buffer> _tangent_buffer{};
     Handle<Buffer> _tex_coord_buffer{};
+    Handle<Buffer> _joint_buffer{};
+    Handle<Buffer> _weight_buffer{};
 
     Handle<Buffer> _index_buffer{};
     size_t _triangle_count = 0;

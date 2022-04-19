@@ -5,6 +5,7 @@
 
 namespace ars::editor {
 struct FileBrowserState {
+    std::string filter_pattern{};
     std::function<void(const std::filesystem::path &)> on_file_open =
         [](auto &&) {};
 };

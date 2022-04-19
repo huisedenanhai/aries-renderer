@@ -20,6 +20,13 @@ Mesh::Mesh(Context *context, const MeshInfo &info)
     _tex_coord_buffer = create_buffer(info.vertex_capacity * sizeof(glm::vec2),
                                       vertex_buffer_usage);
 
+    if (_info.skinned) {
+        _joint_buffer = create_buffer(
+            info.vertex_capacity * sizeof(glm::u16vec4), vertex_buffer_usage);
+        _weight_buffer = create_buffer(info.vertex_capacity * sizeof(glm::vec4),
+                                       vertex_buffer_usage);
+    }
+
     VkBufferUsageFlags index_buffer_usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
     _index_buffer = create_buffer(
         _info.triangle_capacity * sizeof(glm::u32vec3), index_buffer_usage);
@@ -89,6 +96,22 @@ math::AABB<float> Mesh::aabb() {
 
 void Mesh::set_aabb(const math::AABB<float> &aabb) {
     _aabb = aabb;
+}
+
+void Mesh::set_joint(const glm::u16vec4 *joints,
+                     size_t elem_offset,
+                     size_t elem_count) {
+    if (_joint_buffer != nullptr) {
+        _joint_buffer->set_data_array(joints, elem_offset, elem_count);
+    }
+}
+
+void Mesh::set_weight(const glm::vec4 *weights,
+                      size_t elem_offset,
+                      size_t elem_count) {
+    if (_weight_buffer != nullptr) {
+        _weight_buffer->set_data_array(weights, elem_offset, elem_count);
+    }
 }
 
 std::shared_ptr<Mesh> upcast(const std::shared_ptr<IMesh> &mesh) {

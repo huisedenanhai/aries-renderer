@@ -15,4 +15,8 @@ size_t IMesh::triangle_capacity() const {
 void IMesh::register_type() {
     rttr::registration::class_<IMesh>("ars::render::IMesh");
 }
+
+bool IMesh::skinned() const {
+    return _info.skinned;
+}
 } // namespace ars::render

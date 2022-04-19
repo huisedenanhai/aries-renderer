@@ -8,6 +8,7 @@
 
 namespace ars::render {
 struct MeshInfo {
+    bool skinned = false;
     size_t vertex_capacity = 0;
     size_t triangle_capacity = 0;
 };
@@ -19,6 +20,7 @@ class IMesh : public IRes {
     explicit IMesh(const MeshInfo &info);
 
     // Capacity can not be changed after initialization.
+    [[nodiscard]] bool skinned() const;
     [[nodiscard]] size_t vertex_capacity() const;
     [[nodiscard]] size_t triangle_capacity() const;
 
@@ -35,6 +37,13 @@ class IMesh : public IRes {
     virtual void set_tex_coord(const glm::vec2 *tex_coord,
                                size_t elem_offset,
                                size_t elem_count) = 0;
+    // Only take effects when skinned == true
+    virtual void set_joint(const glm::u16vec4 *joints,
+                           size_t elem_offset,
+                           size_t elem_count) = 0;
+    virtual void set_weight(const glm::vec4 *weights,
+                            size_t elem_offset,
+                            size_t elem_count) = 0;
 
     [[nodiscard]] virtual size_t triangle_count() const = 0;
     virtual void set_triangle_count(size_t count) = 0;

@@ -13,6 +13,10 @@ void tree_view_directory(FileBrowserState &state,
         if (!filename.empty() && filename[0] == '.') {
             continue;
         }
+        if (!entry.is_directory() &&
+            filename.find(state.filter_pattern) == std::string::npos) {
+            continue;
+        }
         if (gui::begin_selectable_tree_node(path.string().c_str(),
                                             filename.c_str(),
                                             !entry.is_directory(),
@@ -35,10 +39,13 @@ void tree_view_directory(FileBrowserState &state,
 void file_browser(FileBrowserState &state,
                   const std::filesystem::path &root,
                   std::filesystem::path &current_selected) {
-    if (!std::filesystem::is_directory(root)) {
-        return;
+    gui::input_text("Filter", state.filter_pattern);
+    ImGui::Separator();
+    if (ImGui::BeginChild("File Tree View")) {
+        if (std::filesystem::is_directory(root)) {
+            tree_view_directory(state, root, current_selected);
+        }
+        ImGui::EndChild();
     }
-
-    tree_view_directory(state, root, current_selected);
 }
 } // namespace ars::editor

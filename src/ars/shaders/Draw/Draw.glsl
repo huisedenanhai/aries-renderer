@@ -14,11 +14,21 @@
 #include <Misc.glsl>
 #include <Transform.glsl>
 
+// Shader input attrs
 #ifdef FRILL_SHADER_STAGE_FRAG
 layout(location = 0) flat in uint ars_in_instance_id;
 #else
 layout(location = 0) in uint ars_in_instance_id;
 layout(location = 0) out uint ars_out_instance_id;
+#endif
+
+#ifdef FRILL_SHADER_STAGE_VERT
+
+layout(location = 1) in vec3 in_position_os;
+layout(location = 2) in vec3 in_normal_os;
+layout(location = 3) in vec4 in_tangent_os;
+layout(location = 4) in vec2 in_uv;
+
 #endif
 
 struct Instance {
@@ -69,11 +79,6 @@ vec4 sample_tex_2d(uint index, vec2 uv) {
 
 #ifdef ARS_DEFINE_DEFAULT_VERTEX_SHADER
 #ifdef FRILL_SHADER_STAGE_VERT
-
-layout(location = 1) in vec3 in_position_os;
-layout(location = 2) in vec3 in_normal_os;
-layout(location = 3) in vec4 in_tangent_os;
-layout(location = 4) in vec2 in_uv;
 
 layout(location = 1) out vec3 out_position_vs;
 layout(location = 2) out vec3 out_normal_vs;

@@ -60,4 +60,22 @@ class IMesh : public IRes {
   protected:
     MeshInfo _info{};
 };
+
+struct SkeletonInfo {
+    uint32_t bone_count = 0;
+};
+
+class ISkeleton {
+  public:
+    explicit ISkeleton(const SkeletonInfo &info);
+
+    uint32_t bone_count() const;
+
+    virtual void set_bones(const math::XformTRS<float> *bones,
+                           size_t bone_offset,
+                           size_t bone_count) = 0;
+
+  protected:
+    SkeletonInfo _info{};
+};
 } // namespace ars::render

@@ -4,6 +4,7 @@
 #include <ars/runtime/core/Log.h>
 #include <ars/runtime/core/misc/Visitor.h>
 #include <chrono>
+#include <mikktspace/mikktspace.h>
 #include <sstream>
 #include <tiny_gltf.h>
 
@@ -247,7 +248,88 @@ struct PrimitiveData {
     std::vector<float> weight{};
     std::vector<uint32_t> indices{};
 
+    size_t triangle_count() const {
+        return indices.size() / 3;
+    }
+
+    size_t vertex_count() const {
+        return position.size() / 3;
+    }
+
+    void generate_default_tex_coord() {
+        // Initialize with all zeros
+        tex_coord.clear();
+        tex_coord.resize(vertex_count() * 2);
+    }
+
+    uint32_t vertex_index(int face, int vert) const {
+        return indices[face * 3 + vert];
+    }
+
+    void generate_default_tangent() {
+        // Reserve space for tangent data.
+        tangent.clear();
+        tangent.resize(vertex_count() * 4);
+
+        SMikkTSpaceInterface inter{};
+        inter.m_getNumFaces = [](const SMikkTSpaceContext *ctx) {
+            auto data = reinterpret_cast<PrimitiveData *>(ctx->m_pUserData);
+            return static_cast<int>(data->triangle_count());
+        };
+        inter.m_getNumVerticesOfFace = [](const SMikkTSpaceContext *ctx,
+                                          int face) { return 3; };
+        inter.m_getPosition = [](const SMikkTSpaceContext *ctx,
+                                 float fvPosOut[],
+                                 const int iFace,
+                                 const int iVert) {
+            auto data = reinterpret_cast<PrimitiveData *>(ctx->m_pUserData);
+            auto vert = data->vertex_index(iFace, iVert);
+            std::memcpy(fvPosOut, &data->position[vert * 3], 3 * sizeof(float));
+        };
+        inter.m_getNormal = [](const SMikkTSpaceContext *ctx,
+                               float fvNormOut[],
+                               const int iFace,
+                               const int iVert) {
+            auto data = reinterpret_cast<PrimitiveData *>(ctx->m_pUserData);
+            auto vert = data->vertex_index(iFace, iVert);
+            std::memcpy(fvNormOut, &data->normal[vert * 3], 3 * sizeof(float));
+        };
+        inter.m_getTexCoord = [](const SMikkTSpaceContext *ctx,
+                                 float fvTexcOut[],
+                                 const int iFace,
+                                 const int iVert) {
+            auto data = reinterpret_cast<PrimitiveData *>(ctx->m_pUserData);
+            auto vert = data->vertex_index(iFace, iVert);
+            std::memcpy(
+                fvTexcOut, &data->tex_coord[vert * 2], 2 * sizeof(float));
+        };
+        inter.m_setTSpaceBasic = [](const SMikkTSpaceContext *ctx,
+                                    const float fvTangent[],
+                                    const float fSign,
+                                    const int iFace,
+                                    const int iVert) {
+            auto data = reinterpret_cast<PrimitiveData *>(ctx->m_pUserData);
+            auto vert = data->vertex_index(iFace, iVert);
+            auto idx = vert * 4;
+            std::memcpy(&data->tangent[idx], fvTangent, 3 * sizeof(float));
+            data->tangent[idx + 3] = fSign;
+        };
+
+        SMikkTSpaceContext ctx{};
+        ctx.m_pInterface = &inter;
+        ctx.m_pUserData = this;
+        genTangSpaceDefault(&ctx);
+    }
+
     void canonicalize() {
+        if (tex_coord.empty()) {
+            generate_default_tex_coord();
+        }
+
+        if (tangent.empty()) {
+            generate_default_tangent();
+        }
+
         while (indices.size() % 3 != 0) {
             indices.push_back(0);
         }
@@ -256,9 +338,9 @@ struct PrimitiveData {
     std::shared_ptr<IMesh> upload_mesh(IContext *context) {
         MeshInfo info{};
 
-        info.vertex_capacity = position.size() / 3;
+        info.vertex_capacity = vertex_count();
         if (!indices.empty()) {
-            info.triangle_capacity = indices.size() / 3;
+            info.triangle_capacity = triangle_count();
         }
         info.skinned = !joint.empty() && !weight.empty();
 

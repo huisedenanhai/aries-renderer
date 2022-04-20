@@ -17,7 +17,7 @@ add_library(render
         IMaterial.h)
 
 target_link_libraries(render PUBLIC core imgui)
-target_link_libraries(render PRIVATE glfw imgui_glfw shaderc)
+target_link_libraries(render PRIVATE glfw imgui_glfw shaderc mikktspace)
 aries_setup_common_target(render)
 
 add_subdirectory(vk)

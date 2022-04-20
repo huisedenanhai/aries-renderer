@@ -19,4 +19,10 @@ void IMesh::register_type() {
 bool IMesh::skinned() const {
     return _info.skinned;
 }
+
+ISkeleton::ISkeleton(const SkeletonInfo &info) : _info(info) {}
+
+uint32_t ISkeleton::bone_count() const {
+    return _info.bone_count;
+}
 } // namespace ars::render

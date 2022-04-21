@@ -109,6 +109,11 @@ struct MaterialPassOwned {
 
 using MaterialPassArray = std::array<MaterialPassOwned, RenderPassID_Count>;
 
+struct MaterialPassInfo {
+    RenderPassID pass_id = {};
+    bool skinned = false;
+};
+
 class Material : public IMaterial {
   public:
     Material(
@@ -124,7 +129,7 @@ class Material : public IMaterial {
     std::vector<MaterialPropertyInfo> properties() override;
     MaterialType type() override;
 
-    MaterialPass pass(RenderPassID pass_id);
+    MaterialPass pass(const MaterialPassInfo &info);
 
   private:
     MaterialType _type{};

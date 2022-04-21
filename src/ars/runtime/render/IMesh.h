@@ -62,18 +62,19 @@ class IMesh : public IRes {
 };
 
 struct SkeletonInfo {
-    uint32_t bone_count = 0;
+    uint32_t joint_count = 0;
 };
 
 class ISkeleton {
   public:
     explicit ISkeleton(const SkeletonInfo &info);
 
-    uint32_t bone_count() const;
+    uint32_t joint_count() const;
 
-    virtual void set_bones(const math::XformTRS<float> *bones,
-                           size_t bone_offset,
-                           size_t bone_count) = 0;
+    // Bones are matrix directly applied for skinning
+    virtual void set_joints(const glm::mat4 *joints,
+                            size_t joint_offset,
+                            size_t joint_count) = 0;
 
   protected:
     SkeletonInfo _info{};

@@ -117,4 +117,22 @@ void Mesh::set_weight(const glm::vec4 *weights,
 std::shared_ptr<Mesh> upcast(const std::shared_ptr<IMesh> &mesh) {
     return std::reinterpret_pointer_cast<Mesh>(mesh);
 }
+
+void Skeleton::set_joints(const glm::mat4 *joints,
+                          size_t joint_offset,
+                          size_t joint_count) {
+    _joint_buffer->set_data_array(joints, joint_offset, joint_count);
+}
+
+Skeleton::Skeleton(Context *context, const SkeletonInfo &info)
+    : ISkeleton(info), _context(context) {
+    _joint_buffer =
+        _context->create_buffer(info.joint_count * sizeof(glm::mat4),
+                                VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                                VMA_MEMORY_USAGE_CPU_TO_GPU);
+}
+
+std::shared_ptr<Skeleton> upcast(const std::shared_ptr<ISkeleton> &skeleton) {
+    return std::dynamic_pointer_cast<Skeleton>(skeleton);
+}
 } // namespace ars::render::vk

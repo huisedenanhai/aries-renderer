@@ -7,6 +7,7 @@
 
 namespace ars::render::vk {
 class Mesh;
+class Skeleton;
 class Material;
 class Context;
 struct DrawRequest;
@@ -42,6 +43,7 @@ class Scene : public IScene {
     using RenderObjects = SoA<glm::mat4,
                               std::shared_ptr<Mesh>,
                               std::shared_ptr<Material>,
+                              std::shared_ptr<Skeleton>,
                               UserData>;
     RenderObjects render_objects{};
 
@@ -129,6 +131,8 @@ class RenderObject : public IRenderObject {
     IScene *scene() override;
     std::shared_ptr<IMesh> mesh() override;
     void set_mesh(std::shared_ptr<IMesh> mesh) override;
+    std::shared_ptr<ISkeleton> skeleton() override;
+    void set_skeleton(std::shared_ptr<ISkeleton> skeleton) override;
     std::shared_ptr<IMaterial> material() override;
     void set_material(std::shared_ptr<IMaterial> material) override;
     uint64_t user_data() override;

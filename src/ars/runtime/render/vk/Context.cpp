@@ -1081,4 +1081,8 @@ void Context::end_debug_label(CommandBuffer *cmd) const {
 std::shared_ptr<Material> Context::default_material_vk() {
     return _material_factory->default_material();
 }
+
+std::shared_ptr<ISkeleton> Context::create_skeleton(const SkeletonInfo &info) {
+    return std::make_shared<Skeleton>(this, info);
+}
 } // namespace ars::render::vk

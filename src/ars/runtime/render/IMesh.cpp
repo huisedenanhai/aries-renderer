@@ -22,7 +22,7 @@ bool IMesh::skinned() const {
 
 ISkeleton::ISkeleton(const SkeletonInfo &info) : _info(info) {}
 
-uint32_t ISkeleton::bone_count() const {
-    return _info.bone_count;
+uint32_t ISkeleton::joint_count() const {
+    return _info.joint_count;
 }
 } // namespace ars::render

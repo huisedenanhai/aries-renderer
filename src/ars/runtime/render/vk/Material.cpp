@@ -478,8 +478,8 @@ MaterialType Material::type() {
     return _type;
 }
 
-MaterialPass Material::pass(RenderPassID pass_id) {
-    auto id = static_cast<uint32_t>(pass_id);
+MaterialPass Material::pass(const MaterialPassInfo &info) {
+    auto id = static_cast<uint32_t>(info.pass_id);
     assert(id < _passes.size());
 
     MaterialPass p{};

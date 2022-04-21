@@ -14,6 +14,7 @@
 namespace ars::render {
 class IEffect;
 class IMesh;
+class ISkeleton;
 class ITexture;
 class IMaterial;
 class IScene;
@@ -39,6 +40,9 @@ class IRenderObject {
 
     virtual std::shared_ptr<IMesh> mesh() = 0;
     virtual void set_mesh(std::shared_ptr<IMesh> mesh) = 0;
+
+    virtual std::shared_ptr<ISkeleton> skeleton() = 0;
+    virtual void set_skeleton(std::shared_ptr<ISkeleton> skeleton) = 0;
 
     // For RenderObjects managed by MeshRenderers of engine::Scene, user data is
     // set to Entity *. If the RenderObject is not managed, user data is

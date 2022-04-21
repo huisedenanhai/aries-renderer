@@ -11,11 +11,13 @@ class IWindow;
 class ITexture;
 class IScene;
 class IMesh;
+class ISkeleton;
 class IPanoramaSky;
 class IPhysicalSky;
 
 struct TextureInfo;
 struct MeshInfo;
+struct SkeletonInfo;
 struct WindowInfo;
 
 enum class Backend { Vulkan };
@@ -71,6 +73,8 @@ class IContext {
     virtual std::shared_ptr<ITexture> default_texture(DefaultTexture tex) = 0;
 
     virtual std::shared_ptr<IMesh> create_mesh(const MeshInfo &info) = 0;
+    virtual std::shared_ptr<ISkeleton>
+    create_skeleton(const SkeletonInfo &info) = 0;
     virtual std::shared_ptr<IMaterial> create_material(MaterialType type) = 0;
 
     virtual std::shared_ptr<IPanoramaSky> create_panorama_sky() = 0;

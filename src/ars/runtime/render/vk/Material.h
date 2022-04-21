@@ -107,12 +107,17 @@ struct MaterialPassOwned {
     std::unique_ptr<MaterialPropertyBlock> property_block = nullptr;
 };
 
-using MaterialPassArray = std::array<MaterialPassOwned, RenderPassID_Count>;
-
 struct MaterialPassInfo {
     RenderPassID pass_id = {};
     bool skinned = false;
+
+    uint32_t encode() const;
+
+    constexpr static uint32_t MAX_INDEX = RenderPassID_Count * 2;
 };
+
+using MaterialPassArray =
+    std::array<MaterialPassOwned, MaterialPassInfo::MAX_INDEX>;
 
 class Material : public IMaterial {
   public:
@@ -149,7 +154,7 @@ struct MaterialPassTemplate {
 struct MaterialTemplate {
     MaterialInfo info{};
     std::shared_ptr<MaterialPropertyBlockLayout> property_layout{};
-    std::array<MaterialPassTemplate, RenderPassID_Count> passes{};
+    std::array<MaterialPassTemplate, MaterialPassInfo::MAX_INDEX> passes{};
 
     std::shared_ptr<Material> create();
 };
@@ -162,17 +167,10 @@ class MaterialFactory {
     std::shared_ptr<Material> default_material();
 
   private:
-    void init_unlit_template();
-    void init_metallic_roughness_template();
     void init_default_material();
-    std::shared_ptr<GraphicsPipeline>
-    create_pipeline(RenderPassID id,
-                    const std::vector<Shader *> &shaders,
-                    VkPipelineRasterizationStateCreateInfo *raster = nullptr);
 
     Context *_context{};
-    MaterialTemplate _unlit_template{};
-    MaterialTemplate _metallic_roughness_template{};
+    std::map<MaterialInfo, MaterialTemplate> _material_templates{};
     std::shared_ptr<Material> _default_material{};
 };
 } // namespace ars::render::vk

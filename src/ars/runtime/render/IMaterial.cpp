@@ -99,4 +99,16 @@ std::vector<uint8_t> glsl_to_spirv(const std::string &glsl,
     auto end = reinterpret_cast<const char *>(result.end());
     return {beg, end};
 }
+
+bool MaterialInfo::operator<(const MaterialInfo &rhs) const {
+    auto sm = static_cast<uint32_t>(shading_model);
+    auto rhs_sm = static_cast<uint32_t>(rhs.shading_model);
+    if (sm < rhs_sm) {
+        return true;
+    }
+    if (sm > rhs_sm) {
+        return false;
+    }
+    return features < rhs.features;
+}
 } // namespace ars::render

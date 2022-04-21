@@ -15,6 +15,7 @@ class ToneMapping;
 class QuerySelection;
 class Shadow;
 
+// Value must sequentially increase
 enum RenderPassID {
     RenderPassID_Geometry,
     RenderPassID_Shading,

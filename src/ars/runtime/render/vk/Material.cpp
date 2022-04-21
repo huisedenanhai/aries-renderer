@@ -1,6 +1,6 @@
 #include "Material.h"
 #include "Context.h"
-#include "features/Drawer.h"
+#include "materials/MaterialTemplate.h"
 #include <ars/runtime/core/Log.h>
 #include <ars/runtime/core/misc/Visitor.h>
 #include <sstream>
@@ -272,153 +272,16 @@ MaterialPropertyBlock::get_texture_by_index(uint32_t index) {
 }
 
 MaterialFactory::MaterialFactory(Context *context) : _context(context) {
-    init_unlit_template();
-    init_metallic_roughness_template();
     init_default_material();
 }
 
 std::shared_ptr<Material>
 MaterialFactory::create_material(const MaterialInfo &info) {
-    // TODO
-    switch (info.shading_model) {
-    case MaterialShadingModel::Unlit:
-        return _unlit_template.create();
-    case MaterialShadingModel::MetallicRoughnessPBR:
-        return _metallic_roughness_template.create();
+    auto it = _material_templates.find(info);
+    if (it == _material_templates.end()) {
+        _material_templates[info] = create_material_template(_context, info);
     }
-    return _metallic_roughness_template.create();
-}
-
-void MaterialFactory::init_unlit_template() {
-    auto white_tex = _context->default_texture(DefaultTexture::White);
-    MaterialPropertyBlockInfo unlit{};
-    unlit.name = "Unlit";
-    unlit.add_property("color_factor", glm::vec4(1.0f));
-    unlit.add_property("color_tex", white_tex);
-
-    _unlit_template.info.shading_model = MaterialShadingModel::Unlit;
-    _unlit_template.property_layout =
-        std::make_shared<MaterialPropertyBlockLayout>(_context, unlit);
-
-    auto &geom_pass = _unlit_template.passes[RenderPassID_Geometry];
-    geom_pass.property_layout = _unlit_template.property_layout;
-    // TODO init pipeline
-}
-
-void MaterialFactory::init_metallic_roughness_template() {
-    auto white_tex = _context->default_texture(DefaultTexture::White);
-
-    MaterialPropertyBlockInfo pbr{};
-    pbr.name = "MetallicRoughnessLit";
-    pbr.add_property("base_color_factor", glm::vec4(1.0f));
-    pbr.add_property("metallic_factor", 1.0f);
-    pbr.add_property("roughness_factor", 1.0f);
-    pbr.add_property("normal_scale", 1.0f);
-    pbr.add_property("occlusion_strength", 1.0f);
-    pbr.add_property("emission_factor", glm::vec3(0.0f));
-    pbr.add_property("base_color_tex", white_tex);
-    pbr.add_property("metallic_roughness_tex", white_tex);
-    pbr.add_property("normal_tex",
-                     _context->default_texture(DefaultTexture::Normal));
-    pbr.add_property("occlusion_tex", white_tex);
-    pbr.add_property("emission_tex", white_tex);
-
-    _metallic_roughness_template.info.shading_model =
-        MaterialShadingModel::MetallicRoughnessPBR;
-    _metallic_roughness_template.property_layout =
-        std::make_shared<MaterialPropertyBlockLayout>(_context, pbr);
-
-    // Geometry pass
-    {
-        auto vert_shader =
-            Shader::find_precompiled(_context,
-                                     "Draw/MetallicRoughnessPBR.glsl",
-                                     {"FRILL_SHADER_STAGE_VERT"});
-        auto frag_shader =
-            Shader::find_precompiled(_context,
-                                     "Draw/MetallicRoughnessPBR.glsl",
-                                     {"FRILL_SHADER_STAGE_FRAG"});
-
-        auto &geom_pass =
-            _metallic_roughness_template.passes[RenderPassID_Geometry];
-        geom_pass.property_layout =
-            _metallic_roughness_template.property_layout;
-        geom_pass.pipeline = create_pipeline(
-            RenderPassID_Geometry, {vert_shader.get(), frag_shader.get()});
-    }
-
-    // Shadow pass
-    {
-        auto vert_shader =
-            Shader::find_precompiled(_context, "Draw/Depth.vert");
-
-        VkPipelineRasterizationStateCreateInfo raster{
-            VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO};
-        raster.cullMode = VK_CULL_MODE_NONE;
-        raster.lineWidth = 1.0f;
-        raster.polygonMode = VK_POLYGON_MODE_FILL;
-        raster.depthBiasEnable = VK_TRUE;
-
-        auto &shadow_pass =
-            _metallic_roughness_template.passes[RenderPassID_Shadow];
-        shadow_pass.property_layout = nullptr;
-        shadow_pass.pipeline =
-            create_pipeline(RenderPassID_Shadow, {vert_shader.get()}, &raster);
-    }
-}
-
-std::shared_ptr<GraphicsPipeline> MaterialFactory::create_pipeline(
-    RenderPassID id,
-    const std::vector<Shader *> &shaders,
-    VkPipelineRasterizationStateCreateInfo *raster) {
-
-    VkPipelineVertexInputStateCreateInfo vertex_input{
-        VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
-
-    VkVertexInputBindingDescription vert_bindings[5] = {
-        {0,
-         static_cast<uint32_t>(sizeof(InstanceDrawParam)),
-         VK_VERTEX_INPUT_RATE_INSTANCE},
-        {1,
-         static_cast<uint32_t>(sizeof(glm::vec3)),
-         VK_VERTEX_INPUT_RATE_VERTEX},
-        {2,
-         static_cast<uint32_t>(sizeof(glm::vec3)),
-         VK_VERTEX_INPUT_RATE_VERTEX},
-        {3,
-         static_cast<uint32_t>(sizeof(glm::vec4)),
-         VK_VERTEX_INPUT_RATE_VERTEX},
-        {4,
-         static_cast<uint32_t>(sizeof(glm::vec2)),
-         VK_VERTEX_INPUT_RATE_VERTEX},
-    };
-
-    VkVertexInputAttributeDescription vert_attrs[5] = {
-        {0, 0, VK_FORMAT_R32_UINT, offsetof(InstanceDrawParam, instance_id)},
-        {1, 1, VK_FORMAT_R32G32B32_SFLOAT, 0},
-        {2, 2, VK_FORMAT_R32G32B32_SFLOAT, 0},
-        {3, 3, VK_FORMAT_R32G32B32A32_SFLOAT, 0},
-        {4, 4, VK_FORMAT_R32G32_SFLOAT, 0},
-    };
-
-    vertex_input.vertexAttributeDescriptionCount =
-        static_cast<uint32_t>(std::size(vert_attrs));
-    vertex_input.pVertexAttributeDescriptions = vert_attrs;
-    vertex_input.vertexBindingDescriptionCount =
-        static_cast<uint32_t>(std::size(vert_bindings));
-    vertex_input.pVertexBindingDescriptions = vert_bindings;
-
-    auto depth_stencil = enabled_depth_stencil_state();
-
-    GraphicsPipelineInfo info{};
-    info.shaders = shaders;
-    info.subpass = _context->renderer_data()->subpass(id);
-
-    info.vertex_input = &vertex_input;
-    info.depth_stencil = &depth_stencil;
-    info.raster = raster;
-
-    return std::make_shared<GraphicsPipeline>(_context, info);
+    return _material_templates[info].create();
 }
 
 std::shared_ptr<Material> MaterialFactory::default_material() {
@@ -481,7 +344,7 @@ std::vector<MaterialPropertyInfo> Material::properties() {
 }
 
 MaterialPass Material::pass(const MaterialPassInfo &info) {
-    auto id = static_cast<uint32_t>(info.pass_id);
+    auto id = info.encode();
     assert(id < _passes.size());
 
     MaterialPass p{};
@@ -513,10 +376,15 @@ MaterialPassOwned MaterialPassTemplate::create() {
 
 std::shared_ptr<Material> MaterialTemplate::create() {
     MaterialPassArray ps{};
-    for (int i = 0; i < RenderPassID_Count; i++) {
+    for (int i = 0; i < passes.size(); i++) {
         ps[i] = passes[i].create();
     }
 
     return std::make_shared<Material>(info, property_layout, std::move(ps));
+}
+
+uint32_t MaterialPassInfo::encode() const {
+    auto id = static_cast<uint32_t>(pass_id);
+    return (id << 1) | (skinned ? 1 : 0);
 }
 } // namespace ars::render::vk

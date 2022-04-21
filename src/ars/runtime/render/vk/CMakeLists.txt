@@ -48,3 +48,4 @@ target_include_directories(render PRIVATE
         ${CMAKE_BINARY_DIR}/spv)
 
 add_subdirectory(features)
+add_subdirectory(materials)

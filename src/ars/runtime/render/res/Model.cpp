@@ -699,6 +699,14 @@ void load_materials(IContext *context,
         mat.name = gltf_mat.name;
         MaterialInfo mat_info{};
         mat_info.shading_model = MaterialShadingModel::MetallicRoughnessPBR;
+
+        if (gltf_mat.doubleSided) {
+            mat_info.features |= MaterialFeature_DoubleSidedBit;
+        }
+        if (gltf_mat.alphaMode == "MASK") {
+            mat_info.features |= MaterialFeature_AlphaClipBit;
+        }
+
         auto &m = mat.material = context->create_material(mat_info);
         auto &pbr = gltf_mat.pbrMetallicRoughness;
 
@@ -723,13 +731,9 @@ void load_materials(IContext *context,
                          gltf_mat.emissiveFactor[1],
                          gltf_mat.emissiveFactor[2]));
 
-        // TODO correctly handle double sided and alpha mode
-
-        // m->set("double_sided", gltf_mat.doubleSided);
-        // m->set("alpha_mode", MaterialAlphaMode::Opaque);
-        // if (gltf_mat.alphaMode == "BLEND") {
-        //     m->set("alpha_mode", MaterialAlphaMode::Blend);
-        // }
+        if (mat_info.features & MaterialFeature_AlphaClipBit) {
+            m->set("alpha_cutoff", (float)gltf_mat.alphaCutoff);
+        }
 
         model.materials.emplace_back(std::move(mat));
     }

@@ -71,7 +71,7 @@ enum class MaterialShadingModel : uint32_t {
 
 enum MaterialFeatureFlagBits : uint32_t {
     MaterialFeature_AlphaClipBit = 0x00000001,
-    MaterialFeature_DoubleSided = 0x00000002,
+    MaterialFeature_DoubleSidedBit = 0x00000002,
 };
 
 using MaterialFeatureFlags = uint32_t;
@@ -80,6 +80,8 @@ struct MaterialInfo {
     MaterialShadingModel shading_model =
         MaterialShadingModel::MetallicRoughnessPBR;
     MaterialFeatureFlags features = 0;
+
+    bool operator<(const MaterialInfo &rhs) const;
 };
 
 class IMaterial : public IRes {

@@ -4,62 +4,6 @@
 
 namespace ars::render::vk {
 namespace {
-VkPipelineRasterizationStateCreateInfo
-rasterization_state(const MaterialInfo &mat_info) {
-    VkPipelineRasterizationStateCreateInfo raster{
-        VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO};
-    raster.lineWidth = 1.0f;
-    raster.polygonMode = VK_POLYGON_MODE_FILL;
-
-    raster.cullMode = VK_CULL_MODE_BACK_BIT;
-    if (mat_info.features & MaterialFeature_DoubleSidedBit) {
-        raster.cullMode = VK_CULL_MODE_NONE;
-    }
-    return raster;
-}
-
-std::shared_ptr<GraphicsPipeline>
-create_draw_pipeline(Context *context,
-                     const MaterialInfo &mat_info,
-                     const MaterialPassInfo &pass_info,
-                     const char *glsl_file,
-                     VkShaderStageFlags stages,
-                     VkPipelineRasterizationStateCreateInfo *raster,
-                     std::vector<const char *> common_flags) {
-    std::vector<std::unique_ptr<Shader>> unique_shaders{};
-
-    if (pass_info.skinned) {
-        common_flags.push_back("ARS_SKINNED");
-    }
-    if (mat_info.features & MaterialFeature_AlphaClipBit) {
-        common_flags.push_back("ARS_MATERIAL_ALPHA_CLIP");
-    }
-    if (mat_info.features & MaterialFeature_DoubleSidedBit) {
-        common_flags.push_back("ARS_MATERIAL_DOUBLE_SIDED");
-    }
-
-    if (stages & VK_SHADER_STAGE_VERTEX_BIT) {
-        auto flags = common_flags;
-        flags.push_back("FRILL_SHADER_STAGE_VERT");
-        unique_shaders.emplace_back(
-            Shader::find_precompiled(context, glsl_file, flags));
-    }
-
-    if (stages & VK_SHADER_STAGE_FRAGMENT_BIT) {
-        auto flags = common_flags;
-        flags.push_back("FRILL_SHADER_STAGE_FRAG");
-        unique_shaders.emplace_back(
-            Shader::find_precompiled(context, glsl_file, flags));
-    }
-
-    std::vector<Shader *> shaders{};
-    for (auto &s : unique_shaders) {
-        shaders.push_back(s.get());
-    }
-
-    return create_draw_pipeline(context, pass_info, shaders, raster);
-}
-
 MaterialPassTemplate
 create_pbr_geometry_pass_template(Context *context,
                                   const MaterialInfo &mat_info,

@@ -20,15 +20,22 @@ rasterization_state(const MaterialInfo &mat_info) {
 
 std::shared_ptr<GraphicsPipeline>
 create_draw_pipeline(Context *context,
+                     const MaterialInfo &mat_info,
                      const MaterialPassInfo &pass_info,
                      const char *glsl_file,
                      VkShaderStageFlags stages,
                      VkPipelineRasterizationStateCreateInfo *raster,
-                     std::vector<const char *> common_flags = {}) {
+                     std::vector<const char *> common_flags) {
     std::vector<std::unique_ptr<Shader>> unique_shaders{};
 
     if (pass_info.skinned) {
         common_flags.push_back("ARS_SKINNED");
+    }
+    if (mat_info.features & MaterialFeature_AlphaClipBit) {
+        common_flags.push_back("ARS_MATERIAL_ALPHA_CLIP");
+    }
+    if (mat_info.features & MaterialFeature_DoubleSidedBit) {
+        common_flags.push_back("ARS_MATERIAL_DOUBLE_SIDED");
     }
 
     if (stages & VK_SHADER_STAGE_VERTEX_BIT) {
@@ -74,12 +81,17 @@ create_pbr_geometry_pass_template(Context *context,
     pbr.add_property("occlusion_tex", white_tex);
     pbr.add_property("emission_tex", white_tex);
 
+    if (mat_info.features & MaterialFeature_AlphaClipBit) {
+        pbr.add_property("alpha_cutoff", 0.5f);
+    }
+
     auto raster = rasterization_state(mat_info);
 
     t.property_layout =
         std::make_shared<MaterialPropertyBlockLayout>(context, pbr);
     t.pipeline = create_draw_pipeline(
         context,
+        mat_info,
         pass_info,
         "Draw/Uber.glsl",
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -99,6 +111,7 @@ create_pbr_depth_pass_template(Context *context,
 
     t.property_layout = nullptr;
     t.pipeline = create_draw_pipeline(context,
+                                      mat_info,
                                       pass_info,
                                       "Draw/Uber.glsl",
                                       VK_SHADER_STAGE_VERTEX_BIT |

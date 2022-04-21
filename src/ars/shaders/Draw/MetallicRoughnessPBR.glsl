@@ -12,6 +12,10 @@ struct Material {
     uint normal_tex;
     uint occlusion_tex;
     uint emission_tex;
+
+#ifdef ARS_MATERIAL_ALPHA_CLIP
+    float alpha_cutoff;
+#endif
 };
 
 #define ARS_MATERIAL_SAMPLER_2D_COUNT 5
@@ -54,6 +58,13 @@ void main() {
     GBuffer g;
 
     g.base_color = sample_tex_2d(m.base_color_tex, in_uv) * m.base_color_factor;
+
+#ifdef ARS_MATERIAL_ALPHA_CLIP
+    if (g.base_color.a < m.alpha_cutoff) {
+        discard;
+    }
+#endif
+
     g.normal_vs = normalize(get_shading_normal_vs(m));
 
     MetallicRoughnessPBRGBuffer pbr;

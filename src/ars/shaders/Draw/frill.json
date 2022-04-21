@@ -9,9 +9,15 @@
                         "FRILL_SHADER_STAGE_FRAG"
                     ],
                     "can_off": false
-                }
+                },
+                "ARS_SKINNED"
             ]
         },
-        "Depth.vert"
+        {
+            "file": "Depth.vert",
+            "multi_compile": [
+                "ARS_SKINNED"
+            ]
+        }
     ]
 }

@@ -27,7 +27,7 @@ class Mesh : public IMesh {
                        size_t elem_offset,
                        size_t elem_count) override;
 
-    void set_joint(const glm::u16vec4 *joints,
+    void set_joint(const glm::uvec4 *joints,
                    size_t elem_offset,
                    size_t elem_count) override;
 

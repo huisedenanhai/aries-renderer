@@ -29,6 +29,11 @@ layout(location = 2) in vec3 in_normal_os;
 layout(location = 3) in vec4 in_tangent_os;
 layout(location = 4) in vec2 in_uv;
 
+#ifdef ARS_SKINNED
+layout(location = 5) in uvec4 in_joints;
+layout(location = 6) in vec4 in_weights;
+#endif
+
 #endif
 
 struct Instance {

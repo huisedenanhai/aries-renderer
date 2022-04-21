@@ -38,7 +38,7 @@ class IMesh : public IRes {
                                size_t elem_offset,
                                size_t elem_count) = 0;
     // Only take effects when skinned == true
-    virtual void set_joint(const glm::u16vec4 *joints,
+    virtual void set_joint(const glm::uvec4 *joints,
                            size_t elem_offset,
                            size_t elem_count) = 0;
     virtual void set_weight(const glm::vec4 *weights,

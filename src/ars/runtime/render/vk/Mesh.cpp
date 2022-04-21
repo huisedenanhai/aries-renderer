@@ -21,8 +21,8 @@ Mesh::Mesh(Context *context, const MeshInfo &info)
                                       vertex_buffer_usage);
 
     if (_info.skinned) {
-        _joint_buffer = create_buffer(
-            info.vertex_capacity * sizeof(glm::u16vec4), vertex_buffer_usage);
+        _joint_buffer = create_buffer(info.vertex_capacity * sizeof(glm::uvec4),
+                                      vertex_buffer_usage);
         _weight_buffer = create_buffer(info.vertex_capacity * sizeof(glm::vec4),
                                        vertex_buffer_usage);
     }
@@ -98,7 +98,7 @@ void Mesh::set_aabb(const math::AABB<float> &aabb) {
     _aabb = aabb;
 }
 
-void Mesh::set_joint(const glm::u16vec4 *joints,
+void Mesh::set_joint(const glm::uvec4 *joints,
                      size_t elem_offset,
                      size_t elem_count) {
     if (_joint_buffer != nullptr) {

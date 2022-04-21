@@ -244,7 +244,7 @@ struct PrimitiveData {
     std::vector<float> normal{};
     std::vector<float> tangent{};
     std::vector<float> tex_coord{};
-    std::vector<uint16_t> joint{};
+    std::vector<uint32_t> joint{};
     std::vector<float> weight{};
     std::vector<uint32_t> indices{};
 
@@ -363,7 +363,7 @@ struct PrimitiveData {
                          0,
                          info.vertex_capacity);
         if (info.skinned) {
-            m->set_joint(reinterpret_cast<glm::u16vec4 *>(joint.data()),
+            m->set_joint(reinterpret_cast<glm::uvec4 *>(joint.data()),
                          0,
                          info.vertex_capacity);
             m->set_weight(reinterpret_cast<glm::vec4 *>(weight.data()),
@@ -411,7 +411,7 @@ PrimitiveData gltf_read_primitive_data(const tinygltf::Model &gltf,
     read_attr("TANGENT", data.tangent, TINYGLTF_TYPE_VEC4, 0.0f);
     read_attr("TEXCOORD_0", data.tex_coord, TINYGLTF_TYPE_VEC2, 0.0f);
     read_attr(
-        "JOINTS_0", data.joint, TINYGLTF_TYPE_VEC4, static_cast<uint16_t>(0));
+        "JOINTS_0", data.joint, TINYGLTF_TYPE_VEC4, static_cast<uint32_t>(0));
     read_attr("WEIGHTS_0", data.weight, TINYGLTF_TYPE_VEC4, 0.0f);
 
     if (gltf_prim.indices >= 0) {

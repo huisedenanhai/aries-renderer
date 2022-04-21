@@ -110,6 +110,16 @@ create_pbr_depth_pass_template(Context *context,
     raster.depthBiasEnable = VK_TRUE;
 
     t.property_layout = nullptr;
+    if (mat_info.features & MaterialFeature_AlphaClipBit) {
+        MaterialPropertyBlockInfo block{};
+        block.add_property("base_color_factor", glm::vec4(1.0f));
+        block.add_property("base_color_tex",
+                           context->default_texture(DefaultTexture::White));
+        block.add_property("alpha_cutoff", 0.5f);
+        t.property_layout =
+            std::make_shared<MaterialPropertyBlockLayout>(context, block);
+    }
+
     t.pipeline = create_draw_pipeline(context,
                                       mat_info,
                                       pass_info,

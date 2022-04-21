@@ -1,7 +1,7 @@
 {
     "sources": [
         {
-            "file": "MetallicRoughnessPBR.glsl",
+            "file": "Uber.glsl",
             "multi_compile": [
                 {
                     "options": [
@@ -10,13 +10,16 @@
                     ],
                     "can_off": false
                 },
-                "ARS_SKINNED"
-            ]
-        },
-        {
-            "file": "Depth.vert",
-            "multi_compile": [
-                "ARS_SKINNED"
+                {
+                    "options": [
+                        "ARS_METALLIC_ROUGHNESS_PBR_GEOMETRY_PASS",
+                        "ARS_DEPTH_ONLY_PASS"
+                    ],
+                    "can_off": false
+                },
+                "ARS_SKINNED",
+                "ARS_MATERIAL_ALPHA_CLIP",
+                "ARS_MATERIAL_DOUBLE_SIDED"
             ]
         }
     ]

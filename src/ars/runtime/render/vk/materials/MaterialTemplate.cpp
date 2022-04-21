@@ -61,7 +61,7 @@ MaterialTemplate create_material_template(Context *context,
 
 std::shared_ptr<GraphicsPipeline>
 create_draw_pipeline(Context *context,
-                     MaterialPassInfo pass,
+                     const MaterialPassInfo &pass,
                      const std::vector<Shader *> &shaders,
                      VkPipelineRasterizationStateCreateInfo *raster) {
     VkPipelineVertexInputStateCreateInfo vertex_input{

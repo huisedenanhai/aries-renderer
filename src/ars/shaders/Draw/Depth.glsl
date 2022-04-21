@@ -1,0 +1,7 @@
+#ifdef ARS_UBER_SHADER_DEFINE_MATERIAL
+#define ARS_EMPTY_MATERIAL
+#endif
+
+#ifdef ARS_UBER_SHADER_DEFINE_FRAG_SHADER
+void main() {}
+#endif

@@ -1,8 +1,4 @@
-#version 450 core
-
-#include <GBuffer.glsl>
-#include <MetallicRoughnessPBR.glsl>
-#include <ShadingModel.glsl>
+#ifdef ARS_UBER_SHADER_DEFINE_MATERIAL
 
 struct Material {
     vec4 base_color_factor;
@@ -20,17 +16,9 @@ struct Material {
 
 #define ARS_MATERIAL_SAMPLER_2D_COUNT 5
 
-#define ARS_DEFINE_DEFAULT_VERTEX_SHADER
-#include "Draw.glsl"
+#endif
 
-// Frag shader
-#ifdef FRILL_SHADER_STAGE_FRAG
-
-layout(location = 1) in vec3 in_position_vs;
-layout(location = 2) in vec3 in_normal_vs;
-layout(location = 3) in vec3 in_tangent_vs;
-layout(location = 4) in vec3 in_bitangent_vs;
-layout(location = 5) in vec2 in_uv;
+#ifdef ARS_UBER_SHADER_DEFINE_FRAG_SHADER
 
 layout(location = 0) out vec4 gbuffer0;
 layout(location = 1) out vec4 gbuffer1;

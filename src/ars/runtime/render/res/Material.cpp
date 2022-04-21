@@ -14,7 +14,9 @@ load_material(IContext *context, Resources *res, const ResData &data) {
 
     MaterialResMeta meta = data.meta;
     auto properties = nlohmann::json::from_bson(data.data);
-    auto m = context->create_material(meta.type);
+    MaterialInfo info{};
+    info.shading_model = meta.type;
+    auto m = context->create_material(info);
     for (auto &prop : m->properties()) {
         auto value = properties[prop.name];
         switch (prop.type) {

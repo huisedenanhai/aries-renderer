@@ -1,6 +1,7 @@
 #pragma once
 
 #include "IContext.h"
+#include <ars/runtime/core/Reflect.h>
 #include <ars/runtime/core/Res.h>
 #include <ars/runtime/core/math/AABB.h>
 #include <glm/glm.hpp>

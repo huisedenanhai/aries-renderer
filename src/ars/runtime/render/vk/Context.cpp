@@ -954,8 +954,8 @@ void Context::unregister_swapchain(Swapchain *swapchain) {
     _registered_swapchains.erase(swapchain);
 }
 
-std::shared_ptr<IMaterial> Context::create_material(MaterialType type) {
-    return _material_factory->create_material(type);
+std::shared_ptr<IMaterial> Context::create_material(const MaterialInfo &info) {
+    return _material_factory->create_material(info);
 }
 
 std::shared_ptr<ITexture> Context::default_texture(DefaultTexture tex) {

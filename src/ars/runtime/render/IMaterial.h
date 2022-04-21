@@ -64,10 +64,25 @@ struct MaterialPropertyInfo {
     MaterialPropertyVariant default_value{};
 };
 
-enum class MaterialType : uint32_t { Unlit = 1, MetallicRoughnessPBR = 2 };
+enum class MaterialShadingModel : uint32_t {
+    Unlit = 1,
+    MetallicRoughnessPBR = 2
+};
+
+enum MaterialFeatureFlagBits : uint32_t {
+    MaterialFeature_AlphaClipBit = 0x00000001,
+    MaterialFeature_DoubleSided = 0x00000002,
+};
+
+using MaterialFeatureFlags = uint32_t;
+
+struct MaterialInfo {
+    MaterialShadingModel shading_model =
+        MaterialShadingModel::MetallicRoughnessPBR;
+    MaterialFeatureFlags features = 0;
+};
 
 class IMaterial : public IRes {
-
     RTTR_DERIVE(IRes);
 
   public:
@@ -100,7 +115,7 @@ class IMaterial : public IRes {
     get_variant(const std::string &name) = 0;
 
     virtual std::vector<MaterialPropertyInfo> properties() = 0;
-    virtual MaterialType type() = 0;
+    virtual MaterialInfo info() = 0;
 
     static void register_type();
 };

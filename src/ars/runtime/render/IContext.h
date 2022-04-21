@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Common.h"
-#include "IMaterial.h"
 #include <memory>
 #include <optional>
 #include <string>
@@ -14,11 +13,13 @@ class IMesh;
 class ISkeleton;
 class IPanoramaSky;
 class IPhysicalSky;
+class IMaterial;
 
 struct TextureInfo;
 struct MeshInfo;
 struct SkeletonInfo;
 struct WindowInfo;
+struct MaterialInfo;
 
 enum class Backend { Vulkan };
 
@@ -75,7 +76,8 @@ class IContext {
     virtual std::shared_ptr<IMesh> create_mesh(const MeshInfo &info) = 0;
     virtual std::shared_ptr<ISkeleton>
     create_skeleton(const SkeletonInfo &info) = 0;
-    virtual std::shared_ptr<IMaterial> create_material(MaterialType type) = 0;
+    virtual std::shared_ptr<IMaterial>
+    create_material(const MaterialInfo &info) = 0;
 
     virtual std::shared_ptr<IPanoramaSky> create_panorama_sky() = 0;
     virtual std::shared_ptr<IPhysicalSky> create_physical_sky() = 0;

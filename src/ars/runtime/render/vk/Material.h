@@ -30,7 +30,7 @@ struct MaterialPropertyBlockInfo {
                             std::forward<T>(default_value));
     }
 
-    std::string compile_glsl() const;
+    std::string to_glsl() const;
 };
 
 class MaterialPropertyBlockLayout {
@@ -117,7 +117,7 @@ struct MaterialPassInfo {
 class Material : public IMaterial {
   public:
     Material(
-        MaterialType type,
+        const MaterialInfo &info,
         const std::shared_ptr<MaterialPropertyBlockLayout> &property_layout,
         MaterialPassArray passes);
 
@@ -127,12 +127,12 @@ class Material : public IMaterial {
     get_variant(const std::string &name) override;
 
     std::vector<MaterialPropertyInfo> properties() override;
-    MaterialType type() override;
+    MaterialInfo info() override;
 
     MaterialPass pass(const MaterialPassInfo &info);
 
   private:
-    MaterialType _type{};
+    MaterialInfo _info{};
     std::unique_ptr<MaterialPropertyBlock> _property_block{};
     MaterialPassArray _passes{};
 };
@@ -147,7 +147,7 @@ struct MaterialPassTemplate {
 };
 
 struct MaterialTemplate {
-    MaterialType type{};
+    MaterialInfo info{};
     std::shared_ptr<MaterialPropertyBlockLayout> property_layout{};
     std::array<MaterialPassTemplate, RenderPassID_Count> passes{};
 
@@ -158,7 +158,7 @@ class MaterialFactory {
   public:
     explicit MaterialFactory(Context *context);
 
-    std::shared_ptr<Material> create_material(MaterialType type);
+    std::shared_ptr<Material> create_material(const MaterialInfo &info);
     std::shared_ptr<Material> default_material();
 
   private:

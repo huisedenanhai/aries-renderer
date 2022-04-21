@@ -407,7 +407,7 @@ void import_gltf_materials(const std::filesystem::path &path,
     for (int mat_index = 0; mat_index < gltf.materials.size(); mat_index++) {
         auto &gltf_mat = gltf.materials[mat_index];
         render::MaterialResMeta meta{};
-        meta.type = render::MaterialType::MetallicRoughnessPBR;
+        meta.type = render::MaterialShadingModel::MetallicRoughnessPBR;
 
         auto js = nlohmann::json::object();
 

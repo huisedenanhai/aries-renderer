@@ -82,6 +82,12 @@ vec4 sample_tex_2d(uint index, vec2 uv) {
 
 #endif
 
+#ifdef ARS_SKINNED
+layout(set = 1, binding = 0, std430) buffer Skin {
+    mat4 ars_skin[];
+};
+#endif
+
 #ifdef ARS_DEFINE_DEFAULT_VERTEX_SHADER
 #ifdef FRILL_SHADER_STAGE_VERT
 
@@ -95,10 +101,23 @@ void main() {
     Instance inst = get_instance();
     vec3 bitangent_os = calculate_bitangent(in_normal_os, in_tangent_os);
 
-    out_position_vs = transform_position(inst.MV, in_position_os).xyz;
-    out_normal_vs = transform_normal(inst.I_MV, in_normal_os);
-    out_bitangent_vs = transform_vector(inst.MV, bitangent_os);
-    out_tangent_vs = transform_vector(inst.MV, in_tangent_os.xyz);
+    mat4 MV = inst.MV;
+    mat4 I_MV = inst.I_MV;
+
+#ifdef ARS_SKINNED
+    mat4 skin_mat = ars_skin[in_joints.x] * in_weights.x +
+                    ars_skin[in_joints.y] * in_weights.y +
+                    ars_skin[in_joints.z] * in_weights.z +
+                    ars_skin[in_joints.w] * in_weights.w;
+    MV = MV * skin_mat;
+    I_MV = inverse(skin_mat) * I_MV;
+#endif
+
+    vec4 pos_vs = transform_position(MV, in_position_os);
+    out_position_vs = pos_vs.xyz / pos_vs.w;
+    out_normal_vs = transform_normal(I_MV, in_normal_os);
+    out_bitangent_vs = transform_vector(MV, bitangent_os);
+    out_tangent_vs = transform_vector(MV, in_tangent_os.xyz);
     out_uv = in_uv;
 
     gl_Position = transform_position(get_view().P, out_position_vs);

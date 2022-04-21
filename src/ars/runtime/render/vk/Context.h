@@ -90,7 +90,8 @@ class Context : public IContext {
     std::shared_ptr<IMesh> create_mesh(const MeshInfo &info) override;
     std::shared_ptr<ISkeleton>
     create_skeleton(const SkeletonInfo &info) override;
-    std::shared_ptr<IMaterial> create_material(MaterialType type) override;
+    std::shared_ptr<IMaterial>
+    create_material(const MaterialInfo &info) override;
     std::shared_ptr<IPanoramaSky> create_panorama_sky() override;
     std::shared_ptr<IPhysicalSky> create_physical_sky() override;
     [[nodiscard]] Instance *instance() const;

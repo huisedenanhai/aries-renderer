@@ -1,4 +1,5 @@
 #include "Model.h"
+#include "../IMaterial.h"
 #include "../IMesh.h"
 #include "Texture.h"
 #include <ars/runtime/core/Log.h>
@@ -696,8 +697,9 @@ void load_materials(IContext *context,
         Model::Material mat{};
 
         mat.name = gltf_mat.name;
-        auto &m = mat.material =
-            context->create_material(MaterialType::MetallicRoughnessPBR);
+        MaterialInfo mat_info{};
+        mat_info.shading_model = MaterialShadingModel::MetallicRoughnessPBR;
+        auto &m = mat.material = context->create_material(mat_info);
         auto &pbr = gltf_mat.pbrMetallicRoughness;
 
         m->set_path(gltf_material_path(path, gltf, mat_index));

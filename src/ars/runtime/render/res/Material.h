@@ -7,7 +7,7 @@ namespace ars::render {
 class IContext;
 
 struct MaterialResMeta {
-    MaterialType type = MaterialType::MetallicRoughnessPBR;
+    MaterialShadingModel type = MaterialShadingModel::MetallicRoughnessPBR;
     DataSlice properties;
 
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(MaterialResMeta, type, properties)

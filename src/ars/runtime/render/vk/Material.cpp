@@ -28,7 +28,7 @@ MaterialPropertyBlockInfo &MaterialPropertyBlockInfo::add_property(
     return *this;
 }
 
-std::string MaterialPropertyBlockInfo::compile_glsl() const {
+std::string MaterialPropertyBlockInfo::to_glsl() const {
     std::stringstream ss;
     ss << "struct " << name << " {\n";
     for (auto &p : properties) {
@@ -277,11 +277,13 @@ MaterialFactory::MaterialFactory(Context *context) : _context(context) {
     init_default_material();
 }
 
-std::shared_ptr<Material> MaterialFactory::create_material(MaterialType type) {
-    switch (type) {
-    case MaterialType::Unlit:
+std::shared_ptr<Material>
+MaterialFactory::create_material(const MaterialInfo &info) {
+    // TODO
+    switch (info.shading_model) {
+    case MaterialShadingModel::Unlit:
         return _unlit_template.create();
-    case MaterialType::MetallicRoughnessPBR:
+    case MaterialShadingModel::MetallicRoughnessPBR:
         return _metallic_roughness_template.create();
     }
     return _metallic_roughness_template.create();
@@ -294,7 +296,7 @@ void MaterialFactory::init_unlit_template() {
     unlit.add_property("color_factor", glm::vec4(1.0f));
     unlit.add_property("color_tex", white_tex);
 
-    _unlit_template.type = MaterialType::Unlit;
+    _unlit_template.info.shading_model = MaterialShadingModel::Unlit;
     _unlit_template.property_layout =
         std::make_shared<MaterialPropertyBlockLayout>(_context, unlit);
 
@@ -321,7 +323,8 @@ void MaterialFactory::init_metallic_roughness_template() {
     pbr.add_property("occlusion_tex", white_tex);
     pbr.add_property("emission_tex", white_tex);
 
-    _metallic_roughness_template.type = MaterialType::MetallicRoughnessPBR;
+    _metallic_roughness_template.info.shading_model =
+        MaterialShadingModel::MetallicRoughnessPBR;
     _metallic_roughness_template.property_layout =
         std::make_shared<MaterialPropertyBlockLayout>(_context, pbr);
 
@@ -423,7 +426,10 @@ std::shared_ptr<Material> MaterialFactory::default_material() {
 }
 
 void MaterialFactory::init_default_material() {
-    _default_material = create_material(MaterialType::MetallicRoughnessPBR);
+    MaterialInfo info{};
+    info.shading_model = MaterialShadingModel::MetallicRoughnessPBR;
+
+    _default_material = create_material(info);
     _default_material->set("base_color_factor",
                            glm::vec4(0.8f, 0.8f, 0.8f, 1.0f));
     _default_material->set("metallic_factor", 0.0f);
@@ -457,10 +463,10 @@ Material::get_variant(const std::string &name) {
 }
 
 Material::Material(
-    MaterialType type,
+    const MaterialInfo &info,
     const std::shared_ptr<MaterialPropertyBlockLayout> &property_layout,
     MaterialPassArray passes)
-    : _type(type), _passes(std::move(passes)) {
+    : _info(info), _passes(std::move(passes)) {
     if (property_layout != nullptr) {
         _property_block =
             std::make_unique<MaterialPropertyBlock>(property_layout);
@@ -474,10 +480,6 @@ std::vector<MaterialPropertyInfo> Material::properties() {
     return _property_block->layout()->info().properties;
 }
 
-MaterialType Material::type() {
-    return _type;
-}
-
 MaterialPass Material::pass(const MaterialPassInfo &info) {
     auto id = static_cast<uint32_t>(info.pass_id);
     assert(id < _passes.size());
@@ -487,6 +489,10 @@ MaterialPass Material::pass(const MaterialPassInfo &info) {
     p.pipeline = _passes[id].pipeline.get();
 
     return p;
+}
+
+MaterialInfo Material::info() {
+    return _info;
 }
 
 std::shared_ptr<Material> upcast(const std::shared_ptr<IMaterial> &m) {
@@ -511,6 +517,6 @@ std::shared_ptr<Material> MaterialTemplate::create() {
         ps[i] = passes[i].create();
     }
 
-    return std::make_shared<Material>(type, property_layout, std::move(ps));
+    return std::make_shared<Material>(info, property_layout, std::move(ps));
 }
 } // namespace ars::render::vk

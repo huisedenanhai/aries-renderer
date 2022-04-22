@@ -223,6 +223,87 @@ void Drawer::draw(CommandBuffer *cmd,
          {});
 }
 
+namespace {
+bool can_be_batched(const DrawRequest &lhs, const DrawRequest &rhs) {
+    return lhs.material.pipeline == rhs.material.pipeline &&
+           lhs.material.property_block == rhs.material.property_block &&
+           lhs.mesh == rhs.mesh && lhs.skeleton == rhs.skeleton;
+}
+
+void dispatch_batch(CommandBuffer *cmd,
+                    const DrawRequest &req,
+                    Buffer *view_buffer,
+                    Buffer *inst_buffer,
+                    uint32_t start_index,
+                    uint32_t end_index,
+                    const DrawRequest &bound_req,
+                    const DrawCallbacks &callbacks) {
+    if (end_index <= start_index) {
+        return;
+    }
+
+    auto ctx = cmd->context();
+
+    auto pipeline = req.material.pipeline;
+    if (pipeline != bound_req.material.pipeline) {
+        pipeline->bind(cmd);
+        if (callbacks.on_pipeline_bound) {
+            callbacks.on_pipeline_bound(cmd);
+        }
+    }
+
+    DescriptorEncoder desc{};
+    desc.set_buffer(0, 0, view_buffer);
+    desc.set_buffer(0, 1, inst_buffer);
+    // The property block can be null, if that happens the shader should not
+    // declare material and texture bindings
+    auto prop_block = req.material.property_block;
+    if (prop_block != nullptr) {
+        auto prop_buf =
+            ctx->create_buffer(prop_block->layout()->data_block_size(),
+                               VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                               VMA_MEMORY_USAGE_CPU_TO_GPU);
+        prop_buf->map_once([&](void *ptr) { prop_block->fill_data(ptr); });
+        desc.set_buffer(0, 2, prop_buf.get());
+        auto ref_textures = prop_block->referenced_textures();
+        // If the material does not reference any textures, it should not
+        // bind to texture slot
+        if (!ref_textures.empty()) {
+            desc.set_textures(0, 3, prop_block->referenced_textures());
+        }
+    }
+
+    desc.commit(cmd, pipeline);
+
+    if (req.mesh != bound_req.mesh) {
+        std::vector<VkBuffer> vertex_buffers = {
+            inst_buffer->buffer(),
+            req.mesh->position_buffer()->buffer(),
+            req.mesh->normal_buffer()->buffer(),
+            req.mesh->tangent_buffer()->buffer(),
+            req.mesh->tex_coord_buffer()->buffer(),
+        };
+        if (req.skeleton != nullptr) {
+            vertex_buffers.push_back(req.mesh->joint_buffer()->buffer());
+            vertex_buffers.push_back(req.mesh->weight_buffer()->buffer());
+        }
+        std::vector<VkDeviceSize> vertex_offsets(std::size(vertex_buffers));
+        cmd->BindVertexBuffers(0,
+                               static_cast<uint32_t>(std::size(vertex_buffers)),
+                               vertex_buffers.data(),
+                               vertex_offsets.data());
+        cmd->BindIndexBuffer(
+            req.mesh->index_buffer()->buffer(), 0, VK_INDEX_TYPE_UINT32);
+    }
+
+    cmd->DrawIndexed(req.mesh->triangle_count() * 3,
+                     end_index - start_index,
+                     0,
+                     0,
+                     start_index);
+}
+} // namespace
+
 void Drawer::draw(CommandBuffer *cmd,
                   const glm::mat4 &P,
                   const glm::mat4 &V,
@@ -258,6 +339,9 @@ void Drawer::draw(CommandBuffer *cmd,
                   if (lhs->mesh != rhs->mesh) {
                       return lhs->mesh < rhs->mesh;
                   }
+                  if (lhs->skeleton != rhs->skeleton) {
+                      return lhs->skeleton < rhs->skeleton;
+                  }
                   return lhs < rhs;
               });
 
@@ -280,83 +364,29 @@ void Drawer::draw(CommandBuffer *cmd,
         }
     });
 
-    GraphicsPipeline *bound_pipeline = nullptr;
-    MaterialPropertyBlock *bound_property_block = nullptr;
-    Mesh *bound_mesh = nullptr;
+    DrawRequest bound_req{};
     size_t last_flushed_index = 0;
 
     auto flush = [&](size_t end_index) {
         if (end_index <= last_flushed_index) {
             return;
         }
-
         auto req = sorted_requests[last_flushed_index];
-        if (req->material.pipeline != bound_pipeline) {
-            bound_pipeline = req->material.pipeline;
-            bound_pipeline->bind(cmd);
-            if (callbacks.on_pipeline_bound) {
-                callbacks.on_pipeline_bound(cmd);
-            }
-        }
-
-        bound_property_block = req->material.property_block;
-
-        DescriptorEncoder desc{};
-        desc.set_buffer(0, 0, view_transform_buffer.get());
-        desc.set_buffer(0, 1, inst_buffer.get());
-        // The property block can be null, if that happens the shader should not
-        // declare material and texture bindings
-        if (bound_property_block != nullptr) {
-            auto prop_buf = ctx->create_buffer(
-                bound_property_block->layout()->data_block_size(),
-                VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-                VMA_MEMORY_USAGE_CPU_TO_GPU);
-            prop_buf->map_once(
-                [&](void *ptr) { bound_property_block->fill_data(ptr); });
-            desc.set_buffer(0, 2, prop_buf.get());
-            auto ref_textures = bound_property_block->referenced_textures();
-            // If the material does not reference any textures, it should not
-            // bind to texture slot
-            if (!ref_textures.empty()) {
-                desc.set_textures(
-                    0, 3, bound_property_block->referenced_textures());
-            }
-        }
-        desc.commit(cmd, bound_pipeline);
-
-        if (req->mesh != bound_mesh) {
-            bound_mesh = req->mesh;
-            VkBuffer vertex_buffers[] = {
-                inst_buffer->buffer(),
-                bound_mesh->position_buffer()->buffer(),
-                bound_mesh->normal_buffer()->buffer(),
-                bound_mesh->tangent_buffer()->buffer(),
-                bound_mesh->tex_coord_buffer()->buffer(),
-            };
-            VkDeviceSize vertex_offsets[std::size(vertex_buffers)] = {};
-            cmd->BindVertexBuffers(
-                0,
-                static_cast<uint32_t>(std::size(vertex_buffers)),
-                vertex_buffers,
-                vertex_offsets);
-            cmd->BindIndexBuffer(
-                bound_mesh->index_buffer()->buffer(), 0, VK_INDEX_TYPE_UINT32);
-        }
-
-        cmd->DrawIndexed(bound_mesh->triangle_count() * 3,
-                         end_index - last_flushed_index,
-                         0,
-                         0,
-                         last_flushed_index);
-
+        dispatch_batch(cmd,
+                       *req,
+                       view_transform_buffer.get(),
+                       inst_buffer.get(),
+                       last_flushed_index,
+                       end_index,
+                       bound_req,
+                       callbacks);
+        bound_req = *req;
         last_flushed_index = end_index;
     };
 
     for (int i = 0; i < sorted_requests.size(); i++) {
         auto req = sorted_requests[i];
-        if (req->material.pipeline != bound_pipeline ||
-            req->material.property_block != bound_property_block ||
-            req->mesh != bound_mesh) {
+        if (!can_be_batched(*req, *sorted_requests[last_flushed_index])) {
             flush(i);
         }
     }

@@ -114,6 +114,14 @@ void Mesh::set_weight(const glm::vec4 *weights,
     }
 }
 
+Handle<Buffer> Mesh::joint_buffer() const {
+    return _joint_buffer;
+}
+
+Handle<Buffer> Mesh::weight_buffer() const {
+    return _weight_buffer;
+}
+
 std::shared_ptr<Mesh> upcast(const std::shared_ptr<IMesh> &mesh) {
     return std::reinterpret_pointer_cast<Mesh>(mesh);
 }

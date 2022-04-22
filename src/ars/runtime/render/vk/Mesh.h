@@ -50,6 +50,8 @@ class Mesh : public IMesh {
     [[nodiscard]] Handle<Buffer> tangent_buffer() const;
     [[nodiscard]] Handle<Buffer> tex_coord_buffer() const;
     [[nodiscard]] Handle<Buffer> index_buffer() const;
+    [[nodiscard]] Handle<Buffer> joint_buffer() const;
+    [[nodiscard]] Handle<Buffer> weight_buffer() const;
 
   private:
     Context *_context = nullptr;

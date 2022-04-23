@@ -30,6 +30,22 @@ bool input_vec4(const char *label, glm::vec4 &v) {
     return ImGui::InputFloat4(label, &v[0]);
 }
 
+bool input_mat4(const char *label, glm::mat4 &v) {
+    bool changed = false;
+    auto t = glm::transpose(v);
+    if (ImGui::TreeNode(label)) {
+        changed = input_vec4("Row 0", t[0]) || changed;
+        changed = input_vec4("Row 1", t[1]) || changed;
+        changed = input_vec4("Row 2", t[2]) || changed;
+        changed = input_vec4("Row 3", t[3]) || changed;
+        ImGui::TreePop();
+    }
+    if (changed) {
+        v = glm::transpose(t);
+    }
+    return changed;
+}
+
 bool input_color3(const char *label, glm::vec3 &v) {
     return ImGui::ColorEdit3(label, &v[0]);
 }
@@ -266,6 +282,10 @@ bool input_variant(const char *label,
             v,
             changed,
             display == PropertyDisplay::Color ? input_color4 : input_vec4)) {
+        return changed;
+    }
+
+    if (input_variant_type<glm::mat4>(label, v, changed, input_mat4)) {
         return changed;
     }
 

@@ -17,6 +17,7 @@ bool input_text(const char *label, std::string &str);
 bool input_vec2(const char *label, glm::vec2 &v);
 bool input_vec3(const char *label, glm::vec3 &v);
 bool input_vec4(const char *label, glm::vec4 &v);
+bool input_mat4(const char *label, glm::mat4 &v);
 bool input_color3(const char *label, glm::vec3 &v);
 bool input_color4(const char *label, glm::vec4 &v);
 bool input_rotation(const char *label, glm::quat &q);

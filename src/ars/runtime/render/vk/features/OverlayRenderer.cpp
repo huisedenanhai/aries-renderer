@@ -111,8 +111,8 @@ void OverlayRenderer::ensure_outline_rts() {
     }
 
     if (!_outline_depth_rt.valid()) {
-        TextureCreateInfo info = TextureCreateInfo::sampled_2d(
-            ID_DEPTH_STENCIL_ATTACHMENT_FORMAT, 1, 1, 1);
+        TextureCreateInfo info =
+            TextureCreateInfo::sampled_2d(RT_FORMAT_DEPTH, 1, 1, 1);
         info.aspect_mask = VK_IMAGE_ASPECT_DEPTH_BIT;
         info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
         _outline_depth_rt = _view->rt_manager()->alloc(info);

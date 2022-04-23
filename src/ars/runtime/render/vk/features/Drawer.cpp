@@ -56,22 +56,8 @@ void vk::Drawer::draw_ids(CommandBuffer *cmd,
 }
 
 Drawer::Drawer(View *view) : _view(view) {
-    init_render_pass();
     init_draw_id_pipeline();
     init_draw_id_billboard_alpha_clip();
-}
-
-void Drawer::init_render_pass() {
-    RenderPassAttachmentInfo color_info{};
-    color_info.format = ID_COLOR_ATTACHMENT_FORMAT;
-    color_info.samples = VK_SAMPLE_COUNT_1_BIT;
-
-    RenderPassAttachmentInfo depth_info{};
-    depth_info.format = ID_DEPTH_STENCIL_ATTACHMENT_FORMAT;
-    depth_info.samples = VK_SAMPLE_COUNT_1_BIT;
-
-    _render_pass = RenderPass::create_with_single_pass(
-        _view->context(), 1, &color_info, &depth_info);
 }
 
 void Drawer::init_draw_id_pipeline() {
@@ -109,7 +95,7 @@ void Drawer::init_draw_id_pipeline() {
     GraphicsPipelineInfo info{};
     info.shaders.push_back(vert_shader.get());
     info.shaders.push_back(frag_shader.get());
-    info.subpass.render_pass = _render_pass.get();
+    info.subpass.render_pass = draw_id_render_pass();
     info.subpass.index = 0;
 
     info.vertex_input = &vertex_input;
@@ -168,7 +154,10 @@ void Drawer::draw_ids_billboard_alpha_clip(
 }
 
 RenderPass *Drawer::draw_id_render_pass() const {
-    return _render_pass.get();
+    return _view->context()
+        ->renderer_data()
+        ->subpass(RenderPassID_ObjectID)
+        .render_pass;
 }
 
 void Drawer::init_draw_id_billboard_alpha_clip() {
@@ -184,7 +173,7 @@ void Drawer::init_draw_id_billboard_alpha_clip() {
     GraphicsPipelineInfo info{};
     info.shaders.push_back(vert_shader.get());
     info.shaders.push_back(frag_shader.get());
-    info.subpass.render_pass = _render_pass.get();
+    info.subpass.render_pass = draw_id_render_pass();
     info.subpass.index = 0;
     info.depth_stencil = &depth_stencil;
 
@@ -365,6 +354,7 @@ void Drawer::draw(CommandBuffer *cmd,
             inst.I_MV = glm::inverse(inst.MV);
             inst.material_id = 0;
             inst.instance_id = i;
+            inst.custom_id = req->custom_id;
         }
     });
 

@@ -21,8 +21,11 @@ enum RenderPassID {
     RenderPassID_Shading,
     RenderPassID_Overlay,
     RenderPassID_Shadow,
+    RenderPassID_ObjectID,
     RenderPassID_Count,
 };
+
+constexpr VkFormat ID_COLOR_ATTACHMENT_FORMAT = VK_FORMAT_R32_UINT;
 
 class RendererContextData {
   public:
@@ -35,12 +38,14 @@ class RendererContextData {
     void init_shading_pass();
     void init_overlay_pass();
     void init_shadow_pass();
+    void init_object_id_pass();
 
     Context *_context = nullptr;
     std::unique_ptr<RenderPass> _geometry_pass{};
     std::unique_ptr<RenderPass> _shading_pass{};
     std::unique_ptr<RenderPass> _overlay_pass{};
     std::unique_ptr<RenderPass> _shadow_pass{};
+    std::unique_ptr<RenderPass> _object_id_pass{};
     std::vector<SubpassInfo> _subpasses{};
 };
 

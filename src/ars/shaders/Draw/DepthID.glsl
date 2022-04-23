@@ -17,6 +17,11 @@ struct Material {
 #endif
 
 #ifdef ARS_UBER_SHADER_DEFINE_FRAG_SHADER
+
+#ifdef ARS_OBJECT_ID_PASS
+layout(location = 0) out uint out_id;
+#endif
+
 void main() {
 #ifdef ARS_MATERIAL_ALPHA_CLIP
     Material m = get_material();
@@ -26,6 +31,10 @@ void main() {
     if (base_color.a < m.alpha_cutoff) {
         discard;
     }
+#endif
+
+#ifdef ARS_OBJECT_ID_PASS
+    out_id = get_instance().custom_id;
 #endif
 }
 #endif

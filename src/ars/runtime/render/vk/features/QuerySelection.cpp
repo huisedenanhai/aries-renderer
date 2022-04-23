@@ -26,8 +26,8 @@ std::vector<uint64_t> QuerySelection::query_selection(uint32_t x,
     color_attach_info.usage =
         VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 
-    auto depth_attach_info = TextureCreateInfo::sampled_2d(
-        ID_DEPTH_STENCIL_ATTACHMENT_FORMAT, width, height, 1);
+    auto depth_attach_info =
+        TextureCreateInfo::sampled_2d(RT_FORMAT_DEPTH, width, height, 1);
     depth_attach_info.aspect_mask = VK_IMAGE_ASPECT_DEPTH_BIT;
     depth_attach_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 

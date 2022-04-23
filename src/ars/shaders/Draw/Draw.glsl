@@ -41,6 +41,7 @@ struct Instance {
     mat4 I_MV;
     uint material_id;
     uint instance_id;
+    uint custom_id;
 };
 
 layout(set = 0, binding = 0) uniform View {

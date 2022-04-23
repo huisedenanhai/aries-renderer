@@ -156,6 +156,7 @@ void RendererContextData::init_render_passes() {
     init_shading_pass();
     init_overlay_pass();
     init_shadow_pass();
+    init_object_id_pass();
 
     _subpasses.resize(RenderPassID_Count);
 
@@ -163,6 +164,7 @@ void RendererContextData::init_render_passes() {
     _subpasses[RenderPassID_Shading] = {_shading_pass.get(), 0};
     _subpasses[RenderPassID_Overlay] = {_overlay_pass.get(), 0};
     _subpasses[RenderPassID_Shadow] = {_shadow_pass.get(), 0};
+    _subpasses[RenderPassID_ObjectID] = {_object_id_pass.get(), 0};
 }
 
 void RendererContextData::init_shadow_pass() {
@@ -176,5 +178,18 @@ void RendererContextData::init_shadow_pass() {
 
     _shadow_pass =
         RenderPass::create_with_single_pass(_context, 0, nullptr, &depth);
+}
+
+void RendererContextData::init_object_id_pass() {
+    RenderPassAttachmentInfo color_info{};
+    color_info.format = ID_COLOR_ATTACHMENT_FORMAT;
+    color_info.samples = VK_SAMPLE_COUNT_1_BIT;
+
+    RenderPassAttachmentInfo depth_info{};
+    depth_info.format = RT_FORMAT_DEPTH;
+    depth_info.samples = VK_SAMPLE_COUNT_1_BIT;
+
+    _object_id_pass = RenderPass::create_with_single_pass(
+        _context, 1, &color_info, &depth_info);
 }
 } // namespace ars::render::vk

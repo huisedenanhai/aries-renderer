@@ -13,7 +13,8 @@
                 {
                     "options": [
                         "ARS_METALLIC_ROUGHNESS_PBR_GEOMETRY_PASS",
-                        "ARS_DEPTH_ONLY_PASS"
+                        "ARS_DEPTH_ONLY_PASS",
+                        "ARS_OBJECT_ID_PASS"
                     ],
                     "can_off": false
                 },

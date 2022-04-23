@@ -10,13 +10,12 @@
 #include <ars/runtime/core/misc/Span.h>
 
 namespace ars::render::vk {
-constexpr VkFormat ID_COLOR_ATTACHMENT_FORMAT = VK_FORMAT_R32_UINT;
-constexpr VkFormat ID_DEPTH_STENCIL_ATTACHMENT_FORMAT = VK_FORMAT_D32_SFLOAT;
 
 class View;
 
 struct DrawRequest {
     glm::mat4 M{};
+    uint32_t custom_id = 0;
     Mesh *mesh = nullptr;
     MaterialPass material{};
     Skin *skeleton = nullptr;
@@ -27,7 +26,7 @@ struct InstanceDrawParam {
     glm::mat4 I_MV;
     uint32_t material_id;
     uint32_t instance_id;
-    ARS_PADDING_FIELD(uint32_t);
+    uint32_t custom_id;
     ARS_PADDING_FIELD(uint32_t);
 };
 
@@ -66,7 +65,6 @@ class Drawer {
     void draw(CommandBuffer *cmd, ars::Span<const DrawRequest> requests);
 
   private:
-    void init_render_pass();
     void init_draw_id_pipeline();
     void init_draw_id_billboard_alpha_clip();
 
@@ -78,7 +76,6 @@ class Drawer {
               const DrawCallbacks &callbacks);
 
     View *_view = nullptr;
-    std::unique_ptr<RenderPass> _render_pass{};
     std::unique_ptr<GraphicsPipeline> _draw_id_pipeline{};
     std::unique_ptr<GraphicsPipeline> _draw_id_billboard_alpha_clip_pipeline{};
 };

@@ -138,6 +138,15 @@ Skeleton::Skeleton(Context *context, const SkeletonInfo &info)
         _context->create_buffer(info.joint_count * sizeof(glm::mat4),
                                 VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
                                 VMA_MEMORY_USAGE_CPU_TO_GPU);
+    _joint_buffer->map_once([&](void *ptr) {
+        auto joints = reinterpret_cast<glm::mat4 *>(ptr);
+        std::fill(
+            joints, joints + _info.joint_count, glm::identity<glm::mat4>());
+    });
+}
+
+Handle<Buffer> Skeleton::joint_buffer() const {
+    return _joint_buffer;
 }
 
 std::shared_ptr<Skeleton> upcast(const std::shared_ptr<ISkeleton> &skeleton) {

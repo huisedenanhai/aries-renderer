@@ -19,12 +19,19 @@ struct Model {
     using Index = uint32_t;
 
     struct Node {
-        std::string name;
+        std::string name{};
         std::vector<Index> children{};
-        std::optional<Index> mesh;
-        std::optional<Index> camera;
-        std::optional<Index> light;
+        std::optional<Index> mesh{};
+        std::optional<Index> camera{};
+        std::optional<Index> light{};
+        std::optional<Index> skin{};
         math::XformTRS<float> local_to_parent{};
+    };
+
+    struct Skin {
+        std::string name{};
+        std::vector<Index> joints{};
+        std::vector<glm::mat4> inverse_binding_matrices{};
     };
 
     struct Primitive {
@@ -74,6 +81,7 @@ struct Model {
     std::vector<Texture> textures{};
     std::vector<Material> materials{};
     std::vector<Light> lights{};
+    std::vector<Skin> skins{};
 };
 
 Model load_gltf(IContext *context, const std::filesystem::path &path);

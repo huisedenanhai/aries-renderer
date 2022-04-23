@@ -273,9 +273,13 @@ void dispatch_batch(CommandBuffer *cmd,
         }
     }
 
+    if (req.skeleton != nullptr) {
+        desc.set_buffer(1, 0, req.skeleton->joint_buffer().get());
+    }
+
     desc.commit(cmd, pipeline);
 
-    if (req.mesh != bound_req.mesh) {
+    if (req.mesh != bound_req.mesh || req.skeleton != bound_req.skeleton) {
         std::vector<VkBuffer> vertex_buffers = {
             inst_buffer->buffer(),
             req.mesh->position_buffer()->buffer(),

@@ -266,6 +266,10 @@ CullingResult::gather_draw_requests(RenderPassID pass_id) const {
             continue;
         }
 
+        if (info.skinned) {
+            req.skeleton = skeleton.get();
+        }
+
         req.M = matrix;
         req.mesh = mesh.get();
         requests.push_back(req);

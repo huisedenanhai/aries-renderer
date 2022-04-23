@@ -765,6 +765,37 @@ void load_lights(const tinygltf::Model &gltf, Model &model) {
     }
 }
 
+void load_skins(const tinygltf::Model &gltf, Model &model) {
+    model.skins.reserve(gltf.skins.size());
+    for (auto &gltf_skin : gltf.skins) {
+        Model::Skin skin{};
+
+        skin.name = gltf_skin.name;
+        auto joint_count = gltf_skin.joints.size();
+        skin.joints.reserve(joint_count);
+        for (int i = 0; i < joint_count; i++) {
+            skin.joints.push_back(gltf_skin.joints[i]);
+        }
+
+        skin.inverse_binding_matrices.resize(joint_count);
+        if (gltf_skin.inverseBindMatrices < 0) {
+            std::fill(skin.inverse_binding_matrices.begin(),
+                      skin.inverse_binding_matrices.end(),
+                      glm::identity<glm::mat4>());
+        } else {
+            auto ibm_data = read_buffer_to_vector<float>(
+                gltf, gltf_skin.inverseBindMatrices);
+            assert(ibm_data.size() == joint_count * 16);
+            auto ibm_ptr = reinterpret_cast<glm::mat4 *>(ibm_data.data());
+            std::copy(ibm_ptr,
+                      ibm_ptr + joint_count,
+                      skin.inverse_binding_matrices.begin());
+        }
+
+        model.skins.emplace_back(std::move(skin));
+    }
+}
+
 Model load_gltf(IContext *context,
                 const std::filesystem::path &path,
                 const tinygltf::Model &gltf) {
@@ -777,6 +808,7 @@ Model load_gltf(IContext *context,
     load_textures(context, path, gltf, model);
     load_materials(context, path, gltf, model);
     load_lights(gltf, model);
+    load_skins(gltf, model);
 
     return model;
 }

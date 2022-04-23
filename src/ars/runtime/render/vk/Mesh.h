@@ -78,6 +78,8 @@ class Skeleton : public ISkeleton {
                     size_t joint_offset,
                     size_t joint_count) override;
 
+    [[nodiscard]] Handle<Buffer> joint_buffer() const;
+
   private:
     Context *_context = nullptr;
     Handle<Buffer> _joint_buffer{};

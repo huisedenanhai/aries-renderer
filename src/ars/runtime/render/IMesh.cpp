@@ -20,9 +20,9 @@ bool IMesh::skinned() const {
     return _info.skinned;
 }
 
-ISkeleton::ISkeleton(const SkeletonInfo &info) : _info(info) {}
+ISkin::ISkin(const SkinInfo &info) : _info(info) {}
 
-uint32_t ISkeleton::joint_count() const {
+uint32_t ISkin::joint_count() const {
     return _info.joint_count;
 }
 } // namespace ars::render

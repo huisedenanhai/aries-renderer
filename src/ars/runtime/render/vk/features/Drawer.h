@@ -19,7 +19,7 @@ struct DrawRequest {
     glm::mat4 M{};
     Mesh *mesh = nullptr;
     MaterialPass material{};
-    Skeleton *skeleton = nullptr;
+    Skin *skeleton = nullptr;
 };
 
 struct InstanceDrawParam {

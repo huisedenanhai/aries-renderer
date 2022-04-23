@@ -70,9 +70,9 @@ class Mesh : public IMesh {
 
 std::shared_ptr<Mesh> upcast(const std::shared_ptr<IMesh> &mesh);
 
-class Skeleton : public ISkeleton {
+class Skin : public ISkin {
   public:
-    Skeleton(Context *context, const SkeletonInfo &info);
+    Skin(Context *context, const SkinInfo &info);
 
     void set_joints(const glm::mat4 *joints,
                     size_t joint_offset,
@@ -85,5 +85,5 @@ class Skeleton : public ISkeleton {
     Handle<Buffer> _joint_buffer{};
 };
 
-std::shared_ptr<Skeleton> upcast(const std::shared_ptr<ISkeleton> &skeleton);
+std::shared_ptr<Skin> upcast(const std::shared_ptr<ISkin> &skeleton);
 } // namespace ars::render::vk

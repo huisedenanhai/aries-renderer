@@ -20,6 +20,7 @@ struct RenderSystem {
     friend class MeshRenderer;
     friend class PointLight;
     friend class DirectionalLight;
+    friend class Skin;
 
     using Objects =
         SoA<Entity *, std::vector<std::unique_ptr<render::IRenderObject>>>;

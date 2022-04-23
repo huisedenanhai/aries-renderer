@@ -185,12 +185,12 @@ void RenderObject::set_user_data(uint64_t user_data) {
     get<UserData>().value = user_data;
 }
 
-std::shared_ptr<ISkeleton> RenderObject::skeleton() {
-    return get<std::shared_ptr<Skeleton>>();
+std::shared_ptr<ISkin> RenderObject::skin() {
+    return get<std::shared_ptr<Skin>>();
 }
 
-void RenderObject::set_skeleton(std::shared_ptr<ISkeleton> skeleton) {
-    get<std::shared_ptr<Skeleton>>() = upcast(skeleton);
+void RenderObject::set_skin(std::shared_ptr<ISkin> skin) {
+    get<std::shared_ptr<Skin>>() = upcast(skin);
 }
 
 PointLight::PointLight(Scene *scene) : _scene(scene) {
@@ -249,7 +249,7 @@ CullingResult::gather_draw_requests(RenderPassID pass_id) const {
         auto matrix = render_objects.get<glm::mat4>(obj_id);
         auto mesh = render_objects.get<std::shared_ptr<Mesh>>(obj_id);
         auto material = render_objects.get<std::shared_ptr<Material>>(obj_id);
-        auto skeleton = render_objects.get<std::shared_ptr<Skeleton>>(obj_id);
+        auto skeleton = render_objects.get<std::shared_ptr<Skin>>(obj_id);
 
         if (material == nullptr) {
             material = scene->context()->default_material_vk();

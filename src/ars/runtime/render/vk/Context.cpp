@@ -1082,7 +1082,7 @@ std::shared_ptr<Material> Context::default_material_vk() {
     return _material_factory->default_material();
 }
 
-std::shared_ptr<ISkeleton> Context::create_skeleton(const SkeletonInfo &info) {
-    return std::make_shared<Skeleton>(this, info);
+std::shared_ptr<ISkin> Context::create_skin(const SkinInfo &info) {
+    return std::make_shared<Skin>(this, info);
 }
 } // namespace ars::render::vk

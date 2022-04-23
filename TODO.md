@@ -35,7 +35,7 @@ A very coarse plan for development.
 4. System
    > Build on top of existing rendering features
     + [ ] Particle
-    + [ ] Skeleton Animation
+    + [ ] Skin Animation
     + [ ] Terrain
 5. Utilities
     + [x] Profiler

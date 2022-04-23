@@ -1,4 +1,5 @@
 #include "RenderSystem.h"
+#include "../Engine.h"
 #include <ars/runtime/core/Log.h>
 #include <ars/runtime/core/Reflect.h>
 #include <ars/runtime/render/IMaterial.h>
@@ -322,5 +323,4 @@ void Camera::set_data(render::CameraData data) {
 render::CameraData Camera::data() const {
     return _data;
 }
-
 } // namespace ars::engine

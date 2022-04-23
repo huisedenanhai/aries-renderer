@@ -10,14 +10,14 @@ class IWindow;
 class ITexture;
 class IScene;
 class IMesh;
-class ISkeleton;
+class ISkin;
 class IPanoramaSky;
 class IPhysicalSky;
 class IMaterial;
 
 struct TextureInfo;
 struct MeshInfo;
-struct SkeletonInfo;
+struct SkinInfo;
 struct WindowInfo;
 struct MaterialInfo;
 
@@ -74,8 +74,7 @@ class IContext {
     virtual std::shared_ptr<ITexture> default_texture(DefaultTexture tex) = 0;
 
     virtual std::shared_ptr<IMesh> create_mesh(const MeshInfo &info) = 0;
-    virtual std::shared_ptr<ISkeleton>
-    create_skeleton(const SkeletonInfo &info) = 0;
+    virtual std::shared_ptr<ISkin> create_skin(const SkinInfo &info) = 0;
     virtual std::shared_ptr<IMaterial>
     create_material(const MaterialInfo &info) = 0;
 

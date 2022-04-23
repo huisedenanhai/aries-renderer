@@ -31,17 +31,6 @@ class IComponent {
     virtual void destroy() {}
 };
 
-namespace details {
-template <typename T> struct ComponentAutoRegister {
-    // noexcept silence some clang-tidy warning. The constructor is called
-    // before the main function is start, the program halts if any exception is
-    // thrown.
-    ComponentAutoRegister() noexcept {
-        T::register_component();
-    }
-};
-} // namespace details
-
 template <typename T> auto register_component(const std::string &name) {
     return rttr::registration::class_<T>(name).template constructor<>()(
         rttr::policy::ctor::as_raw_ptr);

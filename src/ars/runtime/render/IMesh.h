@@ -62,13 +62,13 @@ class IMesh : public IRes {
     MeshInfo _info{};
 };
 
-struct SkeletonInfo {
+struct SkinInfo {
     uint32_t joint_count = 0;
 };
 
-class ISkeleton {
+class ISkin {
   public:
-    explicit ISkeleton(const SkeletonInfo &info);
+    explicit ISkin(const SkinInfo &info);
 
     uint32_t joint_count() const;
 
@@ -78,6 +78,6 @@ class ISkeleton {
                             size_t joint_count) = 0;
 
   protected:
-    SkeletonInfo _info{};
+    SkinInfo _info{};
 };
 } // namespace ars::render

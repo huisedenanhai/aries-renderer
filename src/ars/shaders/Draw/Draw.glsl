@@ -105,12 +105,14 @@ void main() {
     mat4 I_MV = inst.I_MV;
 
 #ifdef ARS_SKINNED
+    // Skinned mesh should ignore model transform, otherwise the parent xform
+    // will be applied twice to vertices
     mat4 skin_mat = ars_skin[in_joints.x] * in_weights.x +
                     ars_skin[in_joints.y] * in_weights.y +
                     ars_skin[in_joints.z] * in_weights.z +
                     ars_skin[in_joints.w] * in_weights.w;
-    MV = MV * skin_mat;
-    I_MV = inverse(skin_mat) * I_MV;
+    MV = get_view().V * skin_mat;
+    I_MV = inverse(skin_mat);
 #endif
 
     vec4 pos_vs = transform_position(MV, in_position_os);

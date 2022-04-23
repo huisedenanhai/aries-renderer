@@ -382,5 +382,19 @@ render::CameraData Camera::data() const {
     return _data;
 }
 
-void Skin::update() {}
+void Skin::update() {
+    assert(skin != nullptr);
+    assert(joint_mat.size() == inverse_binding_matrices.size());
+    assert(joint_mat.size() == skin->joint_count());
+
+    auto joint_count = joints.size();
+    std::vector<glm::mat4> joint_mats{};
+    joint_mats.resize(joint_count);
+    for (int i = 0; i < joint_count; i++) {
+        joint_mats[i] = joints[i]->cached_world_xform().matrix() *
+                        inverse_binding_matrices[i];
+    }
+
+    skin->set_joints(joint_mats.data(), 0, joint_count);
+}
 } // namespace ars::engine

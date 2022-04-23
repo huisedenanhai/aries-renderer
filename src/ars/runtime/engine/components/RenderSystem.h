@@ -7,6 +7,17 @@
 #include <ars/runtime/render/res/Model.h>
 
 namespace ars::engine {
+struct Skin {
+    std::string name{};
+    std::vector<Entity *> joints{};
+    std::vector<glm::mat4> inverse_binding_matrices{};
+    std::shared_ptr<render::ISkin> skin{};
+
+    void update();
+};
+
+class MeshRenderer;
+
 struct RenderSystem {
   public:
     explicit RenderSystem(render::IContext *context);
@@ -20,10 +31,8 @@ struct RenderSystem {
     friend class MeshRenderer;
     friend class PointLight;
     friend class DirectionalLight;
-    friend class Skin;
 
-    using Objects =
-        SoA<Entity *, std::vector<std::unique_ptr<render::IRenderObject>>>;
+    using Objects = SoA<Entity *, MeshRenderer *>;
     Objects _objects{};
 
     using DirectionalLights =
@@ -49,10 +58,14 @@ class MeshRenderer : public IComponent {
     render::IRenderObject *add_primitive();
     void remove_primitive(size_t index);
     [[nodiscard]] Entity *entity() const;
+    std::shared_ptr<Skin> skin() const;
+    void set_skin(std::shared_ptr<Skin> skin);
+
+    void update();
 
   private:
     [[nodiscard]] std::vector<std::unique_ptr<render::IRenderObject>> &
-    primitives() const;
+    primitives();
 
     struct PrimitiveHandle {
         std::shared_ptr<IRes> mesh;
@@ -64,6 +77,8 @@ class MeshRenderer : public IComponent {
 
     RenderSystem *_render_system{};
     RenderSystem::Objects::Id _id{};
+    std::vector<std::unique_ptr<render::IRenderObject>> _render_objects{};
+    std::shared_ptr<Skin> _skin{};
 };
 
 class PointLight : public IComponent {

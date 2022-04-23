@@ -14,6 +14,11 @@ void RenderSystem::register_components() {
 }
 
 void MeshRenderer::register_component() {
+    rttr::registration::class_<Skin>("ars::engine::Skin")
+        .property("name", &Skin::name)
+        .property("joints", &Skin::joints)
+        .property("inverse_binding_matrices", &Skin::inverse_binding_matrices);
+
     rttr::registration::class_<PrimitiveHandle>(
         "ars::engine::MeshRenderer::PrimitiveHandle")
         .property("mesh", &PrimitiveHandle::mesh)
@@ -22,7 +27,8 @@ void MeshRenderer::register_component() {
     engine::register_component<MeshRenderer>("ars::engine::MeshRenderer")
         .property("primitives",
                   &MeshRenderer::primitive_handles,
-                  &MeshRenderer::set_primitive_handles);
+                  &MeshRenderer::set_primitive_handles)
+        .RTTR_MEMBER_PROPERTY(MeshRenderer, skin);
 }
 
 void MeshRenderer::init(Entity *entity) {
@@ -30,6 +36,7 @@ void MeshRenderer::init(Entity *entity) {
     auto &objs = _render_system->_objects;
     _id = objs.alloc();
     objs.get<Entity *>(_id) = entity;
+    objs.get<MeshRenderer *>(_id) = this;
 }
 
 void MeshRenderer::destroy() {
@@ -37,9 +44,8 @@ void MeshRenderer::destroy() {
 }
 
 std::vector<std::unique_ptr<render::IRenderObject>> &
-MeshRenderer::primitives() const {
-    return _render_system->_objects
-        .get<std::vector<std::unique_ptr<render::IRenderObject>>>(_id);
+MeshRenderer::primitives() {
+    return _render_objects;
 }
 
 Entity *MeshRenderer::entity() const {
@@ -47,7 +53,7 @@ Entity *MeshRenderer::entity() const {
 }
 
 size_t MeshRenderer::primitive_count() const {
-    return primitives().size();
+    return _render_objects.size();
 }
 
 render::IRenderObject *MeshRenderer::primitive(size_t index) const {
@@ -58,7 +64,7 @@ render::IRenderObject *MeshRenderer::primitive(size_t index) const {
             primitive_count());
         return nullptr;
     }
-    return primitives()[index].get();
+    return _render_objects[index].get();
 }
 
 render::IRenderObject *MeshRenderer::add_primitive() {
@@ -80,9 +86,8 @@ void MeshRenderer::remove_primitive(size_t index) {
 std::vector<MeshRenderer::PrimitiveHandle>
 MeshRenderer::primitive_handles() const {
     std::vector<PrimitiveHandle> handles{};
-    auto &prims = primitives();
-    handles.reserve(prims.size());
-    for (auto &p : prims) {
+    handles.reserve(_render_objects.size());
+    for (auto &p : _render_objects) {
         PrimitiveHandle h{};
         h.mesh = p->mesh();
         h.material = p->material();
@@ -105,6 +110,26 @@ void MeshRenderer::set_primitive_handles(std::vector<PrimitiveHandle> handles) {
             std::dynamic_pointer_cast<render::IMesh>(handles[i].mesh));
         prims[i]->set_material(
             std::dynamic_pointer_cast<render::IMaterial>(handles[i].material));
+    }
+}
+
+void MeshRenderer::update() {
+    for (auto &obj : _render_objects) {
+        obj->set_xform(entity()->cached_world_xform());
+    }
+    if (_skin != nullptr) {
+        _skin->update();
+    }
+}
+
+std::shared_ptr<Skin> MeshRenderer::skin() const {
+    return _skin;
+}
+
+void MeshRenderer::set_skin(std::shared_ptr<Skin> skin) {
+    _skin = skin;
+    for (auto &obj : _render_objects) {
+        obj->set_skin(skin ? skin->skin : nullptr);
     }
 }
 
@@ -229,11 +254,13 @@ void update_xform(SoA<Entity *, T> &soa, Func &&updater) {
 }
 
 void RenderSystem::update() {
-    update_xform(_objects, [](auto &&ts, auto &&xform) {
-        for (auto &t : ts) {
-            t->set_xform(xform);
-        }
-    });
+    auto obj_count = _objects.size();
+    auto obj_arr = _objects.get_array<MeshRenderer *>();
+    for (int i = 0; i < obj_count; i++) {
+        obj_arr[i]->update();
+    }
+
+    update_xform(_objects, [](auto &&ts, auto &&xform) {});
     update_xform(_directional_lights,
                  [](auto &&t, auto &&xform) { t->set_xform(xform); });
     update_xform(_point_lights,
@@ -247,8 +274,13 @@ render::IScene *RenderSystem::render_scene() const {
 namespace {
 void load_node(Entity *parent,
                const render::Model &model,
+               std::vector<Entity *> &entities,
                render::Model::Index node) {
-    auto entity = parent->scene()->create_entity();
+    if (entities[node] == nullptr) {
+        entities[node] = parent->scene()->create_entity();
+    }
+    auto entity = entities[node];
+
     auto &n = model.nodes[node];
     entity->set_name(n.name);
     entity->set_parent(parent);
@@ -292,7 +324,7 @@ void load_node(Entity *parent,
     }
 
     for (auto child : n.children) {
-        load_node(entity, model, child);
+        load_node(entity, model, entities, child);
     }
 }
 } // namespace
@@ -307,8 +339,34 @@ void load_model(Entity *parent, const render::Model &model) {
         return;
     }
     auto &scene = model.scenes[model.default_scene.value_or(0)];
+    std::vector<Entity *> entities{};
+    entities.resize(model.nodes.size());
     for (auto n : scene.nodes) {
-        load_node(parent, model, n);
+        load_node(parent, model, entities, n);
+    }
+    // Set up links
+    for (int i = 0; i < entities.size(); i++) {
+        auto entity = entities[i];
+        auto &n = model.nodes[i];
+        if (entity == nullptr) {
+            continue;
+        }
+        if (n.mesh.has_value() && n.skin.has_value()) {
+            auto &s = model.skins[n.skin.value()];
+            auto skin = std::make_shared<Skin>();
+            skin->name = s.name;
+            skin->inverse_binding_matrices = s.inverse_binding_matrices;
+            skin->joints.reserve(s.joints.size());
+            for (auto j : s.joints) {
+                skin->joints.push_back(entities[j]);
+            }
+
+            render::SkinInfo info{};
+            info.joint_count = s.joints.size();
+            skin->skin = engine::render_context()->create_skin(info);
+
+            entity->component<MeshRenderer>()->set_skin(skin);
+        }
     }
 }
 
@@ -323,4 +381,6 @@ void Camera::set_data(render::CameraData data) {
 render::CameraData Camera::data() const {
     return _data;
 }
+
+void Skin::update() {}
 } // namespace ars::engine

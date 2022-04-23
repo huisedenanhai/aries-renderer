@@ -466,6 +466,9 @@ void load_nodes(const tinygltf::Model &gltf, Model &model) {
         if (gltf_node.mesh >= 0) {
             node.mesh = gltf_node.mesh;
         }
+        if (gltf_node.skin >= 0) {
+            node.skin = gltf_node.skin;
+        }
         auto gltf_light_ext = gltf_node.extensions.find("KHR_lights_punctual");
         if (gltf_light_ext != gltf_node.extensions.end()) {
             if (gltf_light_ext->second.Has("light")) {

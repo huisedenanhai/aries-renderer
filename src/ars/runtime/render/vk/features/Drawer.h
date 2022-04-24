@@ -40,12 +40,6 @@ class Drawer {
 
     RenderPass *draw_id_render_pass() const;
 
-    void draw_ids(CommandBuffer *cmd,
-                  uint32_t count,
-                  const glm::mat4 *mvp_arr,
-                  const uint32_t *ids,
-                  const std::shared_ptr<Mesh> *meshes) const;
-
     void draw_ids_billboard_alpha_clip(CommandBuffer *cmd,
                                        uint32_t count,
                                        const glm::mat4 *mvp_arr,
@@ -65,7 +59,6 @@ class Drawer {
     void draw(CommandBuffer *cmd, ars::Span<const DrawRequest> requests);
 
   private:
-    void init_draw_id_pipeline();
     void init_draw_id_billboard_alpha_clip();
 
     void draw(CommandBuffer *cmd,
@@ -76,7 +69,6 @@ class Drawer {
               const DrawCallbacks &callbacks);
 
     View *_view = nullptr;
-    std::unique_ptr<GraphicsPipeline> _draw_id_pipeline{};
     std::unique_ptr<GraphicsPipeline> _draw_id_billboard_alpha_clip_pipeline{};
 };
 } // namespace ars::render::vk

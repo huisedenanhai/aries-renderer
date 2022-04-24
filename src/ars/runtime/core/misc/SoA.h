@@ -131,13 +131,13 @@ template <typename... Ts> struct SoA {
 
     template <typename T> T &get(Id id) {
         assert(id.valid());
-        auto soa_index = _indices.get_value(id._value);
+        auto soa_index = get_soa_index(id);
         return get_array<T>()[soa_index];
     }
 
     template <typename T> const T &get(Id id) const {
         assert(id.valid());
-        auto soa_index = _indices.get_value(id._value);
+        auto soa_index = get_soa_index(id);
         return get_array<T>()[soa_index];
     }
 
@@ -152,6 +152,11 @@ template <typename... Ts> struct SoA {
             auto id = Id(get_inverse_id()[i].value);
             func(id);
         }
+    }
+
+    uint64_t get_soa_index(Id id) const {
+        assert(id.valid());
+        return _indices.get_value(id.value());
     }
 
     void clear() {

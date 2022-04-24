@@ -82,10 +82,19 @@ std::optional<DrawRequest>
 Scene::get_draw_request(RenderPassID pass_id,
                         RenderObjects::Id obj_id,
                         Material *override_material) {
-    auto matrix = render_objects.get<glm::mat4>(obj_id);
-    auto mesh = render_objects.get<std::shared_ptr<Mesh>>(obj_id);
-    auto material = render_objects.get<std::shared_ptr<Material>>(obj_id).get();
-    auto skeleton = render_objects.get<std::shared_ptr<Skin>>(obj_id);
+    return get_draw_request(
+        pass_id, render_objects.get_soa_index(obj_id), override_material);
+}
+
+std::optional<DrawRequest> Scene::get_draw_request(
+    RenderPassID pass_id, uint32_t rd_obj_index, Material *override_material) {
+    auto matrix = render_objects.get_array<glm::mat4>()[rd_obj_index];
+    auto mesh = render_objects.get_array<std::shared_ptr<Mesh>>()[rd_obj_index];
+    auto material =
+        render_objects.get_array<std::shared_ptr<Material>>()[rd_obj_index]
+            .get();
+    auto skeleton =
+        render_objects.get_array<std::shared_ptr<Skin>>()[rd_obj_index];
 
     if (mesh == nullptr) {
         return std::nullopt;

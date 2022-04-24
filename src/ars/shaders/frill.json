@@ -4,8 +4,6 @@
     "Blit.frag",
     "ImGui.vert",
     "ImGui.frag",
-    "ObjectId.vert",
-    "ObjectId.frag",
     "ToneMapping.comp",
     "BRDFLut.comp",
     "Outline.comp",

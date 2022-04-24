@@ -1,8 +1,6 @@
 #include "QuerySelection.h"
 #include "../Context.h"
 #include "../Mesh.h"
-#include "../Scene.h"
-#include "../View.h"
 #include "Drawer.h"
 #include "OverlayRenderer.h"
 
@@ -20,6 +18,17 @@ std::vector<uint64_t> QuerySelection::query_selection(uint32_t x,
                                                       uint32_t width,
                                                       uint32_t height) {
     auto ctx = _view->context();
+    auto view_extent = _view->size();
+
+    // Constrain input range
+    x = std::clamp(x, 0u, view_extent.width);
+    y = std::clamp(y, 0u, view_extent.height);
+    width = std::clamp(x + width, 0u, view_extent.width) - x;
+    height = std::clamp(y + height, 0u, view_extent.height) - y;
+
+    if (width == 0 || height == 0) {
+        return {};
+    }
 
     auto color_attach_info = TextureCreateInfo::sampled_2d(
         ID_COLOR_ATTACHMENT_FORMAT, width, height, 1);
@@ -42,20 +51,14 @@ std::vector<uint64_t> QuerySelection::query_selection(uint32_t x,
                                  VK_BUFFER_USAGE_TRANSFER_DST_BIT,
                                  VMA_MEMORY_USAGE_GPU_TO_CPU);
 
-    auto &rd_objs = _view->scene_vk()->render_objects;
+    auto scene = _view->scene_vk();
+    auto &rd_objs = scene->render_objects;
     auto rd_obj_count = rd_objs.size();
-    auto &point_lights = _view->scene_vk()->point_lights;
+    auto &point_lights = scene->point_lights;
     auto point_light_count = point_lights.size();
-    auto &directional_lights = _view->scene_vk()->directional_lights;
+    auto &directional_lights = scene->directional_lights;
     auto directional_light_count = directional_lights.size();
     auto light_count = point_light_count + directional_light_count;
-
-    auto view_extent = _view->size();
-    // Constrain input range
-    x = std::clamp(x, 0u, view_extent.width);
-    y = std::clamp(y, 0u, view_extent.height);
-    width = std::clamp(x + width, 0u, view_extent.width) - x;
-    height = std::clamp(y + height, 0u, view_extent.height) - y;
 
     auto v_matrix = _view->view_matrix();
     auto w_div_h = static_cast<float>(view_extent.width) /
@@ -72,22 +75,18 @@ std::vector<uint64_t> QuerySelection::query_selection(uint32_t x,
             cmd, {color_attach, depth_attach}, VK_SUBPASS_CONTENTS_INLINE);
         // draw render object ids
         {
-            std::vector<glm::mat4> mvp_arr{};
-            std::vector<uint32_t> ids{};
-            mvp_arr.reserve(rd_obj_count);
-            ids.reserve(rd_obj_count);
-            auto matrix_arr = rd_objs.get_array<glm::mat4>();
-            for (int i = 0; i < rd_obj_count; i++) {
-                mvp_arr.push_back(p_matrix * v_matrix * matrix_arr[i]);
-                ids.push_back(static_cast<uint32_t>(i) | ID_OBJECT_MARK);
+            std::vector<DrawRequest> requests{};
+            requests.reserve(rd_obj_count);
+            for (uint32_t i = 0; i < rd_obj_count; i++) {
+                auto req = scene->get_draw_request(RenderPassID_ObjectID, i);
+                if (!req.has_value()) {
+                    return;
+                }
+                req->custom_id = i | ID_OBJECT_MARK;
+                requests.push_back(req.value());
             }
 
-            _view->drawer()->draw_ids(
-                cmd,
-                rd_obj_count,
-                mvp_arr.data(),
-                ids.data(),
-                rd_objs.get_array<std::shared_ptr<Mesh>>());
+            _view->drawer()->draw(cmd, p_matrix, v_matrix, requests);
         }
 
         auto light_gizmo = _view->vk_overlay()->light_gizmo();

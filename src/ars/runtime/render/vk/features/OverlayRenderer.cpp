@@ -382,13 +382,6 @@ void OverlayRenderer::draw_outline(uint8_t group, IRenderObject *rd_object) {
     auto obj_id = upcast(rd_object)->id();
     auto scene = _view->scene_vk();
     auto req = scene->get_draw_request(RenderPassID_ObjectID, obj_id);
-    if (!req.has_value()) {
-        // Use a fallback when outline material is not specified
-        req = scene->get_draw_request(
-            RenderPassID_ObjectID,
-            obj_id,
-            _view->context()->default_material_vk().get());
-    }
     if (req.has_value()) {
         add_outline_draw_request(group, req.value());
     }

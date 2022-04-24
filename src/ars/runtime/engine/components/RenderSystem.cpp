@@ -384,8 +384,8 @@ render::CameraData Camera::data() const {
 
 void Skin::update() {
     assert(skin != nullptr);
-    assert(joint_mat.size() == inverse_binding_matrices.size());
-    assert(joint_mat.size() == skin->joint_count());
+    assert(joints.size() == inverse_binding_matrices.size());
+    assert(joints.size() == skin->joint_count());
 
     auto joint_count = joints.size();
     std::vector<glm::mat4> joint_mats{};

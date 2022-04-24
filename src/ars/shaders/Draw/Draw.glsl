@@ -124,6 +124,8 @@ void main() {
     out_uv = in_uv;
 
     gl_Position = transform_position(get_view().P, out_position_vs);
+
+    ars_out_instance_id = ars_in_instance_id;
 }
 
 #endif

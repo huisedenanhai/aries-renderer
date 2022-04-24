@@ -61,6 +61,11 @@ class Scene : public IScene {
                      RenderObjects::Id rd_obj,
                      Material *override_material = nullptr);
 
+    std::optional<DrawRequest>
+    get_draw_request(RenderPassID pass_id,
+                     uint32_t rd_obj_index,
+                     Material *override_material = nullptr);
+
   private:
     CullingResult cull(const Frustum &frustum_ws);
 

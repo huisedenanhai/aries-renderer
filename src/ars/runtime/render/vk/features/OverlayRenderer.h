@@ -4,6 +4,7 @@
 #include "../Pipeline.h"
 #include "../RenderGraph.h"
 #include "../View.h"
+#include "Drawer.h"
 
 namespace ars::render::vk {
 struct LightGizmo {
@@ -20,9 +21,7 @@ class OverlayRenderer : public IOverlay {
     void set_outline_color(uint8_t group, const glm::vec4 &color) override;
     void set_light_gizmo(const std::shared_ptr<ITexture> &texture,
                          float width) override;
-    void draw_outline(uint8_t group,
-                      const math::XformTRS<float> &xform,
-                      const std::shared_ptr<IMesh> &mesh) override;
+    void draw_outline(uint8_t group, IRenderObject *rd_object) override;
     void draw_line(const glm::vec3 &from,
                    const glm::vec3 &to,
                    const glm::vec4 &color) override;
@@ -44,19 +43,14 @@ class OverlayRenderer : public IOverlay {
     bool need_render_billboard() const;
     bool need_render_line() const;
     SubpassInfo overlay_pass() const;
+    void add_outline_draw_request(uint8_t group, const DrawRequest &req);
 
     View *_view = nullptr;
     std::array<glm::vec4, 256> _outline_colors{};
 
-    struct OutlineDrawRequest {
-        uint8_t group = 0;
-        math::XformTRS<float> xform{};
-        std::shared_ptr<Mesh> mesh{};
-    };
-
     RenderTargetId _outline_id_rt{};
     RenderTargetId _outline_depth_rt{};
-    std::vector<OutlineDrawRequest> _outline_draw_requests{};
+    std::vector<DrawRequest> _outline_draw_requests{};
     std::unique_ptr<ComputePipeline> _outline_detect_pipeline{};
 
     LightGizmo _light_gizmo{};

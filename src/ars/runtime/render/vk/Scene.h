@@ -56,6 +56,11 @@ class Scene : public IScene {
 
     DirectionalLights::Id sun_id{};
 
+    std::optional<DrawRequest>
+    get_draw_request(RenderPassID pass_id,
+                     RenderObjects::Id rd_obj,
+                     Material *override_material = nullptr);
+
   private:
     CullingResult cull(const Frustum &frustum_ws);
 
@@ -137,6 +142,7 @@ class RenderObject : public IRenderObject {
     void set_material(std::shared_ptr<IMaterial> material) override;
     uint64_t user_data() override;
     void set_user_data(uint64_t user_data) override;
+    Scene::RenderObjects::Id id() const;
 
   private:
     template <typename T> T &get() {
@@ -146,5 +152,7 @@ class RenderObject : public IRenderObject {
     Scene *_scene = nullptr;
     Scene::RenderObjects::Id _id{};
 };
+
+RenderObject *upcast(IRenderObject *rd_obj);
 
 } // namespace ars::render::vk

@@ -32,16 +32,6 @@ void OverlayRenderer::set_outline_color(uint8_t group, const glm::vec4 &color) {
     _outline_colors[group] = color;
 }
 
-void OverlayRenderer::draw_outline(uint8_t group,
-                                   const math::XformTRS<float> &xform,
-                                   const std::shared_ptr<IMesh> &mesh) {
-    OutlineDrawRequest request{};
-    request.group = group;
-    request.xform = xform;
-    request.mesh = upcast(mesh);
-    _outline_draw_requests.emplace_back(std::move(request));
-}
-
 void OverlayRenderer::render(RenderGraph &rg, NamedRT dst_rt_name) {
     auto rd_outline = need_render_outline();
     auto rd_forward = need_forward_pass();
@@ -374,35 +364,40 @@ void OverlayRenderer::render_object_ids(CommandBuffer *cmd) {
     auto p_matrix = _view->projection_matrix();
     auto v_matrix = _view->view_matrix();
 
-    std::vector<uint32_t> ids{};
-    std::vector<glm::mat4> mvp_arr{};
-    std::vector<std::shared_ptr<Mesh>> meshes{};
-
-    auto outline_request_count = _outline_draw_requests.size();
-
-    ids.reserve(outline_request_count);
-    mvp_arr.reserve(outline_request_count);
-    meshes.reserve(outline_request_count);
-
-    for (int i = 0; i < outline_request_count; i++) {
-        auto &req = _outline_draw_requests[i];
-        ids.push_back(encode_outline_id(req.group, i + 1));
-        mvp_arr.push_back(p_matrix * v_matrix * req.xform.matrix());
-        meshes.push_back(req.mesh);
-    }
-
     auto outline_id = rt_manager->get(_outline_id_rt);
     auto outline_depth = rt_manager->get(_outline_depth_rt);
 
     auto id_rp = _view->drawer()->draw_id_render_pass();
     auto id_rp_exec = id_rp->begin(
         cmd, {outline_id, outline_depth}, VK_SUBPASS_CONTENTS_INLINE);
-    _view->drawer()->draw_ids(
-        cmd, outline_request_count, mvp_arr.data(), ids.data(), meshes.data());
+    _view->drawer()->draw(cmd, _outline_draw_requests);
     id_rp->end(id_rp_exec);
 }
 
 SubpassInfo OverlayRenderer::overlay_pass() const {
     return _view->context()->renderer_data()->subpass(RenderPassID_Overlay);
+}
+
+void OverlayRenderer::draw_outline(uint8_t group, IRenderObject *rd_object) {
+    auto obj_id = upcast(rd_object)->id();
+    auto scene = _view->scene_vk();
+    auto req = scene->get_draw_request(RenderPassID_ObjectID, obj_id);
+    if (!req.has_value()) {
+        // Use a fallback when outline material is not specified
+        req = scene->get_draw_request(
+            RenderPassID_ObjectID,
+            obj_id,
+            _view->context()->default_material_vk().get());
+    }
+    if (req.has_value()) {
+        add_outline_draw_request(group, req.value());
+    }
+}
+
+void OverlayRenderer::add_outline_draw_request(uint8_t group,
+                                               const DrawRequest &req) {
+    auto r = req;
+    r.custom_id = encode_outline_id(group, _outline_draw_requests.size() + 1);
+    _outline_draw_requests.push_back(r);
 }
 } // namespace ars::render::vk

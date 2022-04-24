@@ -184,9 +184,7 @@ class IOverlay {
     // Draw functions
     // All draw requests will be cached and executed on the next call to
     // IView->render(), after that, all cached requests will be cleared.
-    virtual void draw_outline(uint8_t group,
-                              const math::XformTRS<float> &xform,
-                              const std::shared_ptr<IMesh> &mesh) = 0;
+    virtual void draw_outline(uint8_t group, IRenderObject *rd_object) = 0;
 
     virtual void draw_line(const glm::vec3 &from,
                            const glm::vec3 &to,

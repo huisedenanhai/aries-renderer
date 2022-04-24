@@ -45,13 +45,15 @@ create_pbr_geometry_pass_template(Context *context,
 }
 
 MaterialPassTemplate
-create_pbr_depth_pass_template(Context *context,
-                               const MaterialInfo &mat_info,
-                               const MaterialPassInfo &pass_info) {
+create_pbr_depth_id_template(Context *context,
+                             const MaterialInfo &mat_info,
+                             const MaterialPassInfo &pass_info,
+                             VkBool32 depth_bias_enable,
+                             const std::vector<const char *> &common_flags) {
     MaterialPassTemplate t{};
 
     auto raster = rasterization_state(mat_info);
-    raster.depthBiasEnable = VK_TRUE;
+    raster.depthBiasEnable = depth_bias_enable;
 
     t.property_layout = nullptr;
     if (mat_info.features & MaterialFeature_AlphaClipBit) {
@@ -71,7 +73,7 @@ create_pbr_depth_pass_template(Context *context,
                                       VK_SHADER_STAGE_VERTEX_BIT |
                                           VK_SHADER_STAGE_FRAGMENT_BIT,
                                       &raster,
-                                      {"ARS_DEPTH_ONLY_PASS"});
+                                      common_flags);
 
     return t;
 }
@@ -87,7 +89,13 @@ MaterialPassTemplate create_metallic_roughness_pbr_material_pass_template(
     }
 
     if (pass_info.pass_id == RenderPassID_Shadow) {
-        return create_pbr_depth_pass_template(context, mat_info, pass_info);
+        return create_pbr_depth_id_template(
+            context, mat_info, pass_info, VK_TRUE, {"ARS_DEPTH_ONLY_PASS"});
+    }
+
+    if (pass_info.pass_id == RenderPassID_ObjectID) {
+        return create_pbr_depth_id_template(
+            context, mat_info, pass_info, VK_FALSE, {"ARS_OBJECT_ID_PASS"});
     }
 
     return {};

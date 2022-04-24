@@ -239,10 +239,7 @@ class Application : public ars::engine::IApplication {
             return;
         }
         for (int i = 0; i < mesh_renderer->primitive_count(); i++) {
-            _view->overlay()->draw_outline(
-                0,
-                _current_selected->cached_world_xform(),
-                mesh_renderer->primitive(i)->mesh());
+            _view->overlay()->draw_outline(0, mesh_renderer->primitive(i));
         }
     }
 

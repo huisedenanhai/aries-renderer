@@ -46,11 +46,12 @@ void draw_selected_object_outline(render::IView *view,
     }
     for (int i = 0; i < mesh_renderer->primitive_count(); i++) {
         auto overlay = view->overlay();
-        auto mesh = mesh_renderer->primitive(i)->mesh();
+        auto primitive = mesh_renderer->primitive(i);
+        auto mesh = primitive->mesh();
         if (mesh == nullptr) {
             continue;
         }
-        overlay->draw_outline(0, current_selected->cached_world_xform(), mesh);
+        overlay->draw_outline(0, mesh_renderer->primitive(i));
         auto aabb = mesh->aabb();
         overlay->draw_wire_box(current_selected->cached_world_xform(),
                                aabb.center(),

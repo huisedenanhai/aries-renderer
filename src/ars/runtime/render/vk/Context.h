@@ -4,8 +4,10 @@
 #include "Buffer.h"
 #include "Descriptor.h"
 #include "RenderPass.h"
+#include "Scene.h"
 #include "Texture.h"
 #include "Vulkan.h"
+
 #include <ars/runtime/core/misc/Defer.h>
 
 #include <set>

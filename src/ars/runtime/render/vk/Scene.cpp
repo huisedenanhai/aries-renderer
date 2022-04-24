@@ -78,6 +78,48 @@ CullingResult Scene::cull(const math::XformTRS<float> &xform,
     return cull(frustum_ws);
 }
 
+std::optional<DrawRequest>
+Scene::get_draw_request(RenderPassID pass_id,
+                        RenderObjects::Id obj_id,
+                        Material *override_material) {
+    auto matrix = render_objects.get<glm::mat4>(obj_id);
+    auto mesh = render_objects.get<std::shared_ptr<Mesh>>(obj_id);
+    auto material = render_objects.get<std::shared_ptr<Material>>(obj_id).get();
+    auto skeleton = render_objects.get<std::shared_ptr<Skin>>(obj_id);
+
+    if (mesh == nullptr) {
+        return std::nullopt;
+    }
+
+    if (override_material != nullptr) {
+        material = override_material;
+    }
+
+    if (material == nullptr) {
+        material = context()->default_material_vk().get();
+    }
+
+    DrawRequest req{};
+
+    MaterialPassInfo info{};
+    info.pass_id = pass_id;
+    info.skinned = mesh->skinned() && skeleton != nullptr;
+    req.material = material->pass(info);
+
+    if (req.material.pipeline == nullptr) {
+        return std::nullopt;
+    }
+
+    if (info.skinned) {
+        req.skeleton = skeleton.get();
+    }
+
+    req.M = matrix;
+    req.mesh = mesh.get();
+
+    return req;
+}
+
 IScene *View::scene() {
     return _scene;
 }
@@ -193,6 +235,10 @@ void RenderObject::set_skin(std::shared_ptr<ISkin> skin) {
     get<std::shared_ptr<Skin>>() = upcast(skin);
 }
 
+Scene::RenderObjects::Id RenderObject::id() const {
+    return _id;
+}
+
 PointLight::PointLight(Scene *scene) : _scene(scene) {
     _id = _scene->point_lights.alloc();
 }
@@ -245,36 +291,17 @@ CullingResult::gather_draw_requests(RenderPassID pass_id) const {
     requests.reserve(objects.size());
 
     for (auto obj_id : objects) {
-        auto &render_objects = scene->render_objects;
-        auto matrix = render_objects.get<glm::mat4>(obj_id);
-        auto mesh = render_objects.get<std::shared_ptr<Mesh>>(obj_id);
-        auto material = render_objects.get<std::shared_ptr<Material>>(obj_id);
-        auto skeleton = render_objects.get<std::shared_ptr<Skin>>(obj_id);
-
-        if (material == nullptr) {
-            material = scene->context()->default_material_vk();
+        auto req = scene->get_draw_request(pass_id, obj_id);
+        if (req.has_value()) {
+            requests.push_back(req.value());
         }
-
-        DrawRequest req{};
-
-        MaterialPassInfo info{};
-        info.pass_id = pass_id;
-        info.skinned = mesh->skinned() && skeleton != nullptr;
-        req.material = material->pass(info);
-
-        if (req.material.pipeline == nullptr) {
-            continue;
-        }
-
-        if (info.skinned) {
-            req.skeleton = skeleton.get();
-        }
-
-        req.M = matrix;
-        req.mesh = mesh.get();
-        requests.push_back(req);
     }
 
     return requests;
 }
+
+RenderObject *upcast(IRenderObject *rd_obj) {
+    return dynamic_cast<RenderObject *>(rd_obj);
+}
+
 } // namespace ars::render::vk

@@ -12,8 +12,10 @@ A very coarse plan for development.
         + [ ] Clear Coat
         + [ ] Hair
         + [ ] Eye
-    + [ ] Shadow
+    + Shadow
         + [x] Sample Distribution Shadow Map
+        + [x] PCF
+        + [ ] VSSM
     + [ ] Shader Graph
     + [ ] Dynamic GI
     + [ ] GPU Driven Pipeline
@@ -31,14 +33,19 @@ A very coarse plan for development.
         + [x] Pass Culling
         + [ ] Virtual Resource Management
         + [ ] Scheduling
-    + [ ] Virtual Texture
 4. System
-   > Build on top of existing rendering features
+    + [ ] Virtual Texture
     + [ ] Particle
-    + [ ] Skin Animation
+    + Animation
+        + [x] Skinning
+        + [ ] Morphing
     + [ ] Terrain
 5. Utilities
     + [x] Profiler
+
+## Animation
+
+## Physics
 
 ## Editing
 

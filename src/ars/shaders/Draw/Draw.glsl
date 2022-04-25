@@ -113,7 +113,7 @@ void main() {
                     ars_skin[in_joints.z] * in_weights.z +
                     ars_skin[in_joints.w] * in_weights.w;
     MV = get_view().V * skin_mat;
-    I_MV = inverse(skin_mat);
+    I_MV = inverse(MV);
 #endif
 
     vec4 pos_vs = transform_position(MV, in_position_os);

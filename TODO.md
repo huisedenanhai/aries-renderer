@@ -49,6 +49,8 @@ A very coarse plan for development.
 
 ## Editing
 
-+ [ ] Make scene editing workflow clear
-+ [ ] Built-in support GLTF as scene file, which can be an extended version. no need to make a wheel
-+ [ ] Built-in support for KTX
++ Workflow
+    + [ ] Make scene editing workflow clear
+    + [ ] Built-in support GLTF as scene file, which can be an extended version. no need to make a wheel
+    + [ ] Built-in support for KTX
++ [ ] Texture Painting

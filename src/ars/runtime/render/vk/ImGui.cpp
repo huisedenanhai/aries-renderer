@@ -101,7 +101,9 @@ class ImGuiViewportData {
                              VkBufferUsageFlags usage) {
         if (buffer.get() == nullptr || buffer->size() < size) {
             buffer = _swapchain->context()->create_buffer(
-                std::max(size, 256ULL), usage, VMA_MEMORY_USAGE_CPU_TO_GPU);
+                std::max<VkDeviceSize>(size, 256),
+                usage,
+                VMA_MEMORY_USAGE_CPU_TO_GPU);
         }
 
         return buffer.get();

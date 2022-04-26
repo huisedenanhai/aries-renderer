@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cassert>
+#include <cstdint>
 #include <optional>
 #include <tuple>
 #include <vector>

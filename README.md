@@ -1,6 +1,6 @@
 # Aries
 
-My toy Vulkan renderer. Runs on macOS/Windows.
+My toy Vulkan renderer. Runs on macOS/Linux/Windows.
 
 > WARNING: very early stage of development, everything is going to change.
 > 

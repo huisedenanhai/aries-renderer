@@ -13,7 +13,7 @@ void IMaterial::register_type() {
 }
 
 MaterialPropertyType MaterialPropertyVariant::type() const {
-    return std::visit(
+    return ars::visit(
         [](auto &&v) {
             using T = std::remove_cv_t<std::remove_reference_t<decltype(v)>>;
             return MaterialPropertyTypeTrait<T>::Type;

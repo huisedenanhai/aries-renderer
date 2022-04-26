@@ -563,7 +563,7 @@ void DescriptorEncoder::commit(CommandBuffer *cmd, Pipeline *pipeline) {
         }
 
         auto desc_type = bind_info->descriptorType;
-        std::visit(make_visitor(
+        ars::visit(make_visitor(
                        [&](const std::vector<ImageInfo> &data) {
                            auto &w = writes[write_count++];
                            auto img_desc_infos = &image_infos[image_count];

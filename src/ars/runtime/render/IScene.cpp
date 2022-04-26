@@ -1,4 +1,5 @@
 #include "IScene.h"
+#include <ars/runtime/core/misc/Visitor.h>
 
 namespace ars::render {
 namespace {
@@ -115,21 +116,21 @@ Frustum Orthographic::frustum(float w_div_h) const {
 }
 
 glm::mat4 CameraData::projection_matrix(float w_div_h) const {
-    return std::visit(
+    return ars::visit(
         [w_div_h](auto &&d) { return d.projection_matrix(w_div_h); }, *this);
 }
 
 Frustum CameraData::frustum(float w_div_h) const {
-    return std::visit([w_div_h](auto &&d) { return d.frustum(w_div_h); },
+    return ars::visit([w_div_h](auto &&d) { return d.frustum(w_div_h); },
                       *this);
 }
 
 float CameraData::z_far() const {
-    return std::visit([](auto &&d) { return d.z_far; }, *this);
+    return ars::visit([](auto &&d) { return d.z_far; }, *this);
 }
 
 float CameraData::z_near() const {
-    return std::visit([](auto &&d) { return d.z_near; }, *this);
+    return ars::visit([](auto &&d) { return d.z_near; }, *this);
 }
 
 glm::mat4 IView::projection_matrix() {

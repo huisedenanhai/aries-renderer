@@ -190,7 +190,7 @@ void MaterialPropertyBlock::set_variant_by_index(
     }
 
     auto data_ptr = &_data_block[_layout->property_offset(index)];
-    std::visit(ars::make_visitor([&](auto &&v) {
+    ars::visit(ars::make_visitor([&](auto &&v) {
                    using T =
                        std::remove_cv_t<std::remove_reference_t<decltype(v)>>;
                    if constexpr (std::is_same_v<T, std::shared_ptr<ITexture>>) {

@@ -3,6 +3,7 @@
 #include "../ITexture.h"
 #include <ars/runtime/core/Log.h>
 #include <ars/runtime/core/Serde.h>
+#include <ars/runtime/core/misc/Visitor.h>
 
 namespace ars::render {
 std::shared_ptr<IMaterial>
@@ -50,7 +51,7 @@ nlohmann::json serialize_material(IMaterial *material) {
     for (auto &prop : material->properties()) {
         auto v = material->get_variant(prop.name);
         if (v.has_value()) {
-            std::visit([&](auto &&p) { js[prop.name] = p; }, *v);
+            ars::visit([&](auto &&p) { js[prop.name] = p; }, *v);
         }
     }
     return js;

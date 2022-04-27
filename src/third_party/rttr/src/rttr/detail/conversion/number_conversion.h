@@ -50,110 +50,11 @@ convert_to(const F& from, T& to)
     return true;
 }
 
-template<typename F, typename T>
-using is_integer = std::integral_constant<bool, !std::is_same<F, T>::value &&
-                                                std::is_integral<F>::value && std::is_integral<T>::value>;
-
-/////////////////////////////////////////////////////////////////////////////////////////
-
-template<typename F, typename T>
-typename std::enable_if<is_integer<F, T>::value &&
-                        std::numeric_limits<F>::is_signed &&
-                        !std::numeric_limits<T>::is_signed,
+template <typename F, typename T>
+typename std::enable_if<std::is_arithmetic<F>::value &&
+                            std::is_arithmetic<T>::value,
                         bool>::type
-convert_to(const F& from, T& to)
-{
-    if (from < 0)
-        return false; // value too small
-
-    if (static_cast<typename std::make_unsigned<F>::type>(from) > std::numeric_limits<T>::max())
-        return false; // value too large
-
-    to = static_cast<T>(from);
-    return true;
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////
-
-template<typename F, typename T>
-typename std::enable_if<is_integer<F, T>::value &&
-                        !std::numeric_limits<F>::is_signed &&
-                        std::numeric_limits<T>::is_signed,
-                        bool>::type
-convert_to(const F& from, T& to)
-{
-    if (from > static_cast<typename std::make_unsigned<T>::type>(std::numeric_limits<T>::max()))
-        return false; // value too large
-
-    to = static_cast<T>(from);
-    return true;
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////
-
-template<typename F, typename T>
-typename std::enable_if<is_integer<F, T>::value &&
-                        std::numeric_limits<F>::is_signed &&
-                        std::numeric_limits<T>::is_signed,
-                        bool>::type
-convert_to(const F& from, T& to)
-{
-    if (from > std::numeric_limits<T>::max())
-        return false; // value too large
-    else if (from < std::numeric_limits<T>::min())
-        return false; // value too small
-
-    to = static_cast<T>(from);
-    return true;
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////
-
-template<typename F, typename T>
-typename std::enable_if<is_integer<F, T>::value &&
-                        !std::numeric_limits<F>::is_signed &&
-                        !std::numeric_limits<T>::is_signed,
-                        bool>::type
-convert_to(const F& from, T& to)
-{
-    if (from > std::numeric_limits<T>::max())
-        return false; // value too large
-
-    to = static_cast<T>(from);
-    return true;
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////////
-// floating point conversion
-
-template<typename F, typename T>
-typename std::enable_if<std::is_floating_point<F>::value &&
-                        std::is_integral<T>::value && std::numeric_limits<T>::is_signed,
-                        bool>::type
-convert_to(const F& from, T& to)
-{
-    if (from > std::numeric_limits<T>::max())
-        return false; // value too large
-    else if (from < -std::numeric_limits<T>::max())
-        return false; // value to small
-
-    to = static_cast<T>(from);
-    return true;
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////
-
-template<typename F, typename T>
-typename std::enable_if<std::is_floating_point<F>::value &&
-                        std::is_integral<T>::value && !std::numeric_limits<T>::is_signed,
-                        bool>::type
-convert_to(const F& from, T& to)
-{
-    if (from < 0 || from > std::numeric_limits<T>::max())
-        return false; // value too large
-
+convert_to(const F &from, T &to) {
     to = static_cast<T>(from);
     return true;
 }

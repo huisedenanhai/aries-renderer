@@ -130,7 +130,6 @@ class Engine {
         _application.reset();
 
         destroy_render();
-        destroy_profiler();
         destroy_core();
     }
 

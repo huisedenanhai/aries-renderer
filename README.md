@@ -13,6 +13,8 @@ My toy Vulkan renderer. Runs on macOS/Linux/Windows.
 You need [frill](https://github.com/huisedenanhai/frill) built first, and configure cmake
 with `-DARS_FRILL_EXECUTABLE=<path-to-frill-exe>`
 
+Compilers should be clang or MSVC.
+
 ## Run
 
 1. Create a folder and put your assets in there. It will be your project folder.

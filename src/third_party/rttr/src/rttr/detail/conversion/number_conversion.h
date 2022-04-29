@@ -51,7 +51,8 @@ convert_to(const F& from, T& to)
 }
 
 template <typename F, typename T>
-typename std::enable_if<std::is_arithmetic<F>::value &&
+typename std::enable_if<!std::is_same<F, T>::value &&
+                            std::is_arithmetic<F>::value &&
                             std::is_arithmetic<T>::value,
                         bool>::type
 convert_to(const F &from, T &to) {

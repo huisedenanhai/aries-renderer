@@ -1,4 +1,5 @@
 #include "Renderer.h"
+#include "../Context.h"
 #include "../Effect.h"
 #include "../Profiler.h"
 #include "../Scene.h"
@@ -120,6 +121,7 @@ void RendererContextData::init_geometry_pass() {
 
     _geometry_pass =
         RenderPass::create_with_single_pass(_context, 4, colors, &depth);
+    _context->set_debug_name("Geometry Pass", _geometry_pass->render_pass());
 }
 
 void RendererContextData::init_shading_pass() {
@@ -128,6 +130,7 @@ void RendererContextData::init_shading_pass() {
 
     _shading_pass =
         RenderPass::create_with_single_pass(_context, 1, &color, nullptr);
+    _context->set_debug_name("Shading Pass", _shading_pass->render_pass());
 }
 
 void RendererContextData::init_overlay_pass() {
@@ -149,6 +152,7 @@ void RendererContextData::init_overlay_pass() {
 
     _overlay_pass =
         RenderPass::create_with_single_pass(_context, 1, &color, &depth);
+    _context->set_debug_name("Overlay Pass", _overlay_pass->render_pass());
 }
 
 void RendererContextData::init_render_passes() {
@@ -178,6 +182,7 @@ void RendererContextData::init_shadow_pass() {
 
     _shadow_pass =
         RenderPass::create_with_single_pass(_context, 0, nullptr, &depth);
+    _context->set_debug_name("Shadow Pass", _shadow_pass->render_pass());
 }
 
 void RendererContextData::init_object_id_pass() {
@@ -191,5 +196,6 @@ void RendererContextData::init_object_id_pass() {
 
     _object_id_pass = RenderPass::create_with_single_pass(
         _context, 1, &color_info, &depth_info);
+    _context->set_debug_name("Object ID Pass", _object_id_pass->render_pass());
 }
 } // namespace ars::render::vk

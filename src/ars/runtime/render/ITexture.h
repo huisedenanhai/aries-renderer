@@ -16,6 +16,7 @@ enum class MipmapMode { Linear, Nearest };
 enum class WrapMode { Repeat, ClampToEdge, MirroredRepeat };
 
 struct TextureInfo {
+    std::string name{};
     TextureType type = TextureType::Texture2D;
     Format format = Format::R8G8B8A8_SRGB;
     uint32_t width = 1;
@@ -31,17 +32,20 @@ struct TextureInfo {
     WrapMode wrap_v = WrapMode::Repeat;
     WrapMode wrap_w = WrapMode::Repeat;
 
-    static TextureInfo create(TextureType type,
+    static TextureInfo create(const std::string &name,
+                              TextureType type,
                               Format format,
                               uint32_t width,
                               uint32_t height,
                               uint32_t mip_levels = MAX_MIP_LEVELS);
-    static TextureInfo create_2d(Format format,
+    static TextureInfo create_2d(const std::string &name,
+                                 Format format,
                                  uint32_t width,
                                  uint32_t height,
                                  uint32_t mip_levels = MAX_MIP_LEVELS);
     // Width and height for cube map must be equal
-    static TextureInfo create_cube_map(Format format,
+    static TextureInfo create_cube_map(const std::string &name,
+                                       Format format,
                                        uint32_t size,
                                        uint32_t mip_levels = MAX_MIP_LEVELS);
 };

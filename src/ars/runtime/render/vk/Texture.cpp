@@ -10,15 +10,31 @@ namespace {
 constexpr VkImageUsageFlags IMAGE_USAGE_SAMPLED_COLOR =
     VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
     VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+
+VkImageUsageFlags
+remove_unsupported_image_usages(VkImageUsageFlags usages,
+                                VkFormatFeatureFlags features) {
+    auto check = [&](VkImageUsageFlagBits usage_bit,
+                     VkFormatFeatureFlagBits required_feature) {
+        if (!(features & required_feature)) {
+            usages &= (~usage_bit);
+        }
+    };
+    check(VK_IMAGE_USAGE_SAMPLED_BIT, VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT);
+    check(VK_IMAGE_USAGE_STORAGE_BIT, VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT);
+    check(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+          VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT);
+    check(VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+          VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+
+    return usages;
 }
+} // namespace
 
 Texture::Texture(Context *context, const TextureCreateInfo &info)
     : _context(context), _info(info) {
-    _info.mip_levels = std::clamp(calculate_mip_levels(_info.extent.width,
-                                                       _info.extent.height,
-                                                       _info.extent.depth),
-                                  1u,
-                                  _info.mip_levels);
+    correct_texture_create_info();
+
     _image_view_of_levels.resize(_info.mip_levels);
 
     init();
@@ -414,6 +430,10 @@ void Texture::init() {
     if (_context->device()->Create(&sampler_info, &_sampler)) {
         ARS_LOG_CRITICAL("Failed to create sampler");
     }
+
+    _context->set_debug_name(_info.name, _image);
+    _context->set_debug_name(_info.name, _image_view);
+    _context->set_debug_name(_info.name, _sampler);
 }
 
 void Texture::generate_mipmap(const Handle<Texture> &tex, RenderGraph &rg) {
@@ -432,6 +452,22 @@ void Texture::generate_mipmap(const Handle<Texture> &tex, RenderGraph &rg) {
                                  VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
                                  0);
         });
+}
+
+void Texture::correct_texture_create_info() {
+    _info.mip_levels = std::clamp(calculate_mip_levels(_info.extent.width,
+                                                       _info.extent.height,
+                                                       _info.extent.depth),
+                                  1u,
+                                  _info.mip_levels);
+
+    auto inst = _context->instance();
+
+    VkFormatProperties properties{};
+    inst->GetPhysicalDeviceFormatProperties(
+        _context->device()->physical_device(), _info.format, &properties);
+    _info.usage = remove_unsupported_image_usages(
+        _info.usage, properties.optimalTilingFeatures);
 }
 
 TextureCreateInfo
@@ -600,6 +636,7 @@ VkSamplerAddressMode translate(WrapMode mode) {
 
 TextureCreateInfo translate(const TextureInfo &info) {
     TextureCreateInfo up{};
+    up.name = info.name;
     up.format = translate(info.format);
     switch (info.type) {
     case TextureType::Texture2D:

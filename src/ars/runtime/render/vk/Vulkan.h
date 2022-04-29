@@ -203,4 +203,20 @@ template <>
 struct VulkanObjectType<VkPipelineLayout>
     : std::integral_constant<VkObjectType, VK_OBJECT_TYPE_PIPELINE_LAYOUT> {};
 
+template <>
+struct VulkanObjectType<VkRenderPass>
+    : std::integral_constant<VkObjectType, VK_OBJECT_TYPE_RENDER_PASS> {};
+
+template <>
+struct VulkanObjectType<VkImage>
+    : std::integral_constant<VkObjectType, VK_OBJECT_TYPE_IMAGE> {};
+
+template <>
+struct VulkanObjectType<VkImageView>
+    : std::integral_constant<VkObjectType, VK_OBJECT_TYPE_IMAGE_VIEW> {};
+
+template <>
+struct VulkanObjectType<VkSampler>
+    : std::integral_constant<VkObjectType, VK_OBJECT_TYPE_SAMPLER> {};
+
 } // namespace ars::render::vk

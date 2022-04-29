@@ -617,7 +617,10 @@ std::shared_ptr<ITexture> load_texture(IContext *context,
         return nullptr;
     }
 
+    std::filesystem::path tex_path = gltf_texture_path(path, gltf, tex_index);
+
     TextureInfo info{};
+    info.name = tex_path.filename().string();
     info.type = TextureType::Texture2D;
     info.format = get_8_bit_texture_format(channels, need_srgb);
     info.width = width;
@@ -637,7 +640,7 @@ std::shared_ptr<ITexture> load_texture(IContext *context,
 
     auto texture = context->create_texture(info);
 
-    texture->set_path(gltf_texture_path(path, gltf, tex_index));
+    texture->set_path(tex_path);
     texture->set_data((void *)image.image.data(),
                       width * height * channels,
                       0,

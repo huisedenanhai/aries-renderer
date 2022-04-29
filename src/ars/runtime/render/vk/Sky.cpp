@@ -162,12 +162,15 @@ void SkyData::ensure_irradiance_cube_map() {
     // Max mip level 5.
     // Using full mip map count degenerates diffuse irradiance to ambient
     // cube.
-    _irradiance_cube_map =
-        _context->create_texture(translate(TextureInfo::create_cube_map(
-            Format::B10G11R11_UFLOAT_PACK32, _irradiance_cube_map_size, 5)));
-    _tmp_env_map =
-        _context->create_texture(translate(TextureInfo::create_cube_map(
-            Format::B10G11R11_UFLOAT_PACK32, _irradiance_cube_map_size)));
+    _irradiance_cube_map = _context->create_texture(
+        translate(TextureInfo::create_cube_map("Sky Irradiance Filtered",
+                                               Format::B10G11R11_UFLOAT_PACK32,
+                                               _irradiance_cube_map_size,
+                                               5)));
+    _tmp_env_map = _context->create_texture(
+        translate(TextureInfo::create_cube_map("Sky Tmp Env Map",
+                                               Format::B10G11R11_UFLOAT_PACK32,
+                                               _irradiance_cube_map_size)));
 }
 
 void SkyData::update_cache(RenderGraph &rg,

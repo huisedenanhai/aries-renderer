@@ -72,12 +72,14 @@ uint32_t calculate_next_mip_size(uint32_t size) {
     return size > 1 ? size / 2 : 1;
 }
 
-TextureInfo TextureInfo::create(TextureType type,
+TextureInfo TextureInfo::create(const std::string &name,
+                                TextureType type,
                                 Format format,
                                 uint32_t width,
                                 uint32_t height,
                                 uint32_t mip_levels) {
     TextureInfo info{};
+    info.name = name;
     info.format = format;
     info.type = type;
     info.width = width;
@@ -88,16 +90,19 @@ TextureInfo TextureInfo::create(TextureType type,
     return info;
 }
 
-TextureInfo TextureInfo::create_2d(Format format,
+TextureInfo TextureInfo::create_2d(const std::string &name,
+                                   Format format,
                                    uint32_t width,
                                    uint32_t height,
                                    uint32_t mip_levels) {
-    return create(TextureType::Texture2D, format, width, height, mip_levels);
+    return create(
+        name, TextureType::Texture2D, format, width, height, mip_levels);
 }
 
-TextureInfo TextureInfo::create_cube_map(Format format,
+TextureInfo TextureInfo::create_cube_map(const std::string &name,
+                                         Format format,
                                          uint32_t size,
                                          uint32_t mip_levels) {
-    return create(TextureType::CubeMap, format, size, size, mip_levels);
+    return create(name, TextureType::CubeMap, format, size, size, mip_levels);
 }
 } // namespace ars::render

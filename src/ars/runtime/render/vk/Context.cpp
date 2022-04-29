@@ -1023,7 +1023,7 @@ void Context::init_profiler() {
 void Context::set_debug_name_internal(const std::string &name,
                                       uint64_t object_handle,
                                       VkObjectType object_type) {
-    if (!s_vulkan->validation_enabled()) {
+    if (!s_vulkan->validation_enabled() || name.empty()) {
         return;
     }
     VkDebugUtilsObjectNameInfoEXT info{

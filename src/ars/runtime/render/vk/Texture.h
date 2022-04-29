@@ -9,6 +9,7 @@ class Context;
 struct RenderGraph;
 
 struct TextureCreateInfo {
+    std::string name{};
     VkImageType image_type{};
     VkImageViewType view_type{};
     VkFormat format{};
@@ -114,6 +115,7 @@ class Texture : public ITextureHandle {
                          VkAccessFlags dst_access_mask);
 
   private:
+    void correct_texture_create_info();
     void init();
 
     // Call this method after _image and _info initialized

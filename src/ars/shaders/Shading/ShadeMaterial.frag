@@ -111,7 +111,9 @@ vec3 get_shadow_factor(ShadingPoint sp) {
     int i = 0;
     for (; i < SHADOW_CASCADE_COUNT; i++) {
         ShadowCascade cascade = shadow_cascades[i];
-        if (-sp.pos_vs.z > cascade.z_far) {
+        if (-sp.pos_vs.z > cascade.z_far && i + 1 != SHADOW_CASCADE_COUNT) {
+            // Don't discard shadow at the last cascade, to avoid incorrect
+            // shadow cutoff when visible far sample distance increase abruptly.
             continue;
         }
         vec4 pos_shadow_hclip =

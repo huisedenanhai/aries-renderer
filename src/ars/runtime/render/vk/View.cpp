@@ -215,7 +215,9 @@ TextureCreateInfo View::rt_info(NamedRT name) const {
         break;
     }
     case NamedRT_ReflectionHistory:
-    case NamedRT_Reflection: {
+    case NamedRT_Reflection:
+    case NamedRT_SSGI:
+    case NamedRT_SSGIHistory: {
         info = TextureCreateInfo::sampled_2d(
             VK_FORMAT_R16G16B16A16_SFLOAT, 1, 1, 1);
         info.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
@@ -298,6 +300,7 @@ void View::debug_gui() {
 
 void View::flip_history_buffer() {
     std::swap(_rt_ids[NamedRT_Reflection], _rt_ids[NamedRT_ReflectionHistory]);
+    std::swap(_rt_ids[NamedRT_SSGI], _rt_ids[NamedRT_SSGIHistory]);
     std::swap(_rt_ids[NamedRT_LinearColor],
               _rt_ids[NamedRT_LinearColorHistory]);
 }

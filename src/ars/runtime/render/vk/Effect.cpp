@@ -10,6 +10,7 @@ IScreenSpaceReflectionEffect *Effect::screen_space_reflection() {
 
 Effect::Effect(View *view) {
     _ssr_effect = std::make_unique<ScreenSpaceReflectionEffect>();
+    _ssgi_effect = std::make_unique<ScreenSpaceReflectionEffect>();
     _background = std::make_unique<Background>(view);
 }
 
@@ -23,6 +24,10 @@ ScreenSpaceReflectionEffect *Effect::screen_space_reflection_vk() {
 
 Background *Effect::background_vk() {
     return _background.get();
+}
+
+IScreenSpaceReflectionEffect *Effect::screen_space_global_illumination() {
+    return _ssgi_effect.get();
 }
 
 bool ScreenSpaceReflectionEffect::enabled() {

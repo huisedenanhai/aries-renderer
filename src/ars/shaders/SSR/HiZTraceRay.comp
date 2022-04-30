@@ -192,23 +192,26 @@ float sample_reflect_dir(ivec2 index,
                          vec3 v_vs,
                          vec3 n_vs,
                          out vec3 dir_vs) {
-    // Sample dir
-    float roughness =
-        square(max(pbr.perceptual_roughness, SSR_MIN_SAMPLING_ROUGHNESS));
     vec2 u = sample_noise(index);
-
-    // Biased sampling trick on P.68, Stochastic Screen-Space Reflections
-    // (Tomasz Stachowiak)
-    // Clamp pdf to avoid noisy samples on GGX tail
-    u.x *= unbiased_sampling;
-
     vec3 t_vs, b_vs;
     construct_TBN_with_normal(n_vs, t_vs, b_vs);
     mat3 ts_to_vs = mat3(t_vs, n_vs, b_vs);
 
+#ifdef SSR_DIFFUSE
+    vec3 l_ts;
+    float pdf = cosine_sample_hemisphere(u, l_ts);
+#else
+    // Biased sampling trick on P.68, Stochastic Screen-Space Reflections
+    // (Tomasz Stachowiak)
+    // Clamp pdf to avoid noisy samples on GGX tail
+    u.x *= unbiased_sampling;
+    float roughness =
+        square(max(pbr.perceptual_roughness, SSR_MIN_SAMPLING_ROUGHNESS));
     vec3 v_ts = v_vs * ts_to_vs;
     vec3 l_ts;
     float pdf = sample_l_from_D(u, roughness, v_ts, l_ts);
+#endif
+
     dir_vs = ts_to_vs * l_ts;
 
     return pdf;

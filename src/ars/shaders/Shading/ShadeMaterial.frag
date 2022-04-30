@@ -30,14 +30,21 @@ layout(set = 1, binding = 0) uniform Param {
 
 layout(set = 1, binding = 1) uniform sampler2D brdf_lut;
 layout(set = 1, binding = 2) uniform samplerCube cube_map;
-layout(set = 1, binding = 3) uniform sampler2D ssr_reflection;
+layout(set = 1, binding = 3) uniform sampler2D ssr_reflection_tex;
+layout(set = 1, binding = 4) uniform sampler2D ssgi_tex;
 
 vec3 get_env_filtered_radiance(vec3 v_ws, float lod) {
     return env_randiance_factor * textureLod(cube_map, v_ws, lod).rgb;
 }
 
-vec3 get_diffuse_irradiance(vec3 n_ws) {
-    return get_env_filtered_radiance(n_ws, cube_map_mip_count - 1) * PI;
+vec3 get_diffuse_irradiance(ShadingPoint sp, vec3 n_ws) {
+    vec3 filtered_irradiance =
+        get_env_filtered_radiance(n_ws, cube_map_mip_count - 1);
+
+    vec4 ssgi = texture(ssgi_tex, sp.screen_uv);
+    filtered_irradiance = mix(filtered_irradiance, ssgi.rgb, ssgi.a);
+
+    return filtered_irradiance * PI;
 }
 
 vec3 get_glossy_irradiance(ShadingPoint sp,
@@ -47,7 +54,7 @@ vec3 get_glossy_irradiance(ShadingPoint sp,
     vec3 filtered_radiance = get_env_filtered_radiance(
         reflect_dir_ws, (cube_map_mip_count - 1) * perceptual_roughness);
 
-    vec4 ssr = texture(ssr_reflection, sp.screen_uv);
+    vec4 ssr = texture(ssr_reflection_tex, sp.screen_uv);
     filtered_radiance = mix(filtered_radiance, ssr.rgb, ssr.a);
 
     return filtered_radiance * PI;
@@ -174,7 +181,8 @@ vec3 shade_metallic_roughness_pbr(GBuffer gbuffer, ShadingPoint sp) {
 #if defined(LIT_REFLECTION_EMISSION)
     // Sample env irradiance
     vec3 n_ws = transform_vector(view.I_V, n_vs);
-    vec3 diffuse_env_irradiance = brdf.occlusion * get_diffuse_irradiance(n_ws);
+    vec3 diffuse_env_irradiance =
+        brdf.occlusion * get_diffuse_irradiance(sp, n_ws);
     vec3 diffuse_indirect_radiance = fd * diffuse_env_irradiance;
 
     float NoV = clamp01(dot(n_vs, v_vs));

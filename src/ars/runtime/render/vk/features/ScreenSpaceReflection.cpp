@@ -89,9 +89,15 @@ void GenerateHierarchyZ::render(RenderGraph &rg) {
 
 ScreenSpaceReflection::ScreenSpaceReflection(View *view) : _view(view) {
     auto ctx = _view->context();
-    _hiz_trace_pipeline = ComputePipeline::create(ctx, "SSR/HiZTraceRay.comp");
-    _resolve_reflection_pipeline =
+    _hiz_trace_pipeline[0] =
+        ComputePipeline::create(ctx, "SSR/HiZTraceRay.comp");
+    _hiz_trace_pipeline[1] =
+        ComputePipeline::create(ctx, "SSR/HiZTraceRay.comp", {"SSR_DIFFUSE"});
+    _resolve_reflection_pipeline[0] =
         ComputePipeline::create(ctx, "SSR/ResolveReflection.comp");
+    _resolve_reflection_pipeline[1] = ComputePipeline::create(
+        ctx, "SSR/ResolveReflection.comp", {"SSR_DIFFUSE"});
+
     _temporal_filter_pipeline =
         ComputePipeline::create(ctx, "SSR/TemporalFiltering.comp");
 
@@ -99,7 +105,10 @@ ScreenSpaceReflection::ScreenSpaceReflection(View *view) : _view(view) {
     alloc_resolve_single_sample_buffer();
 }
 
-void ScreenSpaceReflection::trace_rays(RenderGraph &rg) {
+void ScreenSpaceReflection::trace_rays(RenderGraph &rg,
+                                       IScreenSpaceReflectionEffect *settings,
+                                       bool diffuse) {
+    auto pipeline = _hiz_trace_pipeline[diffuse].get();
     rg.add_pass(
         [&](RenderGraphPassBuilder &builder) {
             builder.compute_shader_read(NamedRT_HiZBuffer);
@@ -114,7 +123,7 @@ void ScreenSpaceReflection::trace_rays(RenderGraph &rg) {
 
             auto dst_extent = hit_buffer->info().extent;
 
-            _hiz_trace_pipeline->bind(cmd);
+            pipeline->bind(cmd);
 
             DescriptorEncoder desc{};
             desc.set_texture(0, 0, hit_buffer.get());
@@ -134,16 +143,15 @@ void ScreenSpaceReflection::trace_rays(RenderGraph &rg) {
             param.hiz_mip_count =
                 static_cast<int32_t>(hiz_buffer->info().mip_levels);
             param.frame_index = _frame_index++;
-            auto ssr_settings = _view->effect()->screen_space_reflection();
             param.unbiased_sampling =
-                std::clamp(1.0f - ssr_settings->sampling_bias(), 0.0f, 1.0f);
+                std::clamp(1.0f - settings->sampling_bias(), 0.0f, 1.0f);
 
             desc.set_buffer_data(1, 0, param);
             desc.set_buffer(1, 1, _view->transform_buffer().get());
 
-            desc.commit(cmd, _hiz_trace_pipeline.get());
+            desc.commit(cmd, pipeline);
 
-            _hiz_trace_pipeline->local_size().dispatch(cmd, dst_extent);
+            pipeline->local_size().dispatch(cmd, dst_extent);
         });
 }
 
@@ -162,7 +170,9 @@ void ScreenSpaceReflection::alloc_hit_buffer() {
     _hit_buffer_id = _view->rt_manager()->alloc(info, 0.5f);
 }
 
-void ScreenSpaceReflection::resolve_reflection(RenderGraph &rg) {
+void ScreenSpaceReflection::resolve_reflection(
+    RenderGraph &rg, IScreenSpaceReflectionEffect *settings, bool diffuse) {
+    auto pipeline = _resolve_reflection_pipeline[diffuse].get();
     rg.add_pass(
         [&](RenderGraphPassBuilder &builder) {
             builder.compute_shader_read(NamedRT_GBuffer1);
@@ -173,7 +183,7 @@ void ScreenSpaceReflection::resolve_reflection(RenderGraph &rg) {
             builder.compute_shader_write(_resolve_buffer_single_sample);
         },
         [=](CommandBuffer *cmd) {
-            _resolve_reflection_pipeline->bind(cmd);
+            pipeline->bind(cmd);
             auto reflect_color_image =
                 _view->rt_manager()->get(_resolve_buffer_single_sample);
             auto dst_extent = reflect_color_image->info().extent;
@@ -196,19 +206,17 @@ void ScreenSpaceReflection::resolve_reflection(RenderGraph &rg) {
                 float thickness;
             };
 
-            auto ssr = _view->effect()->screen_space_reflection();
             Param param{};
             param.frame_index = _frame_index;
-            param.screen_border_fade_size = 0.5f * ssr->border_fade();
-            param.thickness = ssr->thickness();
+            param.screen_border_fade_size = 0.5f * settings->border_fade();
+            param.thickness = settings->thickness();
             desc.set_buffer_data(1, 0, param);
 
             desc.set_buffer(1, 1, _view->transform_buffer().get());
 
-            desc.commit(cmd, _resolve_reflection_pipeline.get());
+            desc.commit(cmd, pipeline);
 
-            _resolve_reflection_pipeline->local_size().dispatch(cmd,
-                                                                dst_extent);
+            pipeline->local_size().dispatch(cmd, dst_extent);
         });
 }
 
@@ -222,35 +230,30 @@ void ScreenSpaceReflection::alloc_resolve_single_sample_buffer() {
 }
 
 void ScreenSpaceReflection::render(RenderGraph &rg) {
-    auto ssr = _view->effect()->screen_space_reflection();
-    if (ssr->enabled()) {
-        trace_rays(rg);
-        resolve_reflection(rg);
-        temporal_filtering(rg);
-        _reflection_history_valid = true;
-    } else {
-        _reflection_history_valid = false;
-    }
+    render(rg, false);
+    render(rg, true);
 }
 
-void ScreenSpaceReflection::temporal_filtering(RenderGraph &rg) {
+void ScreenSpaceReflection::temporal_filtering(RenderGraph &rg,
+                                               NamedRT history_rt,
+                                               NamedRT result_rt,
+                                               bool history_valid) {
     rg.add_pass(
         [&](RenderGraphPassBuilder &builder) {
             builder.compute_shader_read(NamedRT_Depth);
-            builder.compute_shader_read(NamedRT_ReflectionHistory);
+            builder.compute_shader_read(history_rt);
             builder.compute_shader_read(_resolve_buffer_single_sample);
-            builder.compute_shader_write(NamedRT_Reflection);
+            builder.compute_shader_write(result_rt);
         },
         [=](CommandBuffer *cmd) {
             _temporal_filter_pipeline->bind(cmd);
-            auto reflect_tex = _view->render_target(NamedRT_Reflection);
-            auto dst_extent = reflect_tex->info().extent;
+            auto result_tex = _view->render_target(result_rt);
+            auto dst_extent = result_tex->info().extent;
 
             DescriptorEncoder desc{};
-            desc.set_texture(0, 0, reflect_tex.get());
+            desc.set_texture(0, 0, result_tex.get());
             desc.set_texture(0, 1, _view->render_target(NamedRT_Depth).get());
-            desc.set_texture(
-                0, 2, _view->render_target(NamedRT_ReflectionHistory).get());
+            desc.set_texture(0, 2, _view->render_target(history_rt).get());
             desc.set_texture(
                 0,
                 3,
@@ -261,7 +264,7 @@ void ScreenSpaceReflection::temporal_filtering(RenderGraph &rg) {
             };
 
             Param param{};
-            param.blend_factor = _reflection_history_valid ? 0.05f : 1.0f;
+            param.blend_factor = history_valid ? 0.05f : 1.0f;
             desc.set_buffer_data(1, 0, param);
 
             desc.set_buffer(1, 1, _view->transform_buffer().get());
@@ -270,5 +273,28 @@ void ScreenSpaceReflection::temporal_filtering(RenderGraph &rg) {
 
             _temporal_filter_pipeline->local_size().dispatch(cmd, dst_extent);
         });
+}
+
+void ScreenSpaceReflection::render(RenderGraph &rg, bool diffuse) {
+    auto settings = _view->effect()->screen_space_reflection();
+    auto history_rt = NamedRT_ReflectionHistory;
+    auto result_rt = NamedRT_Reflection;
+
+    if (diffuse) {
+        settings = _view->effect()->screen_space_global_illumination();
+        history_rt = NamedRT_SSGIHistory;
+        result_rt = NamedRT_SSGI;
+    }
+
+    auto &history_valid = _reflection_history_valid[diffuse];
+
+    if (settings->enabled()) {
+        trace_rays(rg, settings, diffuse);
+        resolve_reflection(rg, settings, diffuse);
+        temporal_filtering(rg, history_rt, result_rt, history_valid);
+        history_valid = true;
+    } else {
+        history_valid = false;
+    }
 }
 } // namespace ars::render::vk

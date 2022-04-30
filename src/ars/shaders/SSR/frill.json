@@ -2,8 +2,18 @@
     "sources": [
         "InitHiZ.comp",
         "PropagateHiZ.comp",
-        "HiZTraceRay.comp",
-        "ResolveReflection.comp",
-        "TemporalFiltering.comp"
+        "TemporalFiltering.comp",
+        {
+            "file": "HiZTraceRay.comp",
+            "multi_compile": [
+                "SSR_DIFFUSE"
+            ]
+        },
+        {
+            "file": "ResolveReflection.comp",
+            "multi_compile": [
+                "SSR_DIFFUSE"
+            ]
+        }
     ]
 }

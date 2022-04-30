@@ -7,7 +7,6 @@ namespace ars::render::vk {
 class Buffer;
 class Effect;
 class Scene;
-class Environment;
 class TextureAdapter;
 class GraphicsPipeline;
 class Renderer;
@@ -33,6 +32,9 @@ enum NamedRT {
     NamedRT_Reflection,
     // Auto swapped with NamedRT_Reflection on frame end
     NamedRT_ReflectionHistory,
+    NamedRT_SSGI,
+    // Auto swapped with NamedRT_Reflection on frame end
+    NamedRT_SSGIHistory,
 
     NamedRT_Count
 };

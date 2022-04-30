@@ -102,6 +102,8 @@ class IBackground {
 class IEffect {
   public:
     virtual IScreenSpaceReflectionEffect *screen_space_reflection() = 0;
+    virtual IScreenSpaceReflectionEffect *
+    screen_space_global_illumination() = 0;
     virtual IBackground *background() = 0;
 
     static void register_type();

@@ -71,6 +71,11 @@ void DeferredShading::render(RenderGraph &rg) {
             if (_view->effect()->screen_space_reflection()->enabled()) {
                 frag_read(NamedRT_Reflection);
             }
+            if (_view->effect()
+                    ->screen_space_global_illumination()
+                    ->enabled()) {
+                frag_read(NamedRT_SSGI);
+            }
 
             auto sky = _view->effect_vk()->background_vk()->sky_vk();
             frag_read(sky->data()->irradiance_cube_map());
@@ -152,11 +157,16 @@ void DeferredShading::shade_reflection_emission(CommandBuffer *cmd) {
     desc.set_texture(1, 1, ctx->lut()->brdf_lut().get());
     desc.set_texture(1, 2, sky->irradiance_cube_map().get());
 
+    auto zero_tex = ctx->default_texture_vk(DefaultTexture::Zero);
     if (_view->effect()->screen_space_reflection()->enabled()) {
         desc.set_texture(1, 3, _view->render_target(NamedRT_Reflection).get());
     } else {
-        desc.set_texture(
-            1, 3, ctx->default_texture_vk(DefaultTexture::Zero).get());
+        desc.set_texture(1, 3, zero_tex.get());
+    }
+    if (_view->effect()->screen_space_global_illumination()->enabled()) {
+        desc.set_texture(1, 4, _view->render_target(NamedRT_SSGI).get());
+    } else {
+        desc.set_texture(1, 4, zero_tex.get());
     }
 
     struct ShadingParam {

@@ -4,6 +4,7 @@
 // Constants
 
 const float PI = 3.14159;
+const float INV_PI = 1.0 / PI;
 
 // Utility methods
 

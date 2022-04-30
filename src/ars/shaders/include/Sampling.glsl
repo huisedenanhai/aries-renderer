@@ -1,6 +1,8 @@
 #ifndef ARS_SAMPLING_GLSL
 #define ARS_SAMPLING_GLSL
 
+#include "Misc.glsl"
+
 // Low-discrepancy sequence for quasi monte carlo intergation
 float radical_inverse(float i, float base) {
     float v = 0.0;
@@ -63,6 +65,28 @@ float rnd(inout uint seed) {
 float interleaved_gradient_noise(vec2 screen_pos) {
     vec3 magic = vec3(0.06711056, 0.00583715, 52.9829189);
     return fract(magic.z * fract(dot(screen_pos, magic.xy)));
+}
+
+// Macro normal (0, 1, 0)
+float uniform_sample_hemisphere(vec2 u, out vec3 d) {
+    float theta = 2.0 * PI * u.x;
+    float y = u.y;
+    float r = sqrt(max(0.0, 1.0 - y * y));
+    d.x = r * cos(theta);
+    d.y = y;
+    d.z = r * sin(theta);
+    return 0.5 * INV_PI;
+}
+
+// Macro normal (0, 1, 0)
+float cosine_sample_hemisphere(vec2 u, out vec3 d) {
+    float theta = 2.0 * PI * u.x;
+    float r = sqrt(u.y);
+    float y = sqrt(max(1 - r * r, 0.0));
+    d.x = r * cos(theta);
+    d.y = y;
+    d.z = r * sin(theta);
+    return y * INV_PI;
 }
 
 #endif

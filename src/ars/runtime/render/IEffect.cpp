@@ -15,6 +15,8 @@ void IScreenSpaceReflectionEffect::register_type() {
 void IEffect::register_type() {
     rttr::registration::class_<IEffect>("ars::render::IEffect")
         .RTTR_MEMBER_PROPERTY_READONLY(IEffect, screen_space_reflection)
+        .RTTR_MEMBER_PROPERTY_READONLY(IEffect,
+                                       screen_space_global_illumination)
         .RTTR_MEMBER_PROPERTY_READONLY(IEffect, background);
 }
 

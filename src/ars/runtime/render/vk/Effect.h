@@ -57,12 +57,14 @@ class Effect : public IEffect {
     explicit Effect(View *view);
 
     IScreenSpaceReflectionEffect *screen_space_reflection() override;
+    IScreenSpaceReflectionEffect *screen_space_global_illumination() override;
     ScreenSpaceReflectionEffect *screen_space_reflection_vk();
     IBackground *background() override;
     Background *background_vk();
 
   private:
     std::unique_ptr<ScreenSpaceReflectionEffect> _ssr_effect{};
+    std::unique_ptr<ScreenSpaceReflectionEffect> _ssgi_effect{};
     std::unique_ptr<Background> _background{};
 };
 } // namespace ars::render::vk

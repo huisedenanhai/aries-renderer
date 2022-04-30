@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../Effect.h"
 #include "../Pipeline.h"
 #include "../RenderGraph.h"
 #include "../View.h"
@@ -28,18 +29,26 @@ class ScreenSpaceReflection {
     void render(RenderGraph &rg);
 
   private:
-    void trace_rays(RenderGraph &rg);
-    void resolve_reflection(RenderGraph &rg);
-    void temporal_filtering(RenderGraph &rg);
+    void render(RenderGraph &rg, bool diffuse);
+    void trace_rays(RenderGraph &rg,
+                    IScreenSpaceReflectionEffect *settings,
+                    bool diffuse);
+    void resolve_reflection(RenderGraph &rg,
+                            IScreenSpaceReflectionEffect *settings,
+                            bool diffuse);
+    void temporal_filtering(RenderGraph &rg,
+                            NamedRT history_rt,
+                            NamedRT result_rt,
+                            bool history_valid);
 
     void alloc_hit_buffer();
     void alloc_resolve_single_sample_buffer();
 
     View *_view = nullptr;
-    bool _reflection_history_valid = false;
+    bool _reflection_history_valid[2]{};
     int32_t _frame_index = 0;
-    std::unique_ptr<ComputePipeline> _hiz_trace_pipeline;
-    std::unique_ptr<ComputePipeline> _resolve_reflection_pipeline;
+    std::unique_ptr<ComputePipeline> _hiz_trace_pipeline[2];
+    std::unique_ptr<ComputePipeline> _resolve_reflection_pipeline[2];
     std::unique_ptr<ComputePipeline> _temporal_filter_pipeline;
     RenderTargetId _hit_buffer_id;
     RenderTargetId _resolve_buffer_single_sample;

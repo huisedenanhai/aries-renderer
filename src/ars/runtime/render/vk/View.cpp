@@ -335,8 +335,12 @@ void View::update_transform_buffer() {
     t.P = projection_matrix();
     t.I_V = glm::inverse(t.V);
     t.I_P = glm::inverse(t.P);
-    t.reproject_IV_VP = last_frame_data().projection_matrix() *
-                        last_frame_data().view_matrix() * t.I_V;
+    t.prev_V = last_frame_data().view_matrix();
+    t.prev_P = last_frame_data().projection_matrix();
+    t.prev_IV = glm::inverse(t.prev_V);
+    t.prev_IP = glm::inverse(t.prev_P);
+    t.reproject_IV_VP = t.prev_P * t.prev_V * t.I_V;
+
     t.z_near = camera().z_near();
     t.z_far = camera().z_far();
 
@@ -358,6 +362,10 @@ ViewTransform ViewTransform::from_V_P(const glm::mat4 &V, const glm::mat4 &P) {
     v.I_P = glm::inverse(P);
     v.I_V = glm::inverse(V);
     // No history, just assume the view is static
+    v.prev_P = v.P;
+    v.prev_V = v.V;
+    v.prev_IV = v.I_V;
+    v.prev_IP = v.I_P;
     v.reproject_IV_VP = P;
 
     auto near = math::transform_position(v.I_P, {0, 0, 1.0f});

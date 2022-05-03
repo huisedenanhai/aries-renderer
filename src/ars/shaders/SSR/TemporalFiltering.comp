@@ -61,12 +61,30 @@ vec4 calculate_filtered_color(ivec2 index, ivec2 size) {
     vec3 pos_vs = reconstruct_position_from_ss(view.I_P, uv, depth01);
 
     vec4 current_color = texture(current_color_tex, uv);
-    vec3 history_pos_ss = reproject_pos_ss(pos_vs);
-    if (point_inside_unit_rect(history_pos_ss.xy)) {
-        vec4 history_color = texture(history_color_tex, history_pos_ss.xy);
+    vec3 reproj_pos_ss = reproject_pos_ss(pos_vs);
+    if (point_inside_unit_rect(reproj_pos_ss.xy)) {
+        vec4 history_color = texture(history_color_tex, reproj_pos_ss.xy);
+
+        float blend = blend_factor;
+
+// Disocclusion check with depth
+#if 1
+        float history_depth01 = texture(depth_stencil_tex, reproj_pos_ss.xy).r;
+        float reproj_z_linear =
+            depth01_to_linear_z(view.prev_IP, reproj_pos_ss.z);
+        float history_z_linear =
+            depth01_to_linear_z(view.prev_IP, history_depth01);
+        float disocclusion = smoothstep(
+            0.0,
+            0.05,
+            abs(reproj_z_linear - history_z_linear) / reproj_z_linear);
+
+        blend = mix(blend, 1.0, disocclusion);
+#endif
+
         // It flickers severely when input sample have too big variance :(
         // neighbor_clamp(uv, inv_resolution, current_color, history_color);
-        return mix(history_color, current_color, blend_factor);
+        return mix(history_color, current_color, blend);
     }
     return current_color;
 }

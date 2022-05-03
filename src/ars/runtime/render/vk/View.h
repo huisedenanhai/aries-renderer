@@ -51,6 +51,10 @@ struct ViewTransform {
     glm::mat4 P;
     glm::mat4 I_V;
     glm::mat4 I_P;
+    glm::mat4 prev_V;
+    glm::mat4 prev_P;
+    glm::mat4 prev_IV;
+    glm::mat4 prev_IP;
     glm::mat4 reproject_IV_VP;
     float z_near;
     float z_far;

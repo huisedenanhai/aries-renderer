@@ -87,6 +87,10 @@ struct ViewTransform {
     mat4 P;
     mat4 I_V;
     mat4 I_P;
+    mat4 prev_V;
+    mat4 prev_P;
+    mat4 prev_IV;
+    mat4 prev_IP;
     mat4 reproject_IV_VP;
     float z_far;
     float z_near;
@@ -104,14 +108,22 @@ vec3 get_eye_position_ws(ViewTransform view) {
 // This method returns POSITIVE z value for depth01 in range [0, 1], which is
 // different in sign from the result of reconstruct_position_from_ss, as view
 // space z axis points backward from camera.
-float depth01_to_linear_z(ViewTransform view, float depth01) {
-    vec4 zw = view.I_P * vec4(0, 0, depth01, 1);
+float depth01_to_linear_z(mat4 I_P, float depth01) {
+    vec4 zw = I_P * vec4(0, 0, depth01, 1);
     return -zw.z / zw.w;
 }
 
-float linear_z_to_depth01(ViewTransform view, float linear_z) {
-    vec4 zw = view.P * vec4(0, 0, -linear_z, 1);
+float depth01_to_linear_z(ViewTransform view, float depth01) {
+    return depth01_to_linear_z(view.I_P, depth01);
+}
+
+float linear_z_to_depth01(mat4 P, float linear_z) {
+    vec4 zw = P * vec4(0, 0, -linear_z, 1);
     return zw.z / zw.w;
+}
+
+float linear_z_to_depth01(ViewTransform view, float linear_z) {
+    return linear_z_to_depth01(view.P, linear_z);
 }
 
 mat2 rotate2d(float rad) {

@@ -2,7 +2,7 @@
     "sources": [
         "InitHiZ.comp",
         "PropagateHiZ.comp",
-        "TemporalFiltering.comp",
+        "TemporalFilter.comp",
         {
             "file": "HiZTraceRay.comp",
             "multi_compile": [
@@ -14,6 +14,7 @@
             "multi_compile": [
                 "SSR_DIFFUSE"
             ]
-        }
+        },
+        "BilateralFilter.comp"
     ]
 }

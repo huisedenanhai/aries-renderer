@@ -40,6 +40,12 @@ class ScreenSpaceReflection {
                             NamedRT history_rt,
                             NamedRT result_rt,
                             bool history_valid);
+    void bilateral_filter(RenderGraph &rg, float radius);
+    void bilateral_filter(RenderGraph &rg,
+                          RenderTargetId src_rt,
+                          RenderTargetId dst_rt,
+                          float radius,
+                          const glm::vec2 &direction);
 
     void alloc_hit_buffer();
     void alloc_resolve_single_sample_buffer();
@@ -50,7 +56,9 @@ class ScreenSpaceReflection {
     std::unique_ptr<ComputePipeline> _hiz_trace_pipeline[2];
     std::unique_ptr<ComputePipeline> _resolve_reflection_pipeline[2];
     std::unique_ptr<ComputePipeline> _temporal_filter_pipeline;
+    std::unique_ptr<ComputePipeline> _bilateral_filter_pipeline;
     RenderTargetId _hit_buffer_id;
     RenderTargetId _resolve_buffer_single_sample;
+    RenderTargetId _bilateral_filter_back_buffer;
 };
 } // namespace ars::render::vk

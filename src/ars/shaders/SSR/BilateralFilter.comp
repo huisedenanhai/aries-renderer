@@ -1,0 +1,38 @@
+#version 450 core
+
+#include <Misc.glsl>
+#include <Transform.glsl>
+
+layout(local_size_x = 32, local_size_y = 32) in;
+
+layout(set = 0,
+       binding = 0,
+       rgba16f) writeonly uniform image2D filtered_color_image;
+layout(set = 0, binding = 1) uniform sampler2D current_color_tex;
+
+layout(set = 1, binding = 0) uniform Param {
+    vec2 direction;
+    float radius;
+};
+
+void main() {
+    ivec2 index = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(filtered_color_image);
+    if (index.x >= size.x || index.y >= size.y) {
+        return;
+    }
+
+    vec2 center_uv = index_to_uv(index, 1.0 / size);
+    vec2 delta_uv = direction / size;
+    float weight_acc = 0;
+    vec4 acc = vec4(0);
+
+    for (float d = -radius; d <= radius; d += 1.0) {
+        vec2 uv = center_uv + delta_uv * d;
+        float w = 1.0;
+        acc += texture(current_color_tex, uv) * w;
+        weight_acc += w;
+    }
+
+    imageStore(filtered_color_image, index, max(acc / weight_acc, vec4(0)));
+}

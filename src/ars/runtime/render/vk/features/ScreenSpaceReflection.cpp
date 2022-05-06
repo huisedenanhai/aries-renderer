@@ -99,7 +99,9 @@ ScreenSpaceReflection::ScreenSpaceReflection(View *view) : _view(view) {
         ctx, "SSR/ResolveReflection.comp", {"SSR_DIFFUSE"});
 
     _temporal_filter_pipeline =
-        ComputePipeline::create(ctx, "SSR/TemporalFiltering.comp");
+        ComputePipeline::create(ctx, "SSR/TemporalFilter.comp");
+    _bilateral_filter_pipeline =
+        ComputePipeline::create(ctx, "SSR/BilateralFilter.comp");
 
     alloc_hit_buffer();
     alloc_resolve_single_sample_buffer();
@@ -227,6 +229,7 @@ void ScreenSpaceReflection::alloc_resolve_single_sample_buffer() {
 
     // Resolve at full resolution
     _resolve_buffer_single_sample = _view->rt_manager()->alloc(info);
+    _bilateral_filter_back_buffer = _view->rt_manager()->alloc(info);
 }
 
 void ScreenSpaceReflection::render(RenderGraph &rg) {
@@ -291,10 +294,64 @@ void ScreenSpaceReflection::render(RenderGraph &rg, bool diffuse) {
     if (settings->enabled()) {
         trace_rays(rg, settings, diffuse);
         resolve_reflection(rg, settings, diffuse);
+        if (diffuse) {
+            bilateral_filter(rg, 5.0f);
+        }
         temporal_filtering(rg, history_rt, result_rt, history_valid);
         history_valid = true;
     } else {
         history_valid = false;
     }
+}
+
+void ScreenSpaceReflection::bilateral_filter(RenderGraph &rg, float radius) {
+    bilateral_filter(rg,
+                     _resolve_buffer_single_sample,
+                     _bilateral_filter_back_buffer,
+                     radius,
+                     {0.0f, 1.0f});
+    bilateral_filter(rg,
+                     _bilateral_filter_back_buffer,
+                     _resolve_buffer_single_sample,
+                     radius,
+                     {1.0f, 0.0f});
+}
+
+namespace {
+struct BilateralFilterParam {
+    glm::vec2 direction;
+    float radius;
+    ARS_PADDING_FIELD(float);
+};
+} // namespace
+
+void ScreenSpaceReflection::bilateral_filter(RenderGraph &rg,
+                                             RenderTargetId src_rt,
+                                             RenderTargetId dst_rt,
+                                             float radius,
+                                             const glm::vec2 &direction) {
+    rg.add_pass(
+        [&](RenderGraphPassBuilder &builder) {
+            builder.compute_shader_read(src_rt);
+            builder.compute_shader_write(dst_rt);
+        },
+        [=](CommandBuffer *cmd) {
+            ARS_PROFILER_SAMPLE_VK(cmd, "Bilateral Filter", 0xFF716481);
+            _bilateral_filter_pipeline->bind(cmd);
+            auto dst_tex = _view->rt_manager()->get(dst_rt);
+            auto src_tex = _view->rt_manager()->get(src_rt);
+            auto dst_extent = dst_tex->info().extent;
+
+            DescriptorEncoder desc{};
+            desc.set_texture(0, 0, dst_tex.get());
+            desc.set_texture(0, 1, src_tex.get());
+            BilateralFilterParam param{};
+            param.radius = radius;
+            param.direction = direction;
+            desc.set_buffer_data(1, 0, param);
+            desc.commit(cmd, _bilateral_filter_pipeline.get());
+
+            _bilateral_filter_pipeline->local_size().dispatch(cmd, dst_extent);
+        });
 }
 } // namespace ars::render::vk

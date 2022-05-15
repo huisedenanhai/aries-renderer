@@ -1,7 +1,6 @@
 #include "Shadow.h"
 #include "../Context.h"
 #include "../Profiler.h"
-#include "../Scene.h"
 #include "Drawer.h"
 
 namespace ars::render::vk {

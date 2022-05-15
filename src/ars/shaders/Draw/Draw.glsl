@@ -79,7 +79,18 @@ vec4 sample_tex_2d(uint index, vec2 uv) {
     return texture(ars_samplers_2d[index], uv);
 }
 
-#endif
+#endif // has sampler
+
+#else // ARS_EMPTY_MATERIAL
+
+struct Material {
+    int dummy;
+};
+
+Material get_material() {
+    Material m;
+    return m;
+}
 
 #endif
 
@@ -88,6 +99,15 @@ layout(set = 1, binding = 0, std430) buffer Skin {
     mat4 ars_skin[];
 };
 #endif
+
+struct SurfaceAttribute {
+    vec3 position;
+    vec3 normal;
+    vec3 tangent;
+    vec3 bitangent;
+    vec2 uv;
+    bool front_facing;
+};
 
 #ifdef ARS_DEFINE_DEFAULT_VERTEX_SHADER
 #ifdef FRILL_SHADER_STAGE_VERT

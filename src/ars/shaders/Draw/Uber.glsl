@@ -4,12 +4,16 @@
 #include <MetallicRoughnessPBR.glsl>
 #include <ShadingModel.glsl>
 
-#define ARS_UBER_SHADER_DEFINE_MATERIAL
-#include "UberPass.glsl"
-#undef ARS_UBER_SHADER_DEFINE_MATERIAL
+#define ARS_UBER_SHADER_DECLARE_MATERIAL
+#include "Material.glsl"
+#undef ARS_UBER_SHADER_DECLARE_MATERIAL
 
 #define ARS_DEFINE_DEFAULT_VERTEX_SHADER
 #include "Draw.glsl"
+
+#define ARS_UBER_SHADER_DEFINE_MATERIAL_METHODS
+#include "Material.glsl"
+#undef ARS_UBER_SHADER_DEFINE_MATERIAL_METHODS
 
 // Frag shader
 #ifdef FRILL_SHADER_STAGE_FRAG
@@ -20,8 +24,42 @@ layout(location = 3) in vec3 in_tangent_vs;
 layout(location = 4) in vec3 in_bitangent_vs;
 layout(location = 5) in vec2 in_uv;
 
-#define ARS_UBER_SHADER_DEFINE_FRAG_SHADER
-#include "UberPass.glsl"
-#undef ARS_UBER_SHADER_DEFINE_FRAG_SHADER
+#ifdef ARS_GEOMETRY_PASS
+layout(location = 0) out vec4 gbuffer0;
+layout(location = 1) out vec4 gbuffer1;
+layout(location = 2) out vec4 gbuffer2;
+layout(location = 3) out vec4 gbuffer3;
+#endif
+
+#ifdef ARS_OBJECT_ID_PASS
+layout(location = 0) out uint out_id;
+#endif
+
+void main() {
+    SurfaceAttribute attr;
+    attr.position = in_position_vs;
+    attr.normal = in_normal_vs;
+    attr.tangent = in_tangent_vs;
+    attr.bitangent = in_bitangent_vs;
+    attr.uv = in_uv;
+    attr.front_facing = gl_FrontFacing;
+
+    Material m = get_material();
+
+    Closure c;
+    if (!material_get_closure(m, attr, c)) {
+        discard;
+    }
+
+#ifdef ARS_GEOMETRY_PASS
+    GBuffer g;
+    closure_get_gbuffer(c, g);
+    encode_gbuffer(g, gbuffer0, gbuffer1, gbuffer2, gbuffer3);
+#endif
+
+#ifdef ARS_OBJECT_ID_PASS
+    out_id = get_instance().custom_id;
+#endif
+}
 
 #endif

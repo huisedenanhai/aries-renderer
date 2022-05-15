@@ -27,6 +27,7 @@ void main() {
     float weight_acc = 0;
     vec4 acc = vec4(0);
 
+    // TODO edge aware filtering. It's simple average filter for now.
     for (float d = -radius; d <= radius; d += 1.0) {
         vec2 uv = center_uv + delta_uv * d;
         float w = 1.0;

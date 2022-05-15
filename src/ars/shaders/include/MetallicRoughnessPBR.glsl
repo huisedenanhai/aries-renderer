@@ -4,26 +4,6 @@
 #include <GBuffer.glsl>
 #include <Misc.glsl>
 
-// GBuffer encoding for metallic roughness pbr
-struct MetallicRoughnessPBRGBuffer {
-    float occlusion;
-    float metallic;
-    float perceptual_roughness;
-};
-
-vec3 encode_material(MetallicRoughnessPBRGBuffer p) {
-    return vec3(p.occlusion, p.metallic, p.perceptual_roughness);
-}
-
-MetallicRoughnessPBRGBuffer decode_material(vec3 m) {
-    MetallicRoughnessPBRGBuffer p;
-    p.occlusion = m.r;
-    p.metallic = m.g;
-    p.perceptual_roughness = m.b;
-
-    return p;
-}
-
 // We follow the paper
 // 'Microfacet Models for Refraction through Rough Surfaces'
 // which introduce the GGX distribution to model the scattering of rough glass.
@@ -58,16 +38,22 @@ struct MetallicRoughnessPBR {
     float occlusion;
 };
 
+vec3 encode_material_gbuffer(MetallicRoughnessPBR p) {
+    return vec3(p.occlusion, p.metallic, p.perceptual_roughness);
+}
+
+void decode_material_gbuffer(vec3 m, inout MetallicRoughnessPBR p) {
+    p.occlusion = m.r;
+    p.metallic = m.g;
+    p.perceptual_roughness = m.b;
+}
+
 // Call this method only when
 // gbuffer.shading_model == SHADING_MODEL_METALLIC_ROUGHNESS_PBR
 MetallicRoughnessPBR get_metallic_roughness_pbr(GBuffer gbuffer) {
-    MetallicRoughnessPBRGBuffer material = decode_material(gbuffer.material);
-
     MetallicRoughnessPBR brdf;
+    decode_material_gbuffer(gbuffer.material, brdf);
     brdf.base_color = gbuffer.base_color.rgb;
-    brdf.metallic = material.metallic;
-    brdf.perceptual_roughness = material.perceptual_roughness;
-    brdf.occlusion = material.occlusion;
 
     return brdf;
 }

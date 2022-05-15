@@ -1,4 +1,4 @@
-#ifdef ARS_UBER_SHADER_DEFINE_MATERIAL
+#ifdef ARS_UBER_SHADER_DECLARE_MATERIAL
 
 struct Material {
     vec4 base_color_factor;
@@ -22,64 +22,69 @@ struct Material {
 
 #endif
 
-#ifdef ARS_UBER_SHADER_DEFINE_FRAG_SHADER
+#ifdef ARS_UBER_SHADER_DEFINE_MATERIAL_METHODS
 
-layout(location = 0) out vec4 gbuffer0;
-layout(location = 1) out vec4 gbuffer1;
-layout(location = 2) out vec4 gbuffer2;
-layout(location = 3) out vec4 gbuffer3;
-
-vec3 get_shading_normal_ts(Material m) {
-    vec3 normal = sample_tex_2d(m.normal_tex, in_uv).xyz * 2.0 - 1.0;
+vec3 material_get_shading_normal_ts(Material m, SurfaceAttribute attr) {
+    vec3 normal = sample_tex_2d(m.normal_tex, attr.uv).xyz * 2.0 - 1.0;
     return normal * vec3(m.normal_scale, m.normal_scale, 1.0);
 }
 
 // The result may be not normalized
-vec3 get_shading_normal_vs(Material m) {
-    vec3 normal_ts = get_shading_normal_ts(m);
+vec3 material_get_shading_normal_vs(Material m, SurfaceAttribute attr) {
+    vec3 normal_ts = material_get_shading_normal_ts(m, attr);
     // avoid NAN when tangent is not present
-    vec3 shading_normal_vs = normal_ts.x * safe_normalize(in_tangent_vs) +
-                             normal_ts.y * safe_normalize(in_bitangent_vs) +
-                             normal_ts.z * safe_normalize(in_normal_vs);
-    return gl_FrontFacing ? shading_normal_vs : -shading_normal_vs;
+    vec3 shading_normal_vs = normal_ts.x * safe_normalize(attr.tangent) +
+                             normal_ts.y * safe_normalize(attr.bitangent) +
+                             normal_ts.z * safe_normalize(attr.normal);
+    return attr.front_facing ? shading_normal_vs : -shading_normal_vs;
 }
 
-float get_occlusion(Material m) {
-    float occlusion = sample_tex_2d(m.occlusion_tex, in_uv).r;
+float material_get_occlusion(Material m, SurfaceAttribute attr) {
+    float occlusion = sample_tex_2d(m.occlusion_tex, attr.uv).r;
     return mix(1.0, occlusion, m.occlusion_strength);
 }
 
-vec3 get_emission(Material m) {
-    return sample_tex_2d(m.emission_tex, in_uv).rgb * m.emission_factor;
+vec3 material_get_emission(Material m, SurfaceAttribute attr) {
+    return sample_tex_2d(m.emission_tex, attr.uv).rgb * m.emission_factor;
 }
 
-void main() {
-    Material m = get_material();
-    GBuffer g;
+struct Closure {
+    MetallicRoughnessPBR pbr;
+    float alpha;
+    vec3 emission;
+    vec3 shading_normal;
+};
 
-    g.base_color = sample_tex_2d(m.base_color_tex, in_uv) * m.base_color_factor;
+bool material_get_closure(Material m, SurfaceAttribute attr, out Closure c) {
+    vec4 base_color =
+        sample_tex_2d(m.base_color_tex, attr.uv) * m.base_color_factor;
 
 #ifdef ARS_MATERIAL_ALPHA_CLIP
-    if (g.base_color.a < m.alpha_cutoff) {
-        discard;
+    if (base_color.a < m.alpha_cutoff) {
+        return false;
     }
 #endif
 
-    g.normal_vs = normalize(get_shading_normal_vs(m));
+    c.pbr.base_color = base_color.rgb;
+    c.pbr.occlusion = material_get_occlusion(m, attr);
 
-    MetallicRoughnessPBRGBuffer pbr;
-    pbr.occlusion = get_occlusion(m);
+    vec4 metallic_roughness = sample_tex_2d(m.metallic_roughness_tex, attr.uv);
+    c.pbr.metallic = metallic_roughness.b * m.metallic_factor;
+    c.pbr.perceptual_roughness = metallic_roughness.g * m.roughness_factor;
 
-    vec4 metallic_roughness = sample_tex_2d(m.metallic_roughness_tex, in_uv);
-    pbr.metallic = metallic_roughness.b * m.metallic_factor;
-    pbr.perceptual_roughness = metallic_roughness.g * m.roughness_factor;
+    c.alpha = base_color.a;
+    c.shading_normal = normalize(material_get_shading_normal_vs(m, attr));
+    c.emission = material_get_emission(m, attr);
 
-    g.material = encode_material(pbr);
+    return true;
+}
+
+void closure_get_gbuffer(Closure c, out GBuffer g) {
+    g.base_color = vec4(c.pbr.base_color, c.alpha);
+    g.normal_vs = c.shading_normal;
+    g.material = encode_material_gbuffer(c.pbr);
     g.shading_model = SHADING_MODEL_METALLIC_ROUGHNESS_PBR;
-
-    g.emission = get_emission(m);
-
-    encode_gbuffer(g, gbuffer0, gbuffer1, gbuffer2, gbuffer3);
+    g.emission = c.emission;
 }
 
 #endif

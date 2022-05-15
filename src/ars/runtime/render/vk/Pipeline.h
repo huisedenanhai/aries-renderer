@@ -113,7 +113,7 @@ class Pipeline {
   protected:
     void init_layout(const PipelineLayoutInfo &pipeline_layout_info,
                      uint32_t push_constant_range_count,
-                     VkPushConstantRange *push_constant_ranges);
+                     const VkPushConstantRange *push_constant_ranges);
     void set_name(const std::string &name);
 
     Context *_context = nullptr;
@@ -147,13 +147,14 @@ struct GraphicsPipelineInfo {
     // Push constant ranges can not be inferred from shader reflection data as
     // offsets are unknown.
     uint32_t push_constant_range_count = 0;
-    VkPushConstantRange *push_constant_ranges = nullptr;
+    const VkPushConstantRange *push_constant_ranges = nullptr;
 
-    VkPipelineVertexInputStateCreateInfo *vertex_input = nullptr;
-    VkPipelineColorBlendStateCreateInfo *blend = nullptr;
-    VkPipelineDepthStencilStateCreateInfo *depth_stencil = nullptr;
-    VkPipelineRasterizationStateCreateInfo *raster = nullptr;
+    const VkPipelineVertexInputStateCreateInfo *vertex_input = nullptr;
+    const VkPipelineColorBlendStateCreateInfo *blend = nullptr;
+    const VkPipelineDepthStencilStateCreateInfo *depth_stencil = nullptr;
+    const VkPipelineRasterizationStateCreateInfo *raster = nullptr;
     VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    const VkSpecializationInfo *specialization_info = nullptr;
 };
 
 class GraphicsPipeline : public Pipeline {
@@ -172,7 +173,8 @@ struct ComputePipelineInfo {
     // Push constant ranges can not be inferred from shader reflection data as
     // offsets are unknown.
     uint32_t push_constant_range_count = 0;
-    VkPushConstantRange *push_constant_ranges = nullptr;
+    const VkPushConstantRange *push_constant_ranges = nullptr;
+    const VkSpecializationInfo *specialization_info = nullptr;
 };
 
 class ComputePipeline : public Pipeline {

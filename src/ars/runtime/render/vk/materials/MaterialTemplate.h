@@ -10,7 +10,7 @@ std::shared_ptr<GraphicsPipeline>
 create_draw_pipeline(Context *context,
                      const MaterialPassInfo &pass,
                      const std::vector<Shader *> &shaders,
-                     VkPipelineRasterizationStateCreateInfo *raster);
+                     const VkPipelineRasterizationStateCreateInfo *raster);
 
 std::shared_ptr<GraphicsPipeline>
 create_draw_pipeline(Context *context,
@@ -18,7 +18,7 @@ create_draw_pipeline(Context *context,
                      const MaterialPassInfo &pass_info,
                      const char *glsl_file,
                      VkShaderStageFlags stages,
-                     VkPipelineRasterizationStateCreateInfo *raster,
+                     const VkPipelineRasterizationStateCreateInfo *raster,
                      std::vector<const char *> common_flags);
 
 MaterialPassTemplate

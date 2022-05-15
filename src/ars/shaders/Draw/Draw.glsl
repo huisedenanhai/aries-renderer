@@ -9,8 +9,6 @@
 // If a default vertex shader is all you need, define
 // ARS_DEFINE_DEFAULT_VERTEX_SHADER
 
-#extension GL_EXT_nonuniform_qualifier : require
-
 #include <Misc.glsl>
 #include <Transform.glsl>
 
@@ -70,17 +68,6 @@ Material get_material() {
     return ars_materials[get_instance().material_id];
 }
 
-#if defined(ARS_MATERIAL_SAMPLER_2D_COUNT) && ARS_MATERIAL_SAMPLER_2D_COUNT > 0
-
-layout(set = 0, binding = 3) uniform sampler2D
-    ars_samplers_2d[ARS_MATERIAL_SAMPLER_2D_COUNT];
-
-vec4 sample_tex_2d(uint index, vec2 uv) {
-    return texture(ars_samplers_2d[index], uv);
-}
-
-#endif // has sampler
-
 #else // ARS_EMPTY_MATERIAL
 
 struct Material {
@@ -99,15 +86,6 @@ layout(set = 1, binding = 0, std430) buffer Skin {
     mat4 ars_skin[];
 };
 #endif
-
-struct SurfaceAttribute {
-    vec3 position;
-    vec3 normal;
-    vec3 tangent;
-    vec3 bitangent;
-    vec2 uv;
-    bool front_facing;
-};
 
 #ifdef ARS_DEFINE_DEFAULT_VERTEX_SHADER
 #ifdef FRILL_SHADER_STAGE_VERT

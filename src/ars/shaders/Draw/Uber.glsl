@@ -4,16 +4,13 @@
 #include <MetallicRoughnessPBR.glsl>
 #include <ShadingModel.glsl>
 
-#define ARS_UBER_SHADER_DECLARE_MATERIAL
+#define ARS_BINDLESS_RESOURCE_SET 2
+#include "MaterialAPI.glsl"
+
 #include "Material.glsl"
-#undef ARS_UBER_SHADER_DECLARE_MATERIAL
 
 #define ARS_DEFINE_DEFAULT_VERTEX_SHADER
 #include "Draw.glsl"
-
-#define ARS_UBER_SHADER_DEFINE_MATERIAL_METHODS
-#include "Material.glsl"
-#undef ARS_UBER_SHADER_DEFINE_MATERIAL_METHODS
 
 // Frag shader
 #ifdef FRILL_SHADER_STAGE_FRAG

@@ -30,6 +30,8 @@ struct MaterialPropertyBlockInfo {
                             std::forward<T>(default_value));
     }
 
+    uint32_t texture_count() const;
+
     std::string to_glsl() const;
 };
 

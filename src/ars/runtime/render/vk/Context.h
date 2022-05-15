@@ -74,6 +74,7 @@ struct ContextProperties {
     float max_sampler_anisotropy = 1.0f;
     bool time_stamp_compute_graphics = false;
     float time_stamp_period_ns = 1.0f;
+    bool support_bindless = false;
 };
 
 class Context : public IContext {

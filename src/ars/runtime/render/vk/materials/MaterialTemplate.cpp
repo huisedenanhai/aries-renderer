@@ -3,6 +3,7 @@
 #include "../features/Drawer.h"
 #include "MetallicRoughnessPBR.h"
 #include "Unlit.h"
+#include "ars/runtime/core/Log.h"
 
 namespace ars::render::vk {
 MaterialPassTemplate
@@ -63,7 +64,7 @@ std::shared_ptr<GraphicsPipeline>
 create_draw_pipeline(Context *context,
                      const MaterialPassInfo &pass,
                      const std::vector<Shader *> &shaders,
-                     VkPipelineRasterizationStateCreateInfo *raster) {
+                     const VkPipelineRasterizationStateCreateInfo *raster) {
     VkPipelineVertexInputStateCreateInfo vertex_input{
         VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
 
@@ -151,7 +152,7 @@ create_draw_pipeline(Context *context,
                      const MaterialPassInfo &pass_info,
                      const char *glsl_file,
                      VkShaderStageFlags stages,
-                     VkPipelineRasterizationStateCreateInfo *raster,
+                     const VkPipelineRasterizationStateCreateInfo *raster,
                      std::vector<const char *> common_flags) {
     std::vector<std::unique_ptr<Shader>> unique_shaders{};
 
@@ -163,6 +164,9 @@ create_draw_pipeline(Context *context,
     }
     if (mat_info.features & MaterialFeature_DoubleSidedBit) {
         common_flags.push_back("ARS_MATERIAL_DOUBLE_SIDED");
+    }
+    if (context->properties().support_bindless) {
+        common_flags.push_back("ARS_SUPPORT_BINDLESS");
     }
 
     if (stages & VK_SHADER_STAGE_VERTEX_BIT) {

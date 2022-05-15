@@ -1,5 +1,3 @@
-#ifdef ARS_UBER_SHADER_DECLARE_MATERIAL
-
 struct Material {
     vec4 base_color_factor;
     float metallic_factor;
@@ -17,12 +15,6 @@ struct Material {
     float alpha_cutoff;
 #endif
 };
-
-#define ARS_MATERIAL_SAMPLER_2D_COUNT 5
-
-#endif
-
-#ifdef ARS_UBER_SHADER_DEFINE_MATERIAL_METHODS
 
 vec3 material_get_shading_normal_ts(Material m, SurfaceAttribute attr) {
     vec3 normal = sample_tex_2d(m.normal_tex, attr.uv).xyz * 2.0 - 1.0;
@@ -86,5 +78,3 @@ void closure_get_gbuffer(Closure c, out GBuffer g) {
     g.shading_model = SHADING_MODEL_METALLIC_ROUGHNESS_PBR;
     g.emission = c.emission;
 }
-
-#endif

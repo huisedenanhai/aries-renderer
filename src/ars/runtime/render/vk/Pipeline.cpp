@@ -230,6 +230,7 @@ void GraphicsPipeline::init_pipeline(const GraphicsPipelineInfo &info) {
         si.module = shader->module();
         si.stage = shader->stage();
         si.pName = shader->entry();
+        si.pSpecializationInfo = info.specialization_info;
 
         stages.push_back(si);
     }
@@ -355,7 +356,7 @@ Pipeline::Pipeline(Context *context, VkPipelineBindPoint bind_point)
 
 void Pipeline::init_layout(const PipelineLayoutInfo &pipeline_layout_info,
                            uint32_t push_constant_range_count,
-                           VkPushConstantRange *push_constant_ranges) {
+                           const VkPushConstantRange *push_constant_ranges) {
     _pipeline_layout_info = pipeline_layout_info;
 
     std::vector<VkDescriptorSetLayout> valid_desc_sets{};
@@ -463,6 +464,7 @@ void ComputePipeline::init_pipeline(const ComputePipelineInfo &info) {
     si.module = shader->module();
     si.stage = shader->stage();
     si.pName = shader->entry();
+    si.pSpecializationInfo = info.specialization_info;
 
     create_info.layout = _pipeline_layout;
 

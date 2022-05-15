@@ -146,6 +146,7 @@ void dispatch_batch(CommandBuffer *cmd,
     // The property block can be null, if that happens the shader should not
     // declare material and texture bindings
     auto prop_block = req.material.property_block;
+    std::vector<Handle<Texture>> ref_textures{};
     if (prop_block != nullptr) {
         auto prop_buf =
             ctx->create_buffer(prop_block->layout()->data_block_size(),
@@ -153,13 +154,14 @@ void dispatch_batch(CommandBuffer *cmd,
                                VMA_MEMORY_USAGE_CPU_TO_GPU);
         prop_buf->map_once([&](void *ptr) { prop_block->fill_data(ptr); });
         desc.set_buffer(0, 2, prop_buf.get());
-        auto ref_textures = prop_block->referenced_textures();
-        // If the material does not reference any textures, it should not
-        // bind to texture slot
-        if (!ref_textures.empty()) {
-            desc.set_textures(0, 3, prop_block->referenced_textures());
-        }
+        ref_textures = prop_block->referenced_textures();
     }
+
+    constexpr uint32_t SAMPLER_2D_COUNT = 8;
+    while (ref_textures.size() < SAMPLER_2D_COUNT) {
+        ref_textures.push_back(ctx->default_texture_vk(DefaultTexture::White));
+    }
+    desc.set_textures(0, 3, ref_textures);
 
     if (req.skeleton != nullptr) {
         desc.set_buffer(1, 0, req.skeleton->joint_buffer().get());

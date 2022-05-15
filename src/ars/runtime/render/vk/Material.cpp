@@ -57,6 +57,16 @@ std::string MaterialPropertyBlockInfo::to_glsl() const {
     return ss.str();
 }
 
+uint32_t MaterialPropertyBlockInfo::texture_count() const {
+    uint32_t cnt = 0;
+    for (auto &p : properties) {
+        if (p.type == MaterialPropertyType::Texture) {
+            cnt++;
+        }
+    }
+    return cnt;
+}
+
 MaterialPropertyBlockLayout::MaterialPropertyBlockLayout(
     Context *context, MaterialPropertyBlockInfo info)
     : _context(context), _info(std::move(info)) {

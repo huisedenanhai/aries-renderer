@@ -585,6 +585,7 @@ void Context::init_device_and_queues(Instance *instance,
        << std::endl;
     ss << "time stamp period ns: " << _properties.time_stamp_period_ns
        << std::endl;
+    ss << "support bindless: " << _properties.support_bindless << std::endl;
 
     ARS_LOG_INFO(ss.str());
 }

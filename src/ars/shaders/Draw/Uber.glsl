@@ -4,9 +4,8 @@
 #include <MetallicRoughnessPBR.glsl>
 #include <ShadingModel.glsl>
 
-#define ARS_BINDLESS_RESOURCE_SET 2
 #include "MaterialAPI.glsl"
-
+// Include order is important
 #include "Material.glsl"
 
 #define ARS_DEFINE_DEFAULT_VERTEX_SHADER

@@ -38,6 +38,12 @@ void RenderTargetManager::update(VkExtent2D reference_size) {
                         VkClearColorValue value{};
                         cmd->ClearColorImage(
                             tex->image(), tex->layout(), &value, 1, &range);
+                    } else if ((range.aspectMask & VK_IMAGE_ASPECT_DEPTH_BIT) ||
+                               (range.aspectMask &
+                                VK_IMAGE_ASPECT_STENCIL_BIT)) {
+                        VkClearDepthStencilValue value{};
+                        cmd->ClearDepthStencilImage(
+                            tex->image(), tex->layout(), &value, 1, &range);
                     }
                 }
             });
@@ -87,6 +93,9 @@ void RenderTargetManager::update_rt(const RenderTargetManager::Id &id) {
     tex_info.extent.width = desired_size.width;
     tex_info.extent.height = desired_size.height;
     tex_info.extent.depth = 1;
+    // All rt can be transfer dst. This is needed as we will clear it on
+    // creating.
+    tex_info.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
     if (rt.get() == nullptr || desired_size.width != rt->info().extent.width ||
         desired_size.height != rt->info().extent.height) {

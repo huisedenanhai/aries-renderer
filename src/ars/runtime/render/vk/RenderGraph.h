@@ -34,8 +34,8 @@ struct RenderGraphPassBuilder;
 // given rt
 class RenderGraphPass {
   public:
-    std::vector<PassDependency> src_dependencies() const;
-    std::vector<PassDependency> dst_dependencies() const;
+    [[nodiscard]] std::vector<PassDependency> src_dependencies() const;
+    [[nodiscard]] std::vector<PassDependency> dst_dependencies() const;
     void execute(CommandBuffer *cmd) const;
 
     std::vector<PassDependency> dependencies{};

@@ -291,6 +291,11 @@ void ScreenSpaceReflection::render(RenderGraph &rg, bool diffuse) {
 
     auto &history_valid = _reflection_history_valid[diffuse];
 
+    auto history_rt_id = _view->rt_id(history_rt);
+    if (_view->rt_manager()->resized(history_rt_id)) {
+        history_valid = false;
+    }
+
     if (settings->enabled()) {
         trace_rays(rg, settings, diffuse);
         resolve_reflection(rg, settings, diffuse);

@@ -67,9 +67,9 @@ struct ViewData {
     CameraData camera = Perspective{};
     Extent2D size{};
 
-    glm::mat4 projection_matrix() const;
-    glm::mat4 view_matrix() const;
-    Frustum frustum_ws() const;
+    [[nodiscard]] glm::mat4 projection_matrix() const;
+    [[nodiscard]] glm::mat4 view_matrix() const;
+    [[nodiscard]] Frustum frustum_ws() const;
 };
 
 class View : public IView {
@@ -101,7 +101,7 @@ class View : public IView {
     Effect *effect_vk();
 
     void debug_gui() override;
-    OverlayRenderer *vk_overlay() const;
+    [[nodiscard]] OverlayRenderer *vk_overlay() const;
 
     [[nodiscard]] Context *context() const;
     [[nodiscard]] Scene *scene_vk() const;

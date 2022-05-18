@@ -14,6 +14,7 @@ class RenderTargetManager {
     using ScaleFunc = std::function<VkExtent2D(VkExtent2D)>;
     struct RTState {
         Handle<Texture> texture{};
+        bool resized = false;
     };
 
     using Container = SoA<TextureCreateInfo, ScaleFunc, RTState>;
@@ -35,6 +36,8 @@ class RenderTargetManager {
 
     // All RTs will be automatically freed when RenderTargetManager is destroyed
     void free(const Id &id);
+
+    bool resized(const Id &id);
 
   private:
     void update_rt(const Id &id);

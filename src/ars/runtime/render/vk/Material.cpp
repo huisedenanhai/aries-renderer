@@ -260,6 +260,8 @@ MaterialPropertyBlock::get_variant_by_index(uint32_t index) {
     case MaterialPropertyType::Float4:
         return *reinterpret_cast<glm::vec4 *>(data_ptr);
     }
+    // Make compiler happy
+    return 0.0f;
 }
 
 std::shared_ptr<ITexture>

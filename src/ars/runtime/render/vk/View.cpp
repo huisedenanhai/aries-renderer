@@ -23,7 +23,6 @@ VkExtent2D translate(const Extent2D &size) {
 
 void View::render(const RenderOptions &options) {
     ARS_PROFILER_SAMPLE("Render View", 0xFFAA6611);
-    auto ctx = context();
     _rt_manager->update(translate(_data.size));
 
     update_transform_buffer();

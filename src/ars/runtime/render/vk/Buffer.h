@@ -2,6 +2,7 @@
 
 #include "Vulkan.h"
 #include <algorithm>
+#include <vector>
 #include <ars/runtime/core/misc/Macro.h>
 
 namespace ars::render::vk {

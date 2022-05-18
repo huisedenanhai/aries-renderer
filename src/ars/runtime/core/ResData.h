@@ -126,8 +126,7 @@ class Resources {
 
     template <typename T>
     void register_loader(const std::shared_ptr<IResLoader> &loader) {
-        register_loader_by_name(
-            rttr::type::get<T>().get_name().template to_string(), loader);
+        register_loader_by_name(rttr::type::get<T>().get_name().to_string(), loader);
     }
 
     // Should not append .ares extension in path

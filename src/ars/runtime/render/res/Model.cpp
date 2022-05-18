@@ -640,7 +640,7 @@ std::shared_ptr<ITexture> load_texture(IContext *context,
 
     auto texture = context->create_texture(info);
 
-    texture->set_path(tex_path);
+    texture->set_path(tex_path.string());
     texture->set_data((void *)image.image.data(),
                       width * height * channels,
                       0,

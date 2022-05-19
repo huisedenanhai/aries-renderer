@@ -16,16 +16,94 @@
 
 namespace ars::render::vk {
 namespace {
-void remove_duplicates(std::vector<const char *> &vec) {
-    std::sort(vec.begin(), vec.end(), [](const char *a, const char *b) {
-        return strcmp(a, b) < 0;
-    });
-    vec.resize(std::distance(
-        vec.begin(),
-        std::unique(vec.begin(), vec.end(), [](const char *a, const char *b) {
-            return strcmp(a, b) == 0;
-        })));
+std::vector<VkExtensionProperties>
+enumerate_device_extensions(Instance *instance,
+                            VkPhysicalDevice physical_device) {
+    uint32_t available_extension_count = 0;
+    instance->EnumerateDeviceExtensionProperties(
+        physical_device, nullptr, &available_extension_count, nullptr);
+    std::vector<VkExtensionProperties> available_extensions(
+        available_extension_count);
+    instance->EnumerateDeviceExtensionProperties(physical_device,
+                                                 nullptr,
+                                                 &available_extension_count,
+                                                 available_extensions.data());
+    return available_extensions;
 }
+
+std::vector<VkExtensionProperties> enumerate_instance_extensions() {
+    uint32_t extension_count = 0;
+    vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, nullptr);
+
+    std::vector<VkExtensionProperties> available_extensions(extension_count);
+    vkEnumerateInstanceExtensionProperties(
+        nullptr, &extension_count, available_extensions.data());
+    return available_extensions;
+}
+
+bool contains_extension(const std::vector<VkExtensionProperties> &extensions,
+                        const std::string &ext) {
+    for (auto &e : extensions) {
+        if (e.extensionName == ext) {
+            return true;
+        }
+    }
+    return false;
+}
+
+struct ExtensionRequirement {
+  public:
+    void add_extension(const std::string &name, bool required = true) {
+        auto &info = _extensions[name];
+        info.required = required || info.required;
+    }
+
+    std::vector<const char *> extensions() {
+        std::vector<const char *> ext{};
+        for (auto &[k, info] : _extensions) {
+            ext.push_back(k.c_str());
+        }
+        return ext;
+    }
+
+    std::vector<const char *>
+    filter(const std::vector<VkExtensionProperties> &available_extensions) {
+        std::vector<const char *> ext{};
+        for (auto &[k, info] : _extensions) {
+            if (contains_extension(available_extensions, k)) {
+                ext.push_back(k.c_str());
+            }
+        }
+        return ext;
+    }
+
+    bool check(const std::vector<VkExtensionProperties> &available_extensions,
+               std::string *error_str = nullptr) {
+        std::vector<const char *> missing_exts{};
+        for (auto &[k, info] : _extensions) {
+            if (info.required && !contains_extension(available_extensions, k)) {
+                missing_exts.push_back(k.c_str());
+            }
+        }
+        if (!missing_exts.empty() && error_str) {
+            std::stringstream ss;
+            ss << "The following extensions are required but not supported:"
+               << std::endl;
+            for (auto m_ext : missing_exts) {
+                ss << "\t" << m_ext << std::endl;
+            }
+            *error_str = ss.str();
+        }
+        return missing_exts.empty();
+    }
+
+  private:
+    struct ExtensionInfo {
+        bool required = false;
+    };
+
+    std::map<std::string, ExtensionInfo> _extensions{};
+};
 
 VKAPI_ATTR VkBool32 VKAPI_CALL
 debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
@@ -63,51 +141,10 @@ VkDebugUtilsMessengerCreateInfoEXT default_debug_utils_messenger_create_info() {
 
 const char *VALIDATION_LAYER = "VK_LAYER_KHRONOS_validation";
 
-template <typename T, typename Getter>
-bool check_contains(const char *const *target,
-                    size_t target_count,
-                    const T *available,
-                    size_t available_count,
-                    Getter &&getter) {
-    for (int i = 0; i < target_count; i++) {
-        bool exist = false;
-        for (int j = 0; j < available_count; j++) {
-            if (strcmp(getter(available[j]), target[i]) == 0) {
-                exist = true;
-                break;
-            }
-        }
-        if (!exist) {
-            return false;
-        }
-    }
-    return true;
-}
-
-template <typename T, typename Getter>
-inline bool check_contains(const std::vector<const char *> &target,
-                           const std::vector<T> &available,
-                           Getter &&getter) {
-    return check_contains(target.data(),
-                          target.size(),
-                          available.data(),
-                          available.size(),
-                          std::forward<Getter>(getter));
-}
-
-std::vector<VkExtensionProperties> enumerate_instance_extensions() {
-    uint32_t extension_count = 0;
-    vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, nullptr);
-
-    std::vector<VkExtensionProperties> available_extensions(extension_count);
-    vkEnumerateInstanceExtensionProperties(
-        nullptr, &extension_count, available_extensions.data());
-    return available_extensions;
-}
-
-std::vector<const char *> get_instance_extensions(bool enable_validation,
-                                                  bool need_presentation) {
-    std::vector<const char *> enabled_extensions{};
+ExtensionRequirement
+get_instance_extension_requirement(bool enable_validation,
+                                   bool need_presentation) {
+    ExtensionRequirement req{};
     if (need_presentation) {
         uint32_t glfw_extension_count;
         const char **glfw_extensions;
@@ -115,38 +152,21 @@ std::vector<const char *> get_instance_extensions(bool enable_validation,
             glfwGetRequiredInstanceExtensions(&glfw_extension_count);
 
         for (int i = 0; i < glfw_extension_count; i++) {
-            enabled_extensions.push_back(glfw_extensions[i]);
+            req.add_extension(glfw_extensions[i]);
         }
     }
 
     if (enable_validation) {
-        enabled_extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+        req.add_extension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     }
 
-    auto available_extensions = enumerate_instance_extensions();
     // required by potentially enabled VK_KHR_portability_subset
-    constexpr const char *PHYSICAL_DEVICE_PROPERTIES2 =
-        "VK_KHR_get_physical_device_properties2";
-    for (const auto &ext : available_extensions) {
-        if (strcmp(ext.extensionName, PHYSICAL_DEVICE_PROPERTIES2) == 0) {
-            enabled_extensions.push_back(PHYSICAL_DEVICE_PROPERTIES2);
-            break;
-        }
-    }
+    req.add_extension("VK_KHR_get_physical_device_properties2", false);
 
-    remove_duplicates(enabled_extensions);
-
-    return enabled_extensions;
+    return req;
 }
 
 constexpr const char *PORTABILITY_SUBSET = "VK_KHR_portability_subset";
-
-bool check_instance_extension_supported(
-    const std::vector<const char *> &extensions) {
-    return check_contains(extensions,
-                          enumerate_instance_extensions(),
-                          [](auto &&ext) { return ext.extensionName; });
-}
 
 bool check_validation_layers() {
     uint32_t layer_count;
@@ -155,9 +175,12 @@ bool check_validation_layers() {
     std::vector<VkLayerProperties> available_layers(layer_count);
     vkEnumerateInstanceLayerProperties(&layer_count, available_layers.data());
 
-    return check_contains({VALIDATION_LAYER},
-                          available_layers,
-                          [](auto &&layer) { return layer.layerName; });
+    for (auto &layer : available_layers) {
+        if (strcmp(layer.layerName, VALIDATION_LAYER) == 0) {
+            return true;
+        }
+    }
+    return false;
 }
 
 std::unique_ptr<Instance>
@@ -173,11 +196,16 @@ create_vulkan_instance(const ApplicationInfo &app_info,
     vk_app_info.pEngineName = "Aries";
     vk_app_info.engineVersion = VK_MAKE_VERSION(1, 0, 0);
 
-    auto extensions = get_instance_extensions(enable_validation,
-                                              app_info.enable_presentation);
-    if (!check_instance_extension_supported(extensions)) {
-        ARS_LOG_CRITICAL("Instance extension not supported");
+    auto extension_requirement = get_instance_extension_requirement(
+        enable_validation, app_info.enable_presentation);
+    auto available_extensions = enumerate_instance_extensions();
+    std::string error{};
+    if (!extension_requirement.check(available_extensions, &error)) {
+        ARS_LOG_CRITICAL("Instance extension not supported: {}", error);
     }
+
+    auto enabled_extensions =
+        extension_requirement.filter(available_extensions);
 
     std::vector<const char *> layers{};
     if (enable_validation) {
@@ -187,8 +215,9 @@ create_vulkan_instance(const ApplicationInfo &app_info,
     VkInstanceCreateInfo info{};
     info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     info.pApplicationInfo = &vk_app_info;
-    info.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
-    info.ppEnabledExtensionNames = extensions.data();
+    info.enabledExtensionCount =
+        static_cast<uint32_t>(enabled_extensions.size());
+    info.ppEnabledExtensionNames = enabled_extensions.data();
     info.enabledLayerCount = static_cast<uint32_t>(layers.size());
     info.ppEnabledLayerNames = layers.data();
 
@@ -294,64 +323,24 @@ std::shared_ptr<IMesh> Context::create_mesh(const MeshInfo &info) {
 }
 
 namespace {
-std::vector<VkExtensionProperties>
-enumerate_device_extensions(Instance *instance,
-                            VkPhysicalDevice physical_device) {
-    uint32_t available_extension_count = 0;
-    instance->EnumerateDeviceExtensionProperties(
-        physical_device, nullptr, &available_extension_count, nullptr);
-    std::vector<VkExtensionProperties> available_extensions(
-        available_extension_count);
-    instance->EnumerateDeviceExtensionProperties(physical_device,
-                                                 nullptr,
-                                                 &available_extension_count,
-                                                 available_extensions.data());
-    return available_extensions;
-}
-
 bool is_portability_subset(Instance *instance,
                            VkPhysicalDevice physical_device) {
-    auto available_extensions =
-        enumerate_device_extensions(instance, physical_device);
-    for (const auto &ext : available_extensions) {
-        if (strcmp(ext.extensionName, PORTABILITY_SUBSET) == 0) {
-            return true;
-        }
-    }
-    return false;
-}
-
-bool check_device_extension_supported(
-    Instance *instance,
-    VkPhysicalDevice physical_device,
-    const std::vector<const char *> &extensions) {
-    return check_contains(
-        extensions,
+    return contains_extension(
         enumerate_device_extensions(instance, physical_device),
-        [](auto &&ext) { return ext.extensionName; });
+        PORTABILITY_SUBSET);
 }
 
-std::vector<const char *> get_device_extensions(
-    Instance *instance, VkPhysicalDevice physical_device, bool need_swapchain) {
-    auto available_extensions =
-        enumerate_device_extensions(instance, physical_device);
-    std::vector<const char *> enabled_extensions{"VK_EXT_descriptor_indexing"};
+ExtensionRequirement get_device_extension_requirement(bool need_swapchain) {
+    ExtensionRequirement requirement{};
+    requirement.add_extension("VK_EXT_descriptor_indexing");
 
     if (need_swapchain) {
-        enabled_extensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+        requirement.add_extension(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
     }
 
-    for (const auto &ext : available_extensions) {
-        // must include VK_KHR_portability_subset if available
-        if (strcmp(ext.extensionName, PORTABILITY_SUBSET) == 0) {
-            enabled_extensions.push_back(PORTABILITY_SUBSET);
-            break;
-        }
-    }
+    requirement.add_extension(PORTABILITY_SUBSET, false);
 
-    remove_duplicates(enabled_extensions);
-
-    return enabled_extensions;
+    return requirement;
 }
 
 struct QueueFamilyIndices {
@@ -413,10 +402,9 @@ int rate_device_suitability(Instance *instance,
 
     bool need_swapchain = surface != VK_NULL_HANDLE;
 
-    if (!check_device_extension_supported(
-            instance,
-            physical_device,
-            get_device_extensions(instance, physical_device, need_swapchain))) {
+    auto ext_requirements = get_device_extension_requirement(need_swapchain);
+    if (!ext_requirements.check(
+            enumerate_device_extensions(instance, physical_device))) {
         return 0;
     }
 
@@ -512,12 +500,6 @@ void Context::init_device_and_queues(Instance *instance,
 
     VkPhysicalDeviceFeatures2 device_features2{
         VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
-    VkPhysicalDeviceVulkan12Features vk12_features{
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES};
-    VkPhysicalDeviceDescriptorIndexingFeatures desc_indexing_features{
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES};
-    device_features2.pNext = &vk12_features;
-    vk12_features.pNext = &desc_indexing_features;
 
     instance->GetPhysicalDeviceFeatures2(physical_device, &device_features2);
 
@@ -534,8 +516,10 @@ void Context::init_device_and_queues(Instance *instance,
     create_info.queueCreateInfoCount = 1;
     create_info.pEnabledFeatures = &enabled_features;
 
-    auto enabled_extensions = get_device_extensions(
-        instance, physical_device, surface != VK_NULL_HANDLE);
+    auto extension_requirement =
+        get_device_extension_requirement(surface != VK_NULL_HANDLE);
+    auto enabled_extensions = extension_requirement.filter(
+        enumerate_device_extensions(instance, physical_device));
     create_info.enabledExtensionCount = (uint32_t)enabled_extensions.size();
     create_info.ppEnabledExtensionNames = enabled_extensions.data();
 
@@ -579,13 +563,8 @@ void Context::init_device_and_queues(Instance *instance,
     for (auto &ext : enabled_extensions) {
         ss << "\t" << ext << std::endl;
     }
-    ss << "anisotropic sampler enabled: "
-       << _properties.anisotropic_sampler_enabled << std::endl;
-    ss << "max sampler anisotropy: " << _properties.max_sampler_anisotropy
-       << std::endl;
-    ss << "time stamp period ns: " << _properties.time_stamp_period_ns
-       << std::endl;
-    ss << "support bindless: " << _properties.support_bindless << std::endl;
+
+    ss << _properties.dump();
 
     ARS_LOG_INFO(ss.str());
 }
@@ -1085,5 +1064,16 @@ std::shared_ptr<Material> Context::default_material_vk() {
 
 std::shared_ptr<ISkin> Context::create_skin(const SkinInfo &info) {
     return std::make_shared<Skin>(this, info);
+}
+
+std::string ContextProperties::dump() const {
+    std::stringstream ss;
+    ss << std::boolalpha;
+    ss << "anisotropic sampler enabled: " << anisotropic_sampler_enabled
+       << std::endl;
+    ss << "max sampler anisotropy: " << max_sampler_anisotropy << std::endl;
+    ss << "time stamp period ns: " << time_stamp_period_ns << std::endl;
+    ss << "support bindless: " << support_bindless << std::endl;
+    return ss.str();
 }
 } // namespace ars::render::vk

@@ -75,6 +75,8 @@ struct ContextProperties {
     bool time_stamp_compute_graphics = false;
     float time_stamp_period_ns = 1.0f;
     bool support_bindless = false;
+
+    std::string dump() const;
 };
 
 class Context : public IContext {

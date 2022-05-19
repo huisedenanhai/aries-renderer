@@ -2,7 +2,6 @@
 #include "Context.h"
 #include "Profiler.h"
 #include <ars/runtime/core/Log.h>
-#include <frill_shaders.hpp>
 #include <stdexcept>
 
 namespace ars::render::vk {
@@ -79,16 +78,6 @@ Instance::Instance(VkInstance instance,
                    const VkAllocationCallbacks *allocator)
     : volk::Instance(instance, allocator),
       _presentation_enabled(presentation_enabled), _api_version(api_version) {}
-
-MemoryView
-load_spirv_code(const char *path, const char **flags, uint32_t flag_count) {
-    auto code = frill_shaders::load(path, flags, flag_count);
-    if (code.code == nullptr) {
-        ARS_LOG_CRITICAL("Shader {} not found, have you add it to frill.json?",
-                         path);
-    }
-    return MemoryView{code.code, code.size};
-}
 
 CommandBuffer::CommandBuffer(Context *context,
                              VkCommandPool pool,

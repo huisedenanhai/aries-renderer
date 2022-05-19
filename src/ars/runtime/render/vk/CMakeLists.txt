@@ -1,4 +1,5 @@
 aries_target_sources(render PRIVATE
+        ShaderLib.cpp
         Profiler.cpp
         Profiler.h
         Effect.cpp

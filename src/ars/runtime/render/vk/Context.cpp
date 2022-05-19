@@ -15,6 +15,7 @@
 #include <vector>
 
 namespace ars::render::vk {
+
 namespace {
 std::vector<VkExtensionProperties>
 enumerate_device_extensions(Instance *instance,
@@ -50,60 +51,6 @@ bool contains_extension(const std::vector<VkExtensionProperties> &extensions,
     }
     return false;
 }
-
-struct ExtensionRequirement {
-  public:
-    void add_extension(const std::string &name, bool required = true) {
-        auto &info = _extensions[name];
-        info.required = required || info.required;
-    }
-
-    std::vector<const char *> extensions() {
-        std::vector<const char *> ext{};
-        for (auto &[k, info] : _extensions) {
-            ext.push_back(k.c_str());
-        }
-        return ext;
-    }
-
-    std::vector<const char *>
-    filter(const std::vector<VkExtensionProperties> &available_extensions) {
-        std::vector<const char *> ext{};
-        for (auto &[k, info] : _extensions) {
-            if (contains_extension(available_extensions, k)) {
-                ext.push_back(k.c_str());
-            }
-        }
-        return ext;
-    }
-
-    bool check(const std::vector<VkExtensionProperties> &available_extensions,
-               std::string *error_str = nullptr) {
-        std::vector<const char *> missing_exts{};
-        for (auto &[k, info] : _extensions) {
-            if (info.required && !contains_extension(available_extensions, k)) {
-                missing_exts.push_back(k.c_str());
-            }
-        }
-        if (!missing_exts.empty() && error_str) {
-            std::stringstream ss;
-            ss << "The following extensions are required but not supported:"
-               << std::endl;
-            for (auto m_ext : missing_exts) {
-                ss << "\t" << m_ext << std::endl;
-            }
-            *error_str = ss.str();
-        }
-        return missing_exts.empty();
-    }
-
-  private:
-    struct ExtensionInfo {
-        bool required = false;
-    };
-
-    std::map<std::string, ExtensionInfo> _extensions{};
-};
 
 VKAPI_ATTR VkBool32 VKAPI_CALL
 debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
@@ -340,6 +287,14 @@ ExtensionRequirement get_device_extension_requirement(bool need_swapchain) {
 
     requirement.add_extension(PORTABILITY_SUBSET, false);
 
+    // Ray tracing pipeline
+    requirement.add_extension(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
+                              false);
+    requirement.add_extension(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
+                              false);
+    requirement.add_extension(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
+                              false);
+
     return requirement;
 }
 
@@ -498,28 +453,26 @@ void Context::init_device_and_queues(Instance *instance,
     queue_create_info.queueCount = 1;
     queue_create_info.pQueuePriorities = &queue_priority;
 
-    VkPhysicalDeviceFeatures2 device_features2{
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
-
-    instance->GetPhysicalDeviceFeatures2(physical_device, &device_features2);
-
-    VkPhysicalDeviceFeatures device_features = device_features2.features;
-
-    VkPhysicalDeviceFeatures enabled_features{};
-
-    // Enable sampler anisotropy if the device supports
-    enabled_features.samplerAnisotropy = device_features.samplerAnisotropy;
+    _info.init(instance,
+               physical_device,
+               get_device_extension_requirement(surface != VK_NULL_HANDLE));
 
     VkDeviceCreateInfo create_info{};
     create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     create_info.pQueueCreateInfos = &queue_create_info;
     create_info.queueCreateInfoCount = 1;
-    create_info.pEnabledFeatures = &enabled_features;
+    create_info.pEnabledFeatures = &_info.features;
 
-    auto extension_requirement =
-        get_device_extension_requirement(surface != VK_NULL_HANDLE);
-    auto enabled_extensions = extension_requirement.filter(
-        enumerate_device_extensions(instance, physical_device));
+    set_up_vk_struct_chain({
+        &create_info,
+        &_info.ray_tracing_pipeline_features,
+        &_info.acceleration_structure_features,
+    });
+
+    std::vector<const char *> enabled_extensions{};
+    for (auto &ext : _info.enabled_extensions) {
+        enabled_extensions.push_back(ext.c_str());
+    }
     create_info.enabledExtensionCount = (uint32_t)enabled_extensions.size();
     create_info.ppEnabledExtensionNames = enabled_extensions.data();
 
@@ -539,34 +492,7 @@ void Context::init_device_and_queues(Instance *instance,
     _device = std::make_unique<Device>(instance, device, physical_device);
     _queue = std::make_unique<Queue>(this, indices.primary_family.value());
 
-    VkPhysicalDeviceProperties device_properties{};
-    instance->GetPhysicalDeviceProperties(physical_device, &device_properties);
-
-    // Init context properties
-    if (enabled_features.samplerAnisotropy == VK_TRUE) {
-        _properties.anisotropic_sampler_enabled = true;
-        _properties.max_sampler_anisotropy =
-            device_properties.limits.maxSamplerAnisotropy;
-    }
-    _properties.time_stamp_compute_graphics =
-        device_properties.limits.timestampComputeAndGraphics;
-    _properties.time_stamp_period_ns = device_properties.limits.timestampPeriod;
-
-    // Log info
-    std::stringstream ss;
-    ss << "Vulkan Physical Device" << std::endl;
-    ss << "name: " << device_properties.deviceName << std::endl;
-    ss << "api version: " << dump_version(device_properties.apiVersion)
-       << std::endl;
-    ss << "driver version: " << device_properties.driverVersion << std::endl;
-    ss << "enabled extensions: " << std::endl;
-    for (auto &ext : enabled_extensions) {
-        ss << "\t" << ext << std::endl;
-    }
-
-    ss << _properties.dump();
-
-    ARS_LOG_INFO(ss.str());
+    ARS_LOG_INFO(_info.dump());
 }
 
 Context::Context(const WindowInfo *info,
@@ -864,8 +790,8 @@ void Context::init_descriptor_arena() {
         _device.get(), pool_sizes, properties.limits.maxBoundDescriptorSets);
 }
 
-const ContextProperties &Context::properties() const {
-    return _properties;
+const ContextInfo &Context::info() const {
+    return _info;
 }
 
 VkSurfaceKHR Context::create_surface(GLFWwindow *window) {
@@ -995,7 +921,7 @@ Profiler *Context::profiler() const {
 
 void Context::init_profiler() {
     if (s_vulkan->profiler_enabled &&
-        properties().time_stamp_compute_graphics) {
+        info().properties.limits.timestampComputeAndGraphics) {
         _profiler = std::make_unique<Profiler>(this);
     }
 }
@@ -1066,14 +992,106 @@ std::shared_ptr<ISkin> Context::create_skin(const SkinInfo &info) {
     return std::make_shared<Skin>(this, info);
 }
 
-std::string ContextProperties::dump() const {
+std::string ContextInfo::dump() const {
     std::stringstream ss;
-    ss << std::boolalpha;
-    ss << "anisotropic sampler enabled: " << anisotropic_sampler_enabled
+    auto to_str = [](VkBool32 b) { return b ? "true" : "false"; };
+    ss << "Vulkan Physical Device" << std::endl;
+    ss << "name: " << properties.deviceName << std::endl;
+    ss << "api version: " << dump_version(properties.apiVersion) << std::endl;
+    ss << "driver version: " << properties.driverVersion << std::endl;
+    ss << "enabled extensions: " << std::endl;
+    for (auto &ext : enabled_extensions) {
+        ss << "\t" << ext << std::endl;
+    }
+    ss << "anisotropic sampler: " << to_str(features.samplerAnisotropy)
        << std::endl;
-    ss << "max sampler anisotropy: " << max_sampler_anisotropy << std::endl;
-    ss << "time stamp period ns: " << time_stamp_period_ns << std::endl;
-    ss << "support bindless: " << support_bindless << std::endl;
+    ss << "ray tracing pipeline: "
+       << to_str(ray_tracing_pipeline_features.rayTracingPipeline) << std::endl;
+    ss << "acceleration structure: "
+       << to_str(acceleration_structure_features.accelerationStructure)
+       << std::endl;
+
     return ss.str();
+}
+
+void ContextInfo::init(Instance *instance,
+                       VkPhysicalDevice physical_device,
+                       const ExtensionRequirement &extension_requirement) {
+    // Init features
+    VkPhysicalDeviceFeatures2 device_features2{
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
+
+    set_up_vk_struct_chain({
+        &device_features2,
+        &acceleration_structure_features,
+        &ray_tracing_pipeline_features,
+    });
+
+    instance->GetPhysicalDeviceFeatures2(physical_device, &device_features2);
+
+    // Enable sampler anisotropy if the device supports
+    features.samplerAnisotropy = device_features2.features.samplerAnisotropy;
+
+    // Init properties
+    VkPhysicalDeviceProperties2 device_properties2{
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
+    set_up_vk_struct_chain({
+        &device_properties2,
+        &ray_tracing_pipeline_properties,
+    });
+    instance->GetPhysicalDeviceProperties2(physical_device,
+                                           &device_properties2);
+    properties = device_properties2.properties;
+
+    // Init extensions
+    auto extensions = extension_requirement.filter(
+        enumerate_device_extensions(instance, physical_device));
+    enabled_extensions = {extensions.begin(), extensions.end()};
+}
+
+void ExtensionRequirement::add_extension(const std::string &name,
+                                         bool required) {
+    auto &info = _extensions[name];
+    info.required = required || info.required;
+}
+
+std::vector<const char *> ExtensionRequirement::extensions() const {
+    std::vector<const char *> ext{};
+    for (auto &[k, info] : _extensions) {
+        ext.push_back(k.c_str());
+    }
+    return ext;
+}
+
+std::vector<const char *> ExtensionRequirement::filter(
+    const std::vector<VkExtensionProperties> &available_extensions) const {
+    std::vector<const char *> ext{};
+    for (auto &[k, info] : _extensions) {
+        if (contains_extension(available_extensions, k)) {
+            ext.push_back(k.c_str());
+        }
+    }
+    return ext;
+}
+
+bool ExtensionRequirement::check(
+    const std::vector<VkExtensionProperties> &available_extensions,
+    std::string *error_str) const {
+    std::vector<const char *> missing_exts{};
+    for (auto &[k, info] : _extensions) {
+        if (info.required && !contains_extension(available_extensions, k)) {
+            missing_exts.push_back(k.c_str());
+        }
+    }
+    if (!missing_exts.empty() && error_str) {
+        std::stringstream ss;
+        ss << "The following extensions are required but not supported:"
+           << std::endl;
+        for (auto m_ext : missing_exts) {
+            ss << "\t" << m_ext << std::endl;
+        }
+        *error_str = ss.str();
+    }
+    return missing_exts.empty();
 }
 } // namespace ars::render::vk

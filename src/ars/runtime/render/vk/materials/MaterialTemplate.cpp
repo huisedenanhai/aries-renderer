@@ -165,7 +165,7 @@ create_draw_pipeline(Context *context,
     if (mat_info.features & MaterialFeature_DoubleSidedBit) {
         common_flags.push_back("ARS_MATERIAL_DOUBLE_SIDED");
     }
-    if (context->properties().support_bindless) {
+    if (context->info().support_bindless()) {
         common_flags.push_back("ARS_SUPPORT_BINDLESS");
     }
 

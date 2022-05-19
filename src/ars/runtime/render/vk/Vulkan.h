@@ -6,7 +6,7 @@
 #include <vulkan/vulkan.h>
 
 #include <vulkan/volk.hpp>
-
+#include <vector>
 #include <ars/runtime/core/misc/Macro.h>
 #include <memory>
 #include <string>
@@ -219,4 +219,7 @@ template <>
 struct VulkanObjectType<VkSampler>
     : std::integral_constant<VkObjectType, VK_OBJECT_TYPE_SAMPLER> {};
 
+// Connect a sequence of vulkan struct with pNext.
+// The input struct must start with field sType and pNext
+void set_up_vk_struct_chain(const std::vector<void *> &chain);
 } // namespace ars::render::vk

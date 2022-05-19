@@ -145,4 +145,26 @@ void CommandBuffer::end_debug_label() {
     _context->end_debug_label(this);
 }
 
+namespace {
+struct VulkanStructHeader {
+    VkStructureType sType;
+    const void *pNext;
+};
+} // namespace
+
+void set_up_vk_struct_chain(const std::vector<void *> &chain) {
+    VulkanStructHeader *cur = nullptr;
+    for (auto e : chain) {
+        if (e == nullptr) {
+            continue;
+        }
+        if (cur != nullptr) {
+            cur->pNext = e;
+        }
+        cur = reinterpret_cast<VulkanStructHeader *>(e);
+    }
+    if (cur != nullptr) {
+        cur->pNext = nullptr;
+    }
+}
 } // namespace ars::render::vk

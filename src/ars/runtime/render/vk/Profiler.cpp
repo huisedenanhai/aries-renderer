@@ -7,7 +7,7 @@ constexpr uint32_t MAX_PROFILER_QUERY_COUNT_VK = 4000;
 
 Profiler::Profiler(Context *context)
     : _context(context),
-      _time_stamp_period_ns(context->properties().time_stamp_period_ns) {
+      _time_stamp_period_ns(context->info().properties.limits.timestampPeriod) {
     VkQueryPoolCreateInfo info{VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO};
     info.queryCount = MAX_PROFILER_QUERY_COUNT_VK;
     info.queryType = VK_QUERY_TYPE_TIMESTAMP;

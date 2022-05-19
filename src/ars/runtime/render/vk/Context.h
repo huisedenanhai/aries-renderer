@@ -69,14 +69,52 @@ class Queue {
     VkQueueFamilyProperties _family_properties{};
 };
 
-struct ContextProperties {
-    bool anisotropic_sampler_enabled = false;
-    float max_sampler_anisotropy = 1.0f;
-    bool time_stamp_compute_graphics = false;
-    float time_stamp_period_ns = 1.0f;
-    bool support_bindless = false;
+struct ExtensionRequirement {
+  public:
+    void add_extension(const std::string &name, bool required = true);
 
-    std::string dump() const;
+    // Those const char* will be invalid when ExtensionRequirement struct is
+    // released or be modified.
+    [[nodiscard]] std::vector<const char *> extensions() const;
+
+    [[nodiscard]] std::vector<const char *> filter(
+        const std::vector<VkExtensionProperties> &available_extensions) const;
+
+    bool check(const std::vector<VkExtensionProperties> &available_extensions,
+               std::string *error_str = nullptr) const;
+
+  private:
+    struct ExtensionInfo {
+        bool required = false;
+    };
+
+    std::map<std::string, ExtensionInfo> _extensions{};
+};
+
+struct ContextInfo {
+    VkPhysicalDeviceFeatures features{};
+    VkPhysicalDeviceAccelerationStructureFeaturesKHR
+        acceleration_structure_features{
+            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR};
+    VkPhysicalDeviceRayTracingPipelineFeaturesKHR ray_tracing_pipeline_features{
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR};
+
+    VkPhysicalDeviceProperties properties{};
+    VkPhysicalDeviceRayTracingPipelinePropertiesKHR
+        ray_tracing_pipeline_properties{
+            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR};
+
+    std::vector<std::string> enabled_extensions{};
+
+    [[nodiscard]] bool support_bindless() const {
+        return false;
+    }
+
+    void init(Instance *instance,
+              VkPhysicalDevice physical_device,
+              const ExtensionRequirement &extension_requirement);
+
+    [[nodiscard]] std::string dump() const;
 };
 
 class Context : public IContext {
@@ -119,7 +157,7 @@ class Context : public IContext {
 
     [[nodiscard]] DescriptorArena *descriptor_arena() const;
 
-    [[nodiscard]] const ContextProperties &properties() const;
+    [[nodiscard]] const ContextInfo &info() const;
 
     bool begin_frame() override;
     void end_frame() override;
@@ -196,6 +234,7 @@ class Context : public IContext {
     static Handle<T> create_handle(std::vector<std::shared_ptr<T>> &pool,
                                    Args &&...args);
 
+    ContextInfo _info{};
     std::unique_ptr<Device> _device{};
     std::unique_ptr<Queue> _queue{};
 
@@ -216,7 +255,6 @@ class Context : public IContext {
 
     std::set<Swapchain *> _registered_swapchains{};
 
-    ContextProperties _properties{};
     std::unique_ptr<MaterialFactory> _material_factory{};
 
     std::array<std::shared_ptr<ITexture>,

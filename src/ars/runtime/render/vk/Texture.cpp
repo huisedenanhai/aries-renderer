@@ -421,10 +421,11 @@ void Texture::init() {
     sampler_info.minLod = 0.0f;
     sampler_info.maxLod = static_cast<float>(_info.mip_levels);
 
-    auto &context_properties = _context->properties();
-    if (context_properties.anisotropic_sampler_enabled) {
+    auto &context_info = _context->info();
+    if (context_info.features.samplerAnisotropy) {
         sampler_info.anisotropyEnable = VK_TRUE;
-        sampler_info.maxAnisotropy = context_properties.max_sampler_anisotropy;
+        sampler_info.maxAnisotropy =
+            context_info.properties.limits.maxSamplerAnisotropy;
     }
 
     if (_context->device()->Create(&sampler_info, &_sampler)) {

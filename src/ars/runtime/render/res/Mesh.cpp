@@ -31,6 +31,7 @@ std::shared_ptr<IMesh> load_mesh(IContext *context, const ResData &data) {
 #undef ARS_MESH_SET_ATTR
 
     mesh->set_triangle_count(meta.indices.size / sizeof(glm::u32vec3));
+    mesh->update_acceleration_structure();
     return mesh;
 }
 } // namespace ars::render

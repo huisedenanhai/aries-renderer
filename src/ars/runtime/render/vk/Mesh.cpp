@@ -1,18 +1,25 @@
 #include "Mesh.h"
 #include "Buffer.h"
 #include "Context.h"
+#include "features/RayTracing.h"
+#include <ars/runtime/core/Log.h>
 
 namespace ars::render::vk {
 Mesh::Mesh(Context *context, const MeshInfo &info)
     : IMesh(info), _context(context) {
     auto create_buffer = [&](VkDeviceSize size, VkBufferUsageFlags usage) {
+        if (_context->info().device_address_features.bufferDeviceAddress) {
+            usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+        }
         return _context->create_buffer(
             size, usage, VMA_MEMORY_USAGE_CPU_TO_GPU);
     };
 
     VkBufferUsageFlags vertex_buffer_usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-    _position_buffer = create_buffer(info.vertex_capacity * sizeof(glm::vec3),
-                                     vertex_buffer_usage);
+    _position_buffer = create_buffer(
+        info.vertex_capacity * sizeof(glm::vec3),
+        vertex_buffer_usage |
+            VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR);
     _normal_buffer = create_buffer(info.vertex_capacity * sizeof(glm::vec3),
                                    vertex_buffer_usage);
     _tangent_buffer = create_buffer(info.vertex_capacity * sizeof(glm::vec4),
@@ -27,7 +34,9 @@ Mesh::Mesh(Context *context, const MeshInfo &info)
                                        vertex_buffer_usage);
     }
 
-    VkBufferUsageFlags index_buffer_usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+    VkBufferUsageFlags index_buffer_usage =
+        VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
+        VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
     _index_buffer = create_buffer(
         _info.triangle_capacity * sizeof(glm::u32vec3), index_buffer_usage);
 }
@@ -122,13 +131,76 @@ Handle<Buffer> Mesh::weight_buffer() const {
     return _weight_buffer;
 }
 
+void Mesh::update_acceleration_structure() {
+    auto &acc_feature = _context->info().acceleration_structure_features;
+    if (acc_feature.accelerationStructure == VK_FALSE) {
+        return;
+    }
+
+    auto device = _context->device();
+
+    VkAccelerationStructureGeometryKHR geometry{
+        VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR};
+    geometry.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
+    auto &triangles = geometry.geometry.triangles;
+    triangles.sType =
+        VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
+    triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
+    triangles.vertexData.deviceAddress = position_buffer()->device_address();
+    triangles.vertexStride = sizeof(glm::vec3);
+    triangles.maxVertex = vertex_capacity();
+    triangles.indexType = VK_INDEX_TYPE_UINT32;
+    triangles.indexData.deviceAddress = index_buffer()->device_address();
+
+    VkAccelerationStructureBuildGeometryInfoKHR build_info{
+        VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR};
+    build_info.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
+    build_info.flags =
+        VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR |
+        VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_COMPACTION_BIT_KHR;
+    build_info.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
+    build_info.geometryCount = 1;
+    build_info.pGeometries = &geometry;
+
+    VkAccelerationStructureBuildSizesInfoKHR size{
+        VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR};
+    uint32_t max_prim_count = triangle_capacity();
+    device->GetAccelerationStructureBuildSizesKHR(
+        VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
+        &build_info,
+        &max_prim_count,
+        &size);
+
+    _acceleration_structure = _context->create_acceleration_structure(
+        VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
+        size.accelerationStructureSize);
+
+    auto scratch_buffer =
+        _context->create_buffer(size.buildScratchSize,
+                                VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+                                    VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+                                VMA_MEMORY_USAGE_GPU_ONLY);
+
+    // Fill in other infos for acceleration build
+    build_info.scratchData.deviceAddress = scratch_buffer->device_address();
+    build_info.dstAccelerationStructure =
+        _acceleration_structure->acceleration_structure();
+
+    _context->queue()->submit_once([&](CommandBuffer *cmd) {
+        VkAccelerationStructureBuildRangeInfoKHR range{};
+        range.primitiveCount = triangle_count();
+        auto ranges = &range;
+        cmd->BuildAccelerationStructuresKHR(1, &build_info, &ranges);
+    });
+}
+
 std::shared_ptr<Mesh> upcast(const std::shared_ptr<IMesh> &mesh) {
     return std::reinterpret_pointer_cast<Mesh>(mesh);
 }
 
 void Skin::set_joints(const glm::mat4 *joints,
-                          size_t joint_offset,
-                          size_t joint_count) {
+                      size_t joint_offset,
+                      size_t joint_count) {
     _joint_buffer->set_data_array(joints, joint_offset, joint_count);
 }
 

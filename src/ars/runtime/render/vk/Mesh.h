@@ -6,6 +6,7 @@
 namespace ars::render::vk {
 class Context;
 class Buffer;
+class AccelerationStructure;
 
 class Mesh : public IMesh {
   public:
@@ -44,6 +45,7 @@ class Mesh : public IMesh {
                      size_t elem_count) override;
     math::AABB<float> aabb() override;
     void set_aabb(const math::AABB<float> &aabb) override;
+    void update_acceleration_structure() override;
 
     [[nodiscard]] Handle<Buffer> position_buffer() const;
     [[nodiscard]] Handle<Buffer> normal_buffer() const;
@@ -66,6 +68,8 @@ class Mesh : public IMesh {
     Handle<Buffer> _index_buffer{};
     size_t _triangle_count = 0;
     math::AABB<float> _aabb{};
+
+    Handle<AccelerationStructure> _acceleration_structure{};
 };
 
 std::shared_ptr<Mesh> upcast(const std::shared_ptr<IMesh> &mesh);

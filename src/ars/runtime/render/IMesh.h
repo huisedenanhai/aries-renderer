@@ -55,6 +55,7 @@ class IMesh : public IRes {
 
     virtual math::AABB<float> aabb() = 0;
     virtual void set_aabb(const math::AABB<float> &aabb) = 0;
+    virtual void update_acceleration_structure() = 0;
 
     static void register_type();
 

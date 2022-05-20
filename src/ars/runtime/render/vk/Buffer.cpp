@@ -66,4 +66,15 @@ void Buffer::set_data_raw(void *value, size_t byte_offset, size_t byte_count) {
         std::memcpy(t_ptr + byte_offset, value, byte_count);
     });
 }
+
+VkDeviceAddress Buffer::device_address() const {
+    if (_context->info().device_address_features.bufferDeviceAddress ==
+        VK_FALSE) {
+        return 0;
+    }
+    VkBufferDeviceAddressInfo info{
+        VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO};
+    info.buffer = _buffer;
+    return _context->device()->GetBufferDeviceAddressKHR(&info);
+}
 } // namespace ars::render::vk

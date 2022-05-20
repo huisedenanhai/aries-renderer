@@ -376,6 +376,7 @@ struct PrimitiveData {
                        0,
                        info.triangle_capacity);
         m->set_triangle_count(info.triangle_capacity);
+        m->update_acceleration_structure();
 
         return m;
     }

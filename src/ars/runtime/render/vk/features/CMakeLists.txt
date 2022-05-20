@@ -1,4 +1,6 @@
 aries_target_sources(render PRIVATE
+        RayTracing.cpp
+        RayTracing.h
         Shadow.cpp
         Shadow.h
         ScreenSpaceReflection.cpp

@@ -6,6 +6,7 @@
 #include "Scene.h"
 #include "Sky.h"
 #include "Swapchain.h"
+#include "features/RayTracing.h"
 #include "features/Renderer.h"
 #include <GLFW/glfw3.h>
 #include <algorithm>
@@ -15,7 +16,6 @@
 #include <vector>
 
 namespace ars::render::vk {
-
 namespace {
 std::vector<VkExtensionProperties>
 enumerate_device_extensions(Instance *instance,
@@ -287,12 +287,23 @@ ExtensionRequirement get_device_extension_requirement(bool need_swapchain) {
 
     requirement.add_extension(PORTABILITY_SUBSET, false);
 
-    // Ray tracing pipeline
+    // Acceleration structure
     requirement.add_extension(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
                               false);
+    // Needed by acceleration structure
+    requirement.add_extension(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
+                              false);
+    // Needed by acceleration structure
+    requirement.add_extension(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
+                              false);
+
+    // Ray tracing pipeline
     requirement.add_extension(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
                               false);
-    requirement.add_extension(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
+    // Needed by ray tracing pipeline
+    requirement.add_extension(VK_KHR_SPIRV_1_4_EXTENSION_NAME, false);
+    // Needed by spirv_1_4
+    requirement.add_extension(VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME,
                               false);
 
     return requirement;
@@ -467,6 +478,7 @@ void Context::init_device_and_queues(Instance *instance,
         &create_info,
         &_info.ray_tracing_pipeline_features,
         &_info.acceleration_structure_features,
+        &_info.device_address_features,
     });
 
     std::vector<const char *> enabled_extensions{};
@@ -744,6 +756,7 @@ void Context::gc() {
     run_gc(_textures);
     run_gc(_command_buffers);
     run_gc(_buffers);
+    run_gc(_acceleration_structures);
 
     _tmp_framebuffers.clear();
 }
@@ -992,6 +1005,12 @@ std::shared_ptr<ISkin> Context::create_skin(const SkinInfo &info) {
     return std::make_shared<Skin>(this, info);
 }
 
+Handle<AccelerationStructure>
+Context::create_acceleration_structure(VkAccelerationStructureTypeKHR type,
+                                       VkDeviceSize buffer_size) {
+    return create_handle(_acceleration_structures, this, type, buffer_size);
+}
+
 std::string ContextInfo::dump() const {
     std::stringstream ss;
     auto to_str = [](VkBool32 b) { return b ? "true" : "false"; };
@@ -1025,6 +1044,7 @@ void ContextInfo::init(Instance *instance,
         &device_features2,
         &acceleration_structure_features,
         &ray_tracing_pipeline_features,
+        &device_address_features,
     });
 
     instance->GetPhysicalDeviceFeatures2(physical_device, &device_features2);

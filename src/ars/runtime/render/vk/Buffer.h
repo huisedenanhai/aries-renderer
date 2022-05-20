@@ -2,8 +2,8 @@
 
 #include "Vulkan.h"
 #include <algorithm>
-#include <vector>
 #include <ars/runtime/core/misc/Macro.h>
+#include <vector>
 
 namespace ars::render::vk {
 class Context;
@@ -71,6 +71,9 @@ class Buffer {
         using DataView = details::BufferDataViewTrait<T>;
         set_data_raw(DataView::ptr(value), 0, DataView::size(value));
     }
+
+    // Only valid when VK_KHR_buffer_device_address is available
+    [[nodiscard]] VkDeviceAddress device_address() const;
 
   private:
     Context *_context = nullptr;

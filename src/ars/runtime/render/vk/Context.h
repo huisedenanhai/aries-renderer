@@ -23,6 +23,7 @@ class Context;
 class MaterialFactory;
 class Material;
 class Profiler;
+class AccelerationStructure;
 class ImageBasedLighting;
 class RendererContextData;
 
@@ -98,6 +99,8 @@ struct ContextInfo {
             VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR};
     VkPhysicalDeviceRayTracingPipelineFeaturesKHR ray_tracing_pipeline_features{
         VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR};
+    VkPhysicalDeviceBufferDeviceAddressFeaturesEXT device_address_features{
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_ADDRESS_FEATURES_EXT};
 
     VkPhysicalDeviceProperties properties{};
     VkPhysicalDeviceRayTracingPipelinePropertiesKHR
@@ -175,6 +178,9 @@ class Context : public IContext {
     Handle<Buffer> create_buffer(VkDeviceSize size,
                                  VkBufferUsageFlags buffer_usage,
                                  VmaMemoryUsage memory_usage);
+    Handle<AccelerationStructure>
+    create_acceleration_structure(VkAccelerationStructureTypeKHR type,
+                                  VkDeviceSize buffer_size);
 
     Framebuffer *
     create_tmp_framebuffer(RenderPass *render_pass,
@@ -250,6 +256,8 @@ class Context : public IContext {
     std::vector<std::shared_ptr<Texture>> _textures{};
     std::vector<std::shared_ptr<CommandBuffer>> _command_buffers{};
     std::vector<std::shared_ptr<Buffer>> _buffers{};
+    std::vector<std::shared_ptr<AccelerationStructure>>
+        _acceleration_structures{};
 
     std::vector<std::unique_ptr<Framebuffer>> _tmp_framebuffers{};
 

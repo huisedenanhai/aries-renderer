@@ -137,61 +137,15 @@ void Mesh::update_acceleration_structure() {
         return;
     }
 
-    auto device = _context->device();
+    _acceleration_structure = AccelerationStructure::create(this);
+}
 
-    VkAccelerationStructureGeometryKHR geometry{
-        VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR};
-    geometry.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-    auto &triangles = geometry.geometry.triangles;
-    triangles.sType =
-        VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
-    triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
-    triangles.vertexData.deviceAddress = position_buffer()->device_address();
-    triangles.vertexStride = sizeof(glm::vec3);
-    triangles.maxVertex = vertex_capacity();
-    triangles.indexType = VK_INDEX_TYPE_UINT32;
-    triangles.indexData.deviceAddress = index_buffer()->device_address();
+Context *Mesh::context() const {
+    return _context;
+}
 
-    VkAccelerationStructureBuildGeometryInfoKHR build_info{
-        VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR};
-    build_info.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
-    build_info.flags =
-        VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR |
-        VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_COMPACTION_BIT_KHR;
-    build_info.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
-    build_info.geometryCount = 1;
-    build_info.pGeometries = &geometry;
-
-    VkAccelerationStructureBuildSizesInfoKHR size{
-        VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR};
-    uint32_t max_prim_count = triangle_capacity();
-    device->GetAccelerationStructureBuildSizesKHR(
-        VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
-        &build_info,
-        &max_prim_count,
-        &size);
-
-    _acceleration_structure = _context->create_acceleration_structure(
-        VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
-        size.accelerationStructureSize);
-
-    auto scratch_buffer =
-        _context->create_buffer(size.buildScratchSize,
-                                VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-                                    VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
-                                VMA_MEMORY_USAGE_GPU_ONLY);
-
-    // Fill in other infos for acceleration build
-    build_info.scratchData.deviceAddress = scratch_buffer->device_address();
-    build_info.dstAccelerationStructure =
-        _acceleration_structure->acceleration_structure();
-
-    _context->queue()->submit_once([&](CommandBuffer *cmd) {
-        VkAccelerationStructureBuildRangeInfoKHR range{};
-        range.primitiveCount = triangle_count();
-        auto ranges = &range;
-        cmd->BuildAccelerationStructuresKHR(1, &build_info, &ranges);
-    });
+Handle<AccelerationStructure> Mesh::acceleration_structure() const {
+    return _acceleration_structure;
 }
 
 std::shared_ptr<Mesh> upcast(const std::shared_ptr<IMesh> &mesh) {

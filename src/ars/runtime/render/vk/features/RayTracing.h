@@ -5,6 +5,8 @@
 
 namespace ars::render::vk {
 class Context;
+class Mesh;
+class Scene;
 
 class AccelerationStructure {
   public:
@@ -14,8 +16,18 @@ class AccelerationStructure {
     ~AccelerationStructure();
 
     [[nodiscard]] VkAccelerationStructureKHR acceleration_structure() const;
+    [[nodiscard]] VkDeviceAddress device_address() const;
+
+    static Handle<AccelerationStructure> create(Mesh *mesh);
+    static Handle<AccelerationStructure> create(Scene *scene);
 
   private:
+    static Handle<AccelerationStructure>
+    create(Context *context,
+           VkAccelerationStructureTypeKHR type,
+           const VkAccelerationStructureGeometryKHR &geometry,
+           uint32_t primitive_count);
+
     Context *_context = nullptr;
     VkAccelerationStructureKHR _acceleration_structure = VK_NULL_HANDLE;
     Handle<Buffer> _buffer{};

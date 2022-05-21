@@ -46,6 +46,7 @@ class Mesh : public IMesh {
     math::AABB<float> aabb() override;
     void set_aabb(const math::AABB<float> &aabb) override;
     void update_acceleration_structure() override;
+    [[nodiscard]] Handle<AccelerationStructure> acceleration_structure() const;
 
     [[nodiscard]] Handle<Buffer> position_buffer() const;
     [[nodiscard]] Handle<Buffer> normal_buffer() const;
@@ -54,6 +55,8 @@ class Mesh : public IMesh {
     [[nodiscard]] Handle<Buffer> index_buffer() const;
     [[nodiscard]] Handle<Buffer> joint_buffer() const;
     [[nodiscard]] Handle<Buffer> weight_buffer() const;
+
+    [[nodiscard]] Context *context() const;
 
   private:
     Context *_context = nullptr;

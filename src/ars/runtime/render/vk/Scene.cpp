@@ -5,6 +5,7 @@
 #include "Profiler.h"
 #include "View.h"
 #include "features/Drawer.h"
+#include "features/RayTracing.h"
 
 namespace ars::render::vk {
 std::unique_ptr<IRenderObject> Scene::create_render_object() {
@@ -127,6 +128,37 @@ std::optional<DrawRequest> Scene::get_draw_request(
     req.mesh = mesh.get();
 
     return req;
+}
+
+void Scene::update_acceleration_structure() {
+    auto &acc_features = _context->info().acceleration_structure_features;
+    if (acc_features.accelerationStructure == VK_FALSE) {
+        return;
+    }
+
+    _acceleration_structure = AccelerationStructure::create(this);
+}
+
+Handle<AccelerationStructure> Scene::acceleration_structure() const {
+    return _acceleration_structure;
+}
+
+void Scene::update_before_render() {
+    update_loaded_aabb();
+    update_acceleration_structure();
+}
+
+std::vector<DrawRequest> Scene::gather_draw_request(RenderPassID pass_id) {
+    auto cnt = render_objects.size();
+    std::vector<DrawRequest> reqs{};
+    reqs.reserve(cnt);
+    for (int i = 0; i < cnt; i++) {
+        auto req = get_draw_request(pass_id, i);
+        if (req.has_value()) {
+            reqs.push_back(req.value());
+        }
+    }
+    return reqs;
 }
 
 IScene *View::scene() {

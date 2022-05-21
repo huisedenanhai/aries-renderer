@@ -167,4 +167,16 @@ void set_up_vk_struct_chain(const std::vector<void *> &chain) {
         cur->pNext = nullptr;
     }
 }
+
+VkTransformMatrixKHR to_vk_xform(const glm::mat4 &m) {
+    VkTransformMatrixKHR m_vk{};
+
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 4; j++) {
+            m_vk.matrix[i][j] = m[j][i];
+        }
+    }
+
+    return m_vk;
+}
 } // namespace ars::render::vk

@@ -15,7 +15,7 @@ namespace ars::render::vk {
 NamedRT Renderer::render(RenderGraph &rg, const RenderOptions &options) {
     ARS_PROFILER_SAMPLE("Build Render Graph", 0xFF772641);
 
-    _view->scene_vk()->update_loaded_aabb();
+    _view->scene_vk()->update_before_render();
 
     auto w_div_h = _view->size().w_div_h();
     auto cull_cam_xform = _view->xform();

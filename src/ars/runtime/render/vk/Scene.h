@@ -11,6 +11,7 @@ class Skin;
 class Material;
 class Context;
 struct DrawRequest;
+class AccelerationStructure;
 
 struct Light {
     glm::vec3 color{1.0f, 1.0f, 1.0f};
@@ -37,8 +38,12 @@ class Scene : public IScene {
     CullingResult cull(const math::XformTRS<float> &xform,
                        const Frustum &frustum_local);
 
+    void update_before_render();
+
     void update_loaded_aabb();
-    math::AABB<float> loaded_aabb_ws() const;
+    [[nodiscard]] math::AABB<float> loaded_aabb_ws() const;
+    void update_acceleration_structure();
+    [[nodiscard]] Handle<AccelerationStructure> acceleration_structure() const;
 
     using RenderObjects = SoA<glm::mat4,
                               std::shared_ptr<Mesh>,
@@ -66,11 +71,14 @@ class Scene : public IScene {
                      uint32_t rd_obj_index,
                      Material *override_material = nullptr);
 
+    std::vector<DrawRequest> gather_draw_request(RenderPassID pass_id);
+
   private:
     CullingResult cull(const Frustum &frustum_ws);
 
     Context *_context = nullptr;
     math::AABB<float> _loaded_aabb_ws{};
+    Handle<AccelerationStructure> _acceleration_structure{};
 };
 
 struct CullingResult {
@@ -78,7 +86,8 @@ struct CullingResult {
     std::vector<Scene::RenderObjects::Id> objects{};
     math::AABB<float> visible_aabb_ws{};
 
-    std::vector<DrawRequest> gather_draw_requests(RenderPassID pass_id) const;
+    [[nodiscard]] std::vector<DrawRequest>
+    gather_draw_requests(RenderPassID pass_id) const;
 };
 
 class DirectionalLight : public IDirectionalLight {
@@ -147,7 +156,7 @@ class RenderObject : public IRenderObject {
     void set_material(std::shared_ptr<IMaterial> material) override;
     uint64_t user_data() override;
     void set_user_data(uint64_t user_data) override;
-    Scene::RenderObjects::Id id() const;
+    [[nodiscard]] Scene::RenderObjects::Id id() const;
 
   private:
     template <typename T> T &get() {

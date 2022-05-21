@@ -5,11 +5,12 @@
 #include <vulkan/vk_mem_alloc.h>
 #include <vulkan/vulkan.h>
 
-#include <vulkan/volk.hpp>
-#include <vector>
 #include <ars/runtime/core/misc/Macro.h>
+#include <glm/mat4x4.hpp>
 #include <memory>
 #include <string>
+#include <vector>
+#include <vulkan/volk.hpp>
 
 namespace ars::render::vk {
 // By now in this project we only use a single allocator.
@@ -222,4 +223,6 @@ struct VulkanObjectType<VkSampler>
 // Connect a sequence of vulkan struct with pNext.
 // The input struct must start with field sType and pNext
 void set_up_vk_struct_chain(const std::vector<void *> &chain);
+
+VkTransformMatrixKHR to_vk_xform(const glm::mat4 &m);
 } // namespace ars::render::vk

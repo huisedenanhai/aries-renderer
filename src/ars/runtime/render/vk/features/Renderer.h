@@ -22,6 +22,7 @@ enum RenderPassID {
     RenderPassID_Overlay,
     RenderPassID_Shadow,
     RenderPassID_ObjectID,
+    RenderPassID_RayTracing,
     RenderPassID_Count,
 };
 
@@ -30,7 +31,7 @@ constexpr VkFormat ID_COLOR_ATTACHMENT_FORMAT = VK_FORMAT_R32_UINT;
 class RendererContextData {
   public:
     explicit RendererContextData(Context *context);
-    SubpassInfo subpass(RenderPassID pass_id) const;
+    [[nodiscard]] SubpassInfo subpass(RenderPassID pass_id) const;
 
   private:
     void init_render_passes();

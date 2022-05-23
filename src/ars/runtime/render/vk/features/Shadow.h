@@ -41,7 +41,7 @@ class ShadowMap {
                 const CullingResult &culling_result,
                 const SampleDistribution &sample_dist);
 
-    Handle<Texture> texture() const;
+    [[nodiscard]] Handle<Texture> texture() const;
 
     ShadowData data(View *view) const;
 

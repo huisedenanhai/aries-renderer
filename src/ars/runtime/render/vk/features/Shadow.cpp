@@ -2,6 +2,7 @@
 #include "../Context.h"
 #include "../Profiler.h"
 #include "Drawer.h"
+#include <future>
 
 namespace ars::render::vk {
 Shadow::Shadow(View *view) : _view(view) {}
@@ -283,20 +284,37 @@ void ShadowMap::render(const math::XformTRS<float> &xform,
             auto rp_exec =
                 rp->begin(cmd, fb, clear_values, VK_SUBPASS_CONTENTS_INLINE);
 
+            std::future<std::vector<DrawRequest>>
+                shadow_draw_requests[SHADOW_CASCADE_COUNT]{};
+
+            {
+                ARS_PROFILER_SAMPLE("Shadow Culling", 0xFF771128);
+                for (int i = 0; i < SHADOW_CASCADE_COUNT; i++) {
+                    shadow_draw_requests[i] =
+                        std::async(std::launch::async, [i, this, scene]() {
+                            auto &cam = _cascade_cameras[i];
+                            float w_div_h = cam.viewport.w / cam.viewport.h;
+                            auto shadow_cull_obj = scene->cull(
+                                cam.xform, cam.camera.frustum(w_div_h));
+
+                            return shadow_cull_obj.gather_draw_requests(
+                                RenderPassID_Shadow);
+                        });
+                }
+
+                for (auto &fut : shadow_draw_requests) {
+                    fut.wait();
+                }
+            }
+
             // Render each cascades
-            for (auto &cam : _cascade_cameras) {
+            for (int i = 0; i < SHADOW_CASCADE_COUNT; i++) {
+                auto &cam = _cascade_cameras[i];
                 fb->set_viewport_scissor(cmd,
                                          cam.viewport.x,
                                          cam.viewport.y,
                                          cam.viewport.w,
                                          cam.viewport.h);
-
-                float w_div_h = cam.viewport.w / cam.viewport.h;
-                auto shadow_cull_obj =
-                    scene->cull(cam.xform, cam.camera.frustum(w_div_h));
-
-                auto draw_requests =
-                    shadow_cull_obj.gather_draw_requests(RenderPassID_Shadow);
 
                 DrawCallbacks callbacks{};
                 callbacks.on_pipeline_bound = [&](CommandBuffer *cmd) {
@@ -304,10 +322,11 @@ void ShadowMap::render(const math::XformTRS<float> &xform,
                     cmd->SetDepthBias(-_constant_bias, 0.0f, -_slope_bias);
                 };
 
+                float w_div_h = cam.viewport.w / cam.viewport.h;
                 view->drawer()->draw(cmd,
                                      cam.camera.projection_matrix(w_div_h),
                                      glm::inverse(cam.xform.matrix_no_scale()),
-                                     draw_requests,
+                                     shadow_draw_requests[i].get(),
                                      callbacks);
             }
 

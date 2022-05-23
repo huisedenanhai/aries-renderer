@@ -150,7 +150,7 @@ template <typename... Ts> struct SoA {
     template <typename Func> void for_each_id(Func &&func) const {
         auto count = size();
         for (size_t i = 0; i < count; i++) {
-            auto id = Id(get_inverse_id()[i].value);
+            auto id = get_id_from_soa_index(i);
             func(id);
         }
     }
@@ -158,6 +158,10 @@ template <typename... Ts> struct SoA {
     uint64_t get_soa_index(Id id) const {
         assert(id.valid());
         return _indices.get_value(id.value());
+    }
+
+    Id get_id_from_soa_index(uint64_t index) const {
+        return Id(get_inverse_id()[index].value);
     }
 
     void clear() {

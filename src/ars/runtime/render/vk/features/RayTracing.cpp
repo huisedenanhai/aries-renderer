@@ -175,4 +175,49 @@ VkDeviceAddress AccelerationStructure::device_address() const {
 
     return _context->device()->GetAccelerationStructureDeviceAddressKHR(&info);
 }
+
+RayTracing::RayTracing(View *view) : _view(view) {}
+
+void RayTracing::render(RenderGraph &rg) {
+    // TODO
+    return;
+    auto ctx = _view->context();
+    auto device = ctx->device();
+    VkRayTracingPipelineCreateInfoKHR info{
+        VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR};
+    //device->CreateRayTracingPipelinesKHR();
+    rg.add_pass(
+        [&](RenderGraphPassBuilder &builder) {
+            builder.access(NamedRT_LinearColor,
+                           VK_ACCESS_SHADER_WRITE_BIT,
+                           VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR,
+                           false);
+        },
+        [=](CommandBuffer *cmd) {
+            auto tex = _view->render_target(NamedRT_LinearColor);
+            auto extent = tex->info().extent;
+            VkStridedDeviceAddressRegionKHR raygen_sbt{};
+            VkStridedDeviceAddressRegionKHR miss_sbt{};
+            VkStridedDeviceAddressRegionKHR hit_sbt{};
+            VkStridedDeviceAddressRegionKHR callable_sbt{};
+            cmd->TraceRaysKHR(&raygen_sbt,
+                              &miss_sbt,
+                              &hit_sbt,
+                              &callable_sbt,
+                              extent.width,
+                              extent.height,
+                              1);
+        });
+}
+
+bool RayTracing::supported(Context *context) {
+    if (context == nullptr) {
+        return false;
+    }
+
+    auto &rt_features = context->info().ray_tracing_pipeline_features;
+    auto &acc_features = context->info().acceleration_structure_features;
+
+    return rt_features.rayTracingPipeline && acc_features.accelerationStructure;
+}
 } // namespace ars::render::vk

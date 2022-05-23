@@ -1,5 +1,6 @@
 #include "Drawer.h"
 #include "../Context.h"
+#include "../Profiler.h"
 
 namespace ars::render::vk {
 Drawer::Drawer(View *view) : _view(view) {
@@ -210,46 +211,61 @@ void Drawer::draw(CommandBuffer *cmd,
 
     auto count = requests.size();
     std::vector<const DrawRequest *> sorted_requests{};
-    sorted_requests.reserve(count);
-    for (int i = 0; i < count; i++) {
-        if (requests[i].material.pipeline == nullptr ||
-            requests[i].mesh == nullptr) {
-            continue;
-        }
-        sorted_requests.push_back(&requests[i]);
-    }
 
-    std::sort(sorted_requests.begin(),
-              sorted_requests.end(),
-              [&](const DrawRequest *lhs, const DrawRequest *rhs) {
-                  if (lhs->material.pipeline != rhs->material.pipeline) {
-                      return lhs->material.pipeline < rhs->material.pipeline;
-                  }
-                  if (lhs->material.property_block !=
-                      rhs->material.property_block) {
-                      return lhs->material.property_block <
-                             rhs->material.property_block;
-                  }
-                  if (lhs->mesh != rhs->mesh) {
-                      return lhs->mesh < rhs->mesh;
-                  }
-                  if (lhs->skeleton != rhs->skeleton) {
-                      return lhs->skeleton < rhs->skeleton;
-                  }
-                  return lhs < rhs;
-              });
+    {
+        ARS_PROFILER_SAMPLE("Sort Request", 0xFF3813B5);
+        sorted_requests.reserve(count);
+        for (int i = 0; i < count; i++) {
+            if (requests[i].material.pipeline == nullptr ||
+                requests[i].mesh == nullptr) {
+                continue;
+            }
+            sorted_requests.push_back(&requests[i]);
+        }
+
+        std::sort(sorted_requests.begin(),
+                  sorted_requests.end(),
+                  [&](const DrawRequest *lhs, const DrawRequest *rhs) {
+                      if (lhs->material.pipeline != rhs->material.pipeline) {
+                          return lhs->material.pipeline <
+                                 rhs->material.pipeline;
+                      }
+                      if (lhs->material.property_block !=
+                          rhs->material.property_block) {
+                          return lhs->material.property_block <
+                                 rhs->material.property_block;
+                      }
+                      if (lhs->mesh != rhs->mesh) {
+                          return lhs->mesh < rhs->mesh;
+                      }
+                      if (lhs->skeleton != rhs->skeleton) {
+                          return lhs->skeleton < rhs->skeleton;
+                      }
+                      return lhs < rhs;
+                  });
+    }
 
     auto ctx = _view->context();
 
-    auto inst_buffer = ctx->create_buffer(
-        sizeof(InstanceDrawParam) * sorted_requests.size(),
-        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-        VMA_MEMORY_USAGE_CPU_TO_GPU);
+    Handle<Buffer> inst_buffer{};
+    {
+        ARS_PROFILER_SAMPLE("Alloc Instance Buffer", 0xFF384712);
+        inst_buffer = ctx->create_buffer(sizeof(InstanceDrawParam) *
+                                             sorted_requests.size(),
+                                         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
+                                             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                                         VMA_MEMORY_USAGE_CPU_TO_GPU);
+    }
 
-    inst_buffer->map_once([&](void *ptr) {
-        auto inst_ptr = reinterpret_cast<InstanceDrawParam *>(ptr);
+    {
+        ARS_PROFILER_SAMPLE("Update Instance Buffer", 0xFF184FA1);
+        // Prepare data on CPU side and copy to device buffer is MUCH faster
+        // than directly write to mapped device pointer on windows with RTX
+        // 2060.
+        std::vector<InstanceDrawParam> inst_data{};
+        inst_data.resize(sorted_requests.size());
         for (int i = 0; i < sorted_requests.size(); i++) {
-            auto &inst = inst_ptr[i];
+            auto &inst = inst_data[i];
             auto req = sorted_requests[i];
             inst.MV = V * req->M;
             inst.I_MV = glm::inverse(inst.MV);
@@ -257,7 +273,9 @@ void Drawer::draw(CommandBuffer *cmd,
             inst.instance_id = i;
             inst.custom_id = req->custom_id;
         }
-    });
+
+        inst_buffer->set_data(inst_data);
+    }
 
     DrawRequest bound_req{};
     size_t last_flushed_index = 0;

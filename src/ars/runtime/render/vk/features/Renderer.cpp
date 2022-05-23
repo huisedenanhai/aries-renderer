@@ -7,6 +7,7 @@
 #include "DeferredShading.h"
 #include "OpaqueGeometry.h"
 #include "QuerySelection.h"
+#include "RayTracing.h"
 #include "ScreenSpaceReflection.h"
 #include "Shadow.h"
 #include "ToneMapping.h"
@@ -41,6 +42,11 @@ NamedRT Renderer::render(RenderGraph &rg, const RenderOptions &options) {
     _generate_hierarchy_z->render(rg);
     _screen_space_reflection->render(rg);
     _deferred_shading->render(rg);
+
+    if (_ray_tracing) {
+        _ray_tracing->render(rg);
+    }
+
     _shadow->read_back_hiz(rg);
     sky->render_background(_view, rg);
 
@@ -63,6 +69,10 @@ Renderer::Renderer(View *view) : _view(view) {
     _tone_mapping = std::make_unique<ToneMapping>(_view);
 
     _query_selection = std::make_unique<QuerySelection>(_view);
+
+    if (RayTracing::supported(_view->context())) {
+        _ray_tracing = std::make_unique<RayTracing>(_view);
+    }
 
     _add_inplace_pipeline =
         ComputePipeline::create(_view->context(), "AddInplace.comp");

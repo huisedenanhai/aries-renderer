@@ -13,6 +13,7 @@ class GenerateHierarchyZ;
 class ScreenSpaceReflection;
 class ToneMapping;
 class QuerySelection;
+class RayTracing;
 class Shadow;
 
 // Value must sequentially increase
@@ -70,6 +71,7 @@ class Renderer {
     std::unique_ptr<ScreenSpaceReflection> _screen_space_reflection{};
     std::unique_ptr<ToneMapping> _tone_mapping{};
     std::unique_ptr<QuerySelection> _query_selection{};
+    std::unique_ptr<RayTracing> _ray_tracing{};
 
     std::unique_ptr<ComputePipeline> _add_inplace_pipeline{};
 };

@@ -31,24 +31,38 @@ Context *Scene::context() const {
 }
 
 CullingResult Scene::cull(const Frustum &frustum_ws) {
+    // This method might be called from different thread, don't put profiler
+    // sample here.
+    auto rd_obj_cnt = render_objects.size();
+
     CullingResult res{};
 
     res.scene = this;
+    res.objects.reserve(rd_obj_cnt);
 
-    render_objects.for_each_id([&](auto id) {
-        auto matrix = render_objects.get<glm::mat4>(id);
-        auto mesh = render_objects.get<std::shared_ptr<Mesh>>(id);
+    std::vector<math::AABB<float>> visible_aabbs{};
+    visible_aabbs.reserve(rd_obj_cnt);
+
+    auto matrix_arr = render_objects.get_array<glm::mat4>();
+    auto mesh_arr = render_objects.get_array<std::shared_ptr<Mesh>>();
+
+    for (int i = 0; i < rd_obj_cnt; i++) {
+        auto &matrix = matrix_arr[i];
+        auto &mesh = mesh_arr[i];
         auto aabb_ws = math::transform_aabb(matrix, mesh->aabb());
         if (frustum_ws.culled(aabb_ws)) {
-            return;
+            continue;
         }
-        res.objects.push_back(id);
-        if (res.objects.size() == 1) {
-            res.visible_aabb_ws = aabb_ws;
-        } else {
-            res.visible_aabb_ws.extend_aabb(aabb_ws);
+        res.objects.push_back(render_objects.get_id_from_soa_index(i));
+        visible_aabbs.push_back(aabb_ws);
+    }
+
+    if (!visible_aabbs.empty()) {
+        res.visible_aabb_ws = visible_aabbs.front();
+        for (auto &aabb : visible_aabbs) {
+            res.visible_aabb_ws.extend_aabb(aabb);
         }
-    });
+    }
 
     return res;
 }
@@ -326,8 +340,8 @@ void PointLight::set_user_data(uint64_t user_data) {
 
 std::vector<DrawRequest>
 CullingResult::gather_draw_requests(RenderPassID pass_id) const {
-    ARS_PROFILER_SAMPLE("Gather Draw Requests", 0xFF017413);
-
+    // This method may called from different thread, don't put profiler sample
+    // here.
     std::vector<DrawRequest> requests{};
     requests.reserve(objects.size());
 

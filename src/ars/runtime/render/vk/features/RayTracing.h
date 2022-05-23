@@ -7,6 +7,8 @@ namespace ars::render::vk {
 class Context;
 class Mesh;
 class Scene;
+class View;
+struct RenderGraph;
 
 class AccelerationStructure {
   public:
@@ -32,4 +34,15 @@ class AccelerationStructure {
     VkAccelerationStructureKHR _acceleration_structure = VK_NULL_HANDLE;
     Handle<Buffer> _buffer{};
 };
+
+class RayTracing {
+  public:
+    explicit RayTracing(View *view);
+    void render(RenderGraph &rg);
+    static bool supported(Context *context);
+
+  private:
+    View *_view = nullptr;
+};
+
 } // namespace ars::render::vk

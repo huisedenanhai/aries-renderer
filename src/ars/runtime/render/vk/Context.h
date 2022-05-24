@@ -199,6 +199,9 @@ class Context : public IContext {
     [[nodiscard]] ImageBasedLighting *ibl() const;
     [[nodiscard]] Profiler *profiler() const;
     [[nodiscard]] RendererContextData *renderer_data() const;
+    [[nodiscard]] Heap *heap(NamedHeap name);
+    [[nodiscard]] Handle<HeapRangeOwned>
+    create_heap_range_owned(Heap *heap, uint64_t offset, VkDeviceSize size);
 
     void set_debug_name_internal(const std::string &name,
                                  uint64_t object_handle,
@@ -258,6 +261,7 @@ class Context : public IContext {
     std::vector<std::shared_ptr<Buffer>> _buffers{};
     std::vector<std::shared_ptr<AccelerationStructure>>
         _acceleration_structures{};
+    std::vector<std::shared_ptr<HeapRangeOwned>> _heap_ranges{};
 
     std::vector<std::unique_ptr<Framebuffer>> _tmp_framebuffers{};
 
@@ -273,6 +277,7 @@ class Context : public IContext {
     std::unique_ptr<ImageBasedLighting> _ibl{};
     std::unique_ptr<Profiler> _profiler{};
     std::unique_ptr<RendererContextData> _renderer_data{};
+    std::array<std::unique_ptr<Heap>, NamedHeap_Count> _heaps{};
 };
 
 template <typename Func>

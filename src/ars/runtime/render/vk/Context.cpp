@@ -755,6 +755,7 @@ template <typename T> void run_gc(std::vector<std::shared_ptr<T>> &pool) {
 void Context::gc() {
     run_gc(_textures);
     run_gc(_command_buffers);
+    run_gc(_heap_ranges);
     run_gc(_buffers);
     run_gc(_acceleration_structures);
 
@@ -1009,6 +1010,20 @@ Handle<AccelerationStructure>
 Context::create_acceleration_structure(VkAccelerationStructureTypeKHR type,
                                        VkDeviceSize buffer_size) {
     return create_handle(_acceleration_structures, this, type, buffer_size);
+}
+
+Heap *Context::heap(NamedHeap name) {
+    assert(name < NamedHeap_Count);
+    if (_heaps[name] == nullptr) {
+        _heaps[name] = std::make_unique<Heap>(this, HeapInfo::named(name));
+    }
+    return _heaps[name].get();
+}
+
+Handle<HeapRangeOwned> Context::create_heap_range_owned(Heap *heap,
+                                                        uint64_t offset,
+                                                        VkDeviceSize size) {
+    return create_handle(_heap_ranges, heap, offset, size);
 }
 
 std::string ContextInfo::dump() const {

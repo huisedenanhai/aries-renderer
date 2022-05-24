@@ -34,9 +34,26 @@ template <typename T> struct BufferDataViewTrait<std::vector<T>> {
         return sizeof(T) * v.size();
     }
 };
+
+// Implement utility methods for setting data as long as set_data_raw method is
+// defined in the derived type B.
+template <typename B> struct BufferSetDataMethods {
+    template <typename T>
+    void set_data_array(const T *value, size_t elem_offset, size_t elem_count) {
+        static_assert(std::is_pod_v<T> && !std::is_pointer_v<T>);
+        static_cast<B *>(this)->set_data_raw(
+            (void *)(value), elem_offset * sizeof(T), elem_count * sizeof(T));
+    }
+
+    template <typename T> void set_data(const T &value) {
+        using DataView = details::BufferDataViewTrait<T>;
+        static_cast<B *>(this)->set_data_raw(
+            DataView::ptr(value), 0, DataView::size(value));
+    }
+};
 } // namespace details
 
-class Buffer {
+class Buffer : public details::BufferSetDataMethods<Buffer> {
   public:
     Buffer(Context *context,
            VkDeviceSize size,
@@ -60,18 +77,6 @@ class Buffer {
 
     void set_data_raw(void *value, size_t byte_offset, size_t byte_count);
 
-    template <typename T>
-    void set_data_array(const T *value, size_t elem_offset, size_t elem_count) {
-        static_assert(std::is_pod_v<T> && !std::is_pointer_v<T>);
-        set_data_raw(
-            (void *)(value), elem_offset * sizeof(T), elem_count * sizeof(T));
-    }
-
-    template <typename T> void set_data(const T &value) {
-        using DataView = details::BufferDataViewTrait<T>;
-        set_data_raw(DataView::ptr(value), 0, DataView::size(value));
-    }
-
     // Only valid when VK_KHR_buffer_device_address is available
     [[nodiscard]] VkDeviceAddress device_address() const;
 
@@ -80,5 +85,70 @@ class Buffer {
     VkDeviceSize _size = 0;
     VkBuffer _buffer = VK_NULL_HANDLE;
     VmaAllocation _allocation = VK_NULL_HANDLE;
+    VkBufferUsageFlags _buffer_usage{};
+    VmaMemoryUsage _memory_usage{};
 };
+
+enum NamedHeap {
+    NamedHeap_Vertices,
+    NamedHeap_Indices,
+    NamedHeap_Count,
+};
+
+struct HeapInfo {
+    VkBufferUsageFlags buffer_usage;
+    VmaMemoryUsage memory_usage;
+
+    static HeapInfo named(NamedHeap heap);
+};
+
+class Heap;
+
+struct HeapRange : details::BufferSetDataMethods<HeapRange> {
+    Heap *heap = nullptr;
+    uint64_t offset = 0;
+    VkDeviceSize size = 0;
+
+    HeapRange slice() const;
+    HeapRange slice(uint64_t offset_in_range, VkDeviceSize size) const;
+    void set_data_raw(void *value, size_t byte_offset, size_t byte_count);
+};
+
+class HeapRangeOwned {
+  public:
+    HeapRangeOwned(Heap *heap, uint64_t offset, VkDeviceSize size);
+    ~HeapRangeOwned();
+
+    ARS_NO_COPY_MOVE(HeapRangeOwned);
+
+    Heap *heap() const;
+    uint64_t offset() const;
+    VkDeviceSize size() const;
+    HeapRange slice() const;
+    HeapRange slice(uint64_t offset_in_range, VkDeviceSize size) const;
+
+  private:
+    Heap *_heap = nullptr;
+    uint64_t _offset = 0;
+    VkDeviceSize _size = 0;
+};
+
+class Heap {
+  public:
+    Heap(Context *context, const HeapInfo &info);
+
+    Handle<Buffer> buffer() const;
+    uint64_t alloc(VkDeviceSize size);
+    Handle<HeapRangeOwned> alloc_owned(VkDeviceSize size);
+    void free(uint64_t ptr);
+
+  private:
+    void extend(VkDeviceSize capacity);
+
+    Context *_context = nullptr;
+    HeapInfo _info{};
+    Handle<Buffer> _buffer{};
+    uint64_t _size = 0;
+};
+
 } // namespace ars::render::vk

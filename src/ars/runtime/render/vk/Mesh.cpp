@@ -7,62 +7,50 @@
 namespace ars::render::vk {
 Mesh::Mesh(Context *context, const MeshInfo &info)
     : IMesh(info), _context(context) {
-    auto create_buffer = [&](VkDeviceSize size, VkBufferUsageFlags usage) {
-        if (_context->info().device_address_features.bufferDeviceAddress) {
-            usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
-        }
-        return _context->create_buffer(
-            size, usage, VMA_MEMORY_USAGE_CPU_TO_GPU);
-    };
-
-    VkBufferUsageFlags vertex_buffer_usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-    _position_buffer = create_buffer(
-        info.vertex_capacity * sizeof(glm::vec3),
-        vertex_buffer_usage |
-            VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR);
-    _normal_buffer = create_buffer(info.vertex_capacity * sizeof(glm::vec3),
-                                   vertex_buffer_usage);
-    _tangent_buffer = create_buffer(info.vertex_capacity * sizeof(glm::vec4),
-                                    vertex_buffer_usage);
-    _tex_coord_buffer = create_buffer(info.vertex_capacity * sizeof(glm::vec2),
-                                      vertex_buffer_usage);
+    auto vert_heap = _context->heap(NamedHeap_Vertices);
+    _position_buffer =
+        vert_heap->alloc_owned(info.vertex_capacity * sizeof(glm::vec3));
+    _normal_buffer =
+        vert_heap->alloc_owned(info.vertex_capacity * sizeof(glm::vec3));
+    _tangent_buffer =
+        vert_heap->alloc_owned(info.vertex_capacity * sizeof(glm::vec4));
+    _tex_coord_buffer =
+        vert_heap->alloc_owned(info.vertex_capacity * sizeof(glm::vec2));
 
     if (_info.skinned) {
-        _joint_buffer = create_buffer(info.vertex_capacity * sizeof(glm::uvec4),
-                                      vertex_buffer_usage);
-        _weight_buffer = create_buffer(info.vertex_capacity * sizeof(glm::vec4),
-                                       vertex_buffer_usage);
+        _joint_buffer =
+            vert_heap->alloc_owned(info.vertex_capacity * sizeof(glm::uvec4));
+        _weight_buffer =
+            vert_heap->alloc_owned(info.vertex_capacity * sizeof(glm::vec4));
     }
 
-    VkBufferUsageFlags index_buffer_usage =
-        VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
-        VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
-    _index_buffer = create_buffer(
-        _info.triangle_capacity * sizeof(glm::u32vec3), index_buffer_usage);
+    _index_buffer =
+        _context->heap(NamedHeap_Indices)
+            ->alloc_owned(_info.triangle_capacity * sizeof(glm::u32vec3));
 }
 
 void Mesh::set_position(const glm::vec3 *positions,
                         size_t elem_offset,
                         size_t elem_count) {
-    _position_buffer->set_data_array(positions, elem_offset, elem_count);
+    position_buffer().set_data_array(positions, elem_offset, elem_count);
 }
 
 void Mesh::set_normal(const glm::vec3 *normals,
                       size_t elem_offset,
                       size_t elem_count) {
-    _normal_buffer->set_data_array(normals, elem_offset, elem_count);
+    normal_buffer().set_data_array(normals, elem_offset, elem_count);
 }
 
 void Mesh::set_tangent(const glm::vec4 *tangents,
                        size_t elem_offset,
                        size_t elem_count) {
-    _tangent_buffer->set_data_array(tangents, elem_offset, elem_count);
+    tangent_buffer().set_data_array(tangents, elem_offset, elem_count);
 }
 
 void Mesh::set_tex_coord(const glm::vec2 *tex_coord,
                          size_t elem_offset,
                          size_t elem_count) {
-    _tex_coord_buffer->set_data_array(tex_coord, elem_offset, elem_count);
+    tex_coord_buffer().set_data_array(tex_coord, elem_offset, elem_count);
 }
 
 size_t Mesh::triangle_count() const {
@@ -76,27 +64,27 @@ void Mesh::set_triangle_count(size_t count) {
 void Mesh::set_indices(const glm::u32vec3 *indices,
                        size_t elem_offset,
                        size_t elem_count) {
-    _index_buffer->set_data_array(indices, elem_offset, elem_count);
+    index_buffer().set_data_array(indices, elem_offset, elem_count);
 }
 
-Handle<Buffer> Mesh::position_buffer() const {
-    return _position_buffer;
+HeapRange Mesh::position_buffer() const {
+    return _position_buffer->slice();
 }
 
-Handle<Buffer> Mesh::normal_buffer() const {
-    return _normal_buffer;
+HeapRange Mesh::normal_buffer() const {
+    return _normal_buffer->slice();
 }
 
-Handle<Buffer> Mesh::tangent_buffer() const {
-    return _tangent_buffer;
+HeapRange Mesh::tangent_buffer() const {
+    return _tangent_buffer->slice();
 }
 
-Handle<Buffer> Mesh::tex_coord_buffer() const {
-    return _tex_coord_buffer;
+HeapRange Mesh::tex_coord_buffer() const {
+    return _tex_coord_buffer->slice();
 }
 
-Handle<Buffer> Mesh::index_buffer() const {
-    return _index_buffer;
+HeapRange Mesh::index_buffer() const {
+    return _index_buffer->slice();
 }
 
 math::AABB<float> Mesh::aabb() {
@@ -110,25 +98,21 @@ void Mesh::set_aabb(const math::AABB<float> &aabb) {
 void Mesh::set_joint(const glm::uvec4 *joints,
                      size_t elem_offset,
                      size_t elem_count) {
-    if (_joint_buffer != nullptr) {
-        _joint_buffer->set_data_array(joints, elem_offset, elem_count);
-    }
+    joint_buffer().set_data_array(joints, elem_offset, elem_count);
 }
 
 void Mesh::set_weight(const glm::vec4 *weights,
                       size_t elem_offset,
                       size_t elem_count) {
-    if (_weight_buffer != nullptr) {
-        _weight_buffer->set_data_array(weights, elem_offset, elem_count);
-    }
+    weight_buffer().set_data_array(weights, elem_offset, elem_count);
 }
 
-Handle<Buffer> Mesh::joint_buffer() const {
-    return _joint_buffer;
+HeapRange Mesh::joint_buffer() const {
+    return _joint_buffer->slice();
 }
 
-Handle<Buffer> Mesh::weight_buffer() const {
-    return _weight_buffer;
+HeapRange Mesh::weight_buffer() const {
+    return _weight_buffer->slice();
 }
 
 void Mesh::update_acceleration_structure() {

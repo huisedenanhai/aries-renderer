@@ -223,4 +223,22 @@ void HeapRange::set_data_raw(void *value,
     }
     heap->buffer()->set_data_raw(value, offset + byte_offset, byte_count);
 }
+
+VkDeviceAddress HeapRange::device_address() const {
+    if (heap == nullptr) {
+        return 0;
+    }
+    auto buffer_addr = heap->buffer()->device_address();
+    if (buffer_addr == 0) {
+        return 0;
+    }
+    return buffer_addr + offset;
+}
+
+VkBuffer HeapRange::buffer() const {
+    if (heap != nullptr) {
+        return heap->buffer()->buffer();
+    }
+    return VK_NULL_HANDLE;
+}
 } // namespace ars::render::vk

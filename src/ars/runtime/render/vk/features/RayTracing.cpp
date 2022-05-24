@@ -53,11 +53,11 @@ Handle<AccelerationStructure> AccelerationStructure::create(Mesh *mesh) {
         VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
     triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
     triangles.vertexData.deviceAddress =
-        mesh->position_buffer()->device_address();
+        mesh->position_buffer().device_address();
     triangles.vertexStride = sizeof(glm::vec3);
     triangles.maxVertex = mesh->vertex_capacity();
     triangles.indexType = VK_INDEX_TYPE_UINT32;
-    triangles.indexData.deviceAddress = mesh->index_buffer()->device_address();
+    triangles.indexData.deviceAddress = mesh->index_buffer().device_address();
 
     return create(mesh->context(),
                   VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
@@ -185,7 +185,7 @@ void RayTracing::render(RenderGraph &rg) {
     auto device = ctx->device();
     VkRayTracingPipelineCreateInfoKHR info{
         VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR};
-    //device->CreateRayTracingPipelinesKHR();
+    // device->CreateRayTracingPipelinesKHR();
     rg.add_pass(
         [&](RenderGraphPassBuilder &builder) {
             builder.access(NamedRT_LinearColor,

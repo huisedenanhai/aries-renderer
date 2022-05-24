@@ -173,22 +173,28 @@ void dispatch_batch(CommandBuffer *cmd,
     if (req.mesh != bound_req.mesh || req.skeleton != bound_req.skeleton) {
         std::vector<VkBuffer> vertex_buffers = {
             inst_buffer->buffer(),
-            req.mesh->position_buffer()->buffer(),
-            req.mesh->normal_buffer()->buffer(),
-            req.mesh->tangent_buffer()->buffer(),
-            req.mesh->tex_coord_buffer()->buffer(),
         };
+        std::vector<VkDeviceSize> vertex_offsets = {0};
+        auto add_vert_buffer = [&](const HeapRange &buf) {
+            vertex_buffers.push_back(buf.buffer());
+            vertex_offsets.push_back(buf.offset);
+        };
+        add_vert_buffer(req.mesh->position_buffer());
+        add_vert_buffer(req.mesh->normal_buffer());
+        add_vert_buffer(req.mesh->tangent_buffer());
+        add_vert_buffer(req.mesh->tex_coord_buffer());
+
         if (req.skeleton != nullptr) {
-            vertex_buffers.push_back(req.mesh->joint_buffer()->buffer());
-            vertex_buffers.push_back(req.mesh->weight_buffer()->buffer());
+            add_vert_buffer(req.mesh->joint_buffer());
+            add_vert_buffer(req.mesh->weight_buffer());
         }
-        std::vector<VkDeviceSize> vertex_offsets(std::size(vertex_buffers));
         cmd->BindVertexBuffers(0,
                                static_cast<uint32_t>(std::size(vertex_buffers)),
                                vertex_buffers.data(),
                                vertex_offsets.data());
+        auto index_buffer = req.mesh->index_buffer();
         cmd->BindIndexBuffer(
-            req.mesh->index_buffer()->buffer(), 0, VK_INDEX_TYPE_UINT32);
+            index_buffer.buffer(), index_buffer.offset, VK_INDEX_TYPE_UINT32);
     }
 
     cmd->DrawIndexed(req.mesh->triangle_count() * 3,

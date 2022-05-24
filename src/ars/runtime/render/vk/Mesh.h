@@ -1,11 +1,11 @@
 #pragma once
 
 #include "../IMesh.h"
+#include "Buffer.h"
 #include "Vulkan.h"
 
 namespace ars::render::vk {
 class Context;
-class Buffer;
 class AccelerationStructure;
 
 class Mesh : public IMesh {
@@ -48,27 +48,28 @@ class Mesh : public IMesh {
     void update_acceleration_structure() override;
     [[nodiscard]] Handle<AccelerationStructure> acceleration_structure() const;
 
-    [[nodiscard]] Handle<Buffer> position_buffer() const;
-    [[nodiscard]] Handle<Buffer> normal_buffer() const;
-    [[nodiscard]] Handle<Buffer> tangent_buffer() const;
-    [[nodiscard]] Handle<Buffer> tex_coord_buffer() const;
-    [[nodiscard]] Handle<Buffer> index_buffer() const;
-    [[nodiscard]] Handle<Buffer> joint_buffer() const;
-    [[nodiscard]] Handle<Buffer> weight_buffer() const;
+    [[nodiscard]] HeapRange position_buffer() const;
+    [[nodiscard]] HeapRange normal_buffer() const;
+    [[nodiscard]] HeapRange tangent_buffer() const;
+    [[nodiscard]] HeapRange tex_coord_buffer() const;
+    [[nodiscard]] HeapRange joint_buffer() const;
+    [[nodiscard]] HeapRange weight_buffer() const;
+
+    [[nodiscard]] HeapRange index_buffer() const;
 
     [[nodiscard]] Context *context() const;
 
   private:
     Context *_context = nullptr;
 
-    Handle<Buffer> _position_buffer{};
-    Handle<Buffer> _normal_buffer{};
-    Handle<Buffer> _tangent_buffer{};
-    Handle<Buffer> _tex_coord_buffer{};
-    Handle<Buffer> _joint_buffer{};
-    Handle<Buffer> _weight_buffer{};
+    Handle<HeapRangeOwned> _position_buffer{};
+    Handle<HeapRangeOwned> _normal_buffer{};
+    Handle<HeapRangeOwned> _tangent_buffer{};
+    Handle<HeapRangeOwned> _tex_coord_buffer{};
+    Handle<HeapRangeOwned> _joint_buffer{};
+    Handle<HeapRangeOwned> _weight_buffer{};
 
-    Handle<Buffer> _index_buffer{};
+    Handle<HeapRangeOwned> _index_buffer{};
     size_t _triangle_count = 0;
     math::AABB<float> _aabb{};
 

@@ -112,6 +112,8 @@ struct HeapRange : details::BufferSetDataMethods<HeapRange> {
     HeapRange slice() const;
     HeapRange slice(uint64_t offset_in_range, VkDeviceSize size) const;
     void set_data_raw(void *value, size_t byte_offset, size_t byte_count);
+    VkDeviceAddress device_address() const;
+    VkBuffer buffer() const;
 };
 
 class HeapRangeOwned {

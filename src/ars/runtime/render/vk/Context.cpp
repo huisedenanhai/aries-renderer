@@ -522,7 +522,7 @@ Context::Context(const WindowInfo *info,
         swapchain = std::make_unique<Swapchain>(this, surface, window, true);
     }
 
-    _bindless_resources = std::make_unique<BindlessResources>();
+    _bindless_resources = std::make_unique<BindlessResources>(this);
     init_default_textures();
     _lut = std::make_unique<Lut>(this);
     _ibl = std::make_unique<ImageBasedLighting>(this);

@@ -19,4 +19,6 @@ void BindlessResources::make_none_resident(Texture *tex) {
         textures_2d[tex->bindless_id()] = nullptr;
     }
 }
+
+BindlessResources::BindlessResources(Context *context) : _context(context) {}
 } // namespace ars::render::vk

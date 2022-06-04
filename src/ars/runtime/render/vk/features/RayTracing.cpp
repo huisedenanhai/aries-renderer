@@ -43,6 +43,7 @@ AccelerationStructure::acceleration_structure() const {
 }
 
 Handle<AccelerationStructure> AccelerationStructure::create(Mesh *mesh) {
+    ARS_PROFILER_SAMPLE("Create BLAS", 0xFF636411);
     assert(mesh != nullptr);
 
     VkAccelerationStructureGeometryKHR geometry{
@@ -70,6 +71,7 @@ Handle<AccelerationStructure> AccelerationStructure::create(
     VkAccelerationStructureTypeKHR type,
     const VkAccelerationStructureGeometryKHR &geometry,
     uint32_t primitive_count) {
+    ARS_PROFILER_SAMPLE("Build Acceleration Structure", 0xFF174641);
     VkAccelerationStructureBuildGeometryInfoKHR build_info{
         VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR};
     build_info.type = type;
@@ -114,38 +116,44 @@ Handle<AccelerationStructure> AccelerationStructure::create(
 }
 
 Handle<AccelerationStructure> AccelerationStructure::create(Scene *scene) {
+    ARS_PROFILER_SAMPLE("Create TLAS", 0xFF174641);
     assert(scene != nullptr);
 
     auto context = scene->context();
 
-    auto draw_requests = scene->gather_draw_request(RenderPassID_RayTracing);
-    auto inst_cnt = draw_requests.size();
+    auto rd_obj_cnt = scene->render_objects.size();
+    auto xform_arr = scene->render_objects.get_array<glm::mat4>();
+    auto mesh_arr = scene->render_objects.get_array<std::shared_ptr<Mesh>>();
 
+    std::vector<VkAccelerationStructureInstanceKHR> inst_buffer_data{};
+    inst_buffer_data.reserve(rd_obj_cnt);
+    for (int i = 0; i < rd_obj_cnt; i++) {
+        auto mesh = mesh_arr[i];
+        if (mesh == nullptr) {
+            continue;
+        }
+        VkAccelerationStructureInstanceKHR inst{};
+        auto blas = mesh->acceleration_structure();
+        assert(blas != nullptr);
+
+        inst.transform = to_vk_xform(xform_arr[i]);
+        inst.instanceCustomIndex = i;
+        inst.accelerationStructureReference = blas->device_address();
+        inst.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+        inst.mask = 0xFF;
+        inst.instanceShaderBindingTableRecordOffset = 0;
+        inst_buffer_data.push_back(inst);
+    }
+
+    auto active_inst_cnt = inst_buffer_data.size();
     Handle<Buffer> inst_buffer{};
-    if (inst_cnt > 0) {
+    if (active_inst_cnt > 0) {
         inst_buffer = context->create_buffer(
-            sizeof(VkAccelerationStructureInstanceKHR) * inst_cnt,
+            sizeof(VkAccelerationStructureInstanceKHR) * active_inst_cnt,
             VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
                 VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
             VMA_MEMORY_USAGE_CPU_TO_GPU);
-        inst_buffer->map_once([&](void *ptr) {
-            auto inst_arr =
-                reinterpret_cast<VkAccelerationStructureInstanceKHR *>(ptr);
-            for (int i = 0; i < inst_cnt; i++) {
-                auto &inst = inst_arr[i];
-                auto &req = draw_requests[i];
-                auto blas = req.mesh->acceleration_structure();
-                assert(blas != nullptr);
-
-                inst.transform = to_vk_xform(req.M);
-                inst.instanceCustomIndex = i;
-                inst.accelerationStructureReference = blas->device_address();
-                inst.flags =
-                    VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
-                inst.mask = 0xFF;
-                inst.instanceShaderBindingTableRecordOffset = 0;
-            }
-        });
+        inst_buffer->set_data(inst_buffer_data);
     }
 
     VkAccelerationStructureGeometryKHR geometry{
@@ -161,7 +169,7 @@ Handle<AccelerationStructure> AccelerationStructure::create(Scene *scene) {
     return create(scene->context(),
                   VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR,
                   geometry,
-                  inst_cnt);
+                  active_inst_cnt);
 }
 
 VkDeviceAddress AccelerationStructure::device_address() const {
@@ -179,7 +187,6 @@ VkDeviceAddress AccelerationStructure::device_address() const {
 RayTracing::RayTracing(View *view) : _view(view) {}
 
 void RayTracing::render(RenderGraph &rg) {
-    // TODO
     return;
     auto ctx = _view->context();
     auto device = ctx->device();

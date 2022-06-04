@@ -28,8 +28,8 @@ struct DescriptorSetInfo {
 struct PipelineLayoutInfo {
     std::array<std::optional<DescriptorSetInfo>, MAX_DESC_SET_COUNT> sets{};
 
-    std::optional<VkDescriptorSetLayoutBinding> binding(uint32_t set,
-                                                        uint32_t binding) const;
+    [[nodiscard]] std::optional<VkDescriptorSetLayoutBinding>
+    binding(uint32_t set, uint32_t binding) const;
 };
 
 struct ShaderLocalSize {
@@ -136,7 +136,7 @@ struct SubpassInfo {
     RenderPass *render_pass = nullptr;
     uint32_t index = 0;
 
-    VkSubpassDescription description() const;
+    [[nodiscard]] VkSubpassDescription description() const;
 };
 
 struct GraphicsPipelineInfo {

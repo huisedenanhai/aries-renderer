@@ -113,7 +113,7 @@ struct MaterialPassInfo {
     RenderPassID pass_id = {};
     bool skinned = false;
 
-    uint32_t encode() const;
+    [[nodiscard]] uint32_t encode() const;
 
     constexpr static uint32_t MAX_INDEX = RenderPassID_Count * 2;
 };

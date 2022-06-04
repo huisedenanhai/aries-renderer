@@ -23,7 +23,6 @@ enum RenderPassID {
     RenderPassID_Overlay,
     RenderPassID_Shadow,
     RenderPassID_ObjectID,
-    RenderPassID_RayTracing,
     RenderPassID_Count,
 };
 

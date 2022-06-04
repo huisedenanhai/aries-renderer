@@ -95,6 +95,8 @@ class Texture : public ITextureHandle {
 
     [[nodiscard]] const TextureCreateInfo &info() const;
 
+    [[nodiscard]] int32_t bindless_id() const;
+
     void assure_layout(VkImageLayout layout);
 
     [[nodiscard]] VkImageSubresourceRange subresource_range() const;
@@ -131,6 +133,7 @@ class Texture : public ITextureHandle {
     // Public methods should ensure all layers and levels of the image are in
     // the same layout
     VkImageLayout _layout = VK_IMAGE_LAYOUT_UNDEFINED;
+    int32_t _bindless_id{};
 
     TextureCreateInfo _info{};
 };

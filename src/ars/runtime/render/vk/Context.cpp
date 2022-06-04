@@ -1,4 +1,5 @@
 #include "Context.h"
+#include "Bindless.h"
 #include "Lut.h"
 #include "Material.h"
 #include "Mesh.h"
@@ -521,6 +522,7 @@ Context::Context(const WindowInfo *info,
         swapchain = std::make_unique<Swapchain>(this, surface, window, true);
     }
 
+    _bindless_resources = std::make_unique<BindlessResources>();
     init_default_textures();
     _lut = std::make_unique<Lut>(this);
     _ibl = std::make_unique<ImageBasedLighting>(this);
@@ -1024,6 +1026,10 @@ Handle<HeapRangeOwned> Context::create_heap_range_owned(Heap *heap,
                                                         uint64_t offset,
                                                         VkDeviceSize size) {
     return create_handle(_heap_ranges, heap, offset, size);
+}
+
+BindlessResources *Context::bindless_resources() const {
+    return _bindless_resources.get();
 }
 
 std::string ContextInfo::dump() const {

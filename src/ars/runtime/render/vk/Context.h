@@ -16,6 +16,7 @@
 struct GLFWwindow;
 
 namespace ars::render::vk {
+class BindlessResources;
 class Lut;
 class DescriptorArena;
 class Swapchain;
@@ -200,6 +201,7 @@ class Context : public IContext {
     [[nodiscard]] Profiler *profiler() const;
     [[nodiscard]] RendererContextData *renderer_data() const;
     [[nodiscard]] Heap *heap(NamedHeap name);
+    [[nodiscard]] BindlessResources *bindless_resources() const;
     [[nodiscard]] Handle<HeapRangeOwned>
     create_heap_range_owned(Heap *heap, uint64_t offset, VkDeviceSize size);
 
@@ -255,6 +257,9 @@ class Context : public IContext {
 
     VkPipelineCache _pipeline_cache = VK_NULL_HANDLE;
 
+    // Must declare bindless resources pool before other resources cache, as the
+    // resources cache should be released before bindless pool.
+    std::unique_ptr<BindlessResources> _bindless_resources{};
     // cached resources
     std::vector<std::shared_ptr<Texture>> _textures{};
     std::vector<std::shared_ptr<CommandBuffer>> _command_buffers{};

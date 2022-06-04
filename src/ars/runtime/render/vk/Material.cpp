@@ -342,7 +342,7 @@ std::vector<MaterialPropertyInfo> Material::properties() {
 
 MaterialPass Material::pass(const MaterialPassInfo &info) {
     auto id = info.encode();
-    assert(id < _passes.size());
+    assert(id < _prototype->passes.size());
 
     MaterialPass p{};
     p.property_block = _property_block.get();
@@ -367,4 +367,10 @@ uint32_t MaterialPassInfo::encode() const {
     auto id = static_cast<uint32_t>(pass_id);
     return (id << 1) | (skinned ? 1 : 0);
 }
+
+const std::map<MaterialInfo, std::unique_ptr<MaterialPrototype>> &
+MaterialFactory::prototypes() const {
+    return _material_prototypes;
+}
+
 } // namespace ars::render::vk

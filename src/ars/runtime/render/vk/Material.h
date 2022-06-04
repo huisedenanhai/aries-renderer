@@ -152,6 +152,10 @@ class MaterialFactory {
     std::shared_ptr<Material> create_material(const MaterialInfo &info);
     std::shared_ptr<Material> default_material();
 
+    [[nodiscard]] const std::map<MaterialInfo,
+                                 std::unique_ptr<MaterialPrototype>> &
+    prototypes() const;
+
   private:
     void init_default_material();
 

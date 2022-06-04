@@ -1,4 +1,5 @@
 #include "Texture.h"
+#include "Bindless.h"
 #include "Context.h"
 #include "Profiler.h"
 #include "RenderGraph.h"
@@ -38,9 +39,12 @@ Texture::Texture(Context *context, const TextureCreateInfo &info)
     _image_view_of_levels.resize(_info.mip_levels);
 
     init();
+
+    _bindless_id = _context->bindless_resources()->make_resident(this);
 }
 
 Texture::~Texture() {
+    _context->bindless_resources()->make_none_resident(this);
     if (_sampler != VK_NULL_HANDLE) {
         _context->device()->Destroy(_sampler);
     }
@@ -469,6 +473,10 @@ void Texture::correct_texture_create_info() {
         _context->device()->physical_device(), _info.format, &properties);
     _info.usage = remove_unsupported_image_usages(
         _info.usage, properties.optimalTilingFeatures);
+}
+
+int32_t Texture::bindless_id() const {
+    return _bindless_id;
 }
 
 TextureCreateInfo

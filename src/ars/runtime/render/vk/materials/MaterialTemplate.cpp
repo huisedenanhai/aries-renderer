@@ -6,58 +6,54 @@
 #include "ars/runtime/core/Log.h"
 
 namespace ars::render::vk {
-MaterialPassTemplate
+namespace {
+std::shared_ptr<MaterialPropertyBlockLayout>
+create_material_property_layout(Context *context,
+                                const MaterialInfo &mat_info) {
+    switch (mat_info.shading_model) {
+    case MaterialShadingModel::Unlit:
+        return create_unlit_material_property_layout(context, mat_info);
+    case MaterialShadingModel::MetallicRoughnessPBR:
+        return create_metallic_roughness_pbr_material_property_layout(context,
+                                                                      mat_info);
+    }
+    return {};
+}
+
+std::shared_ptr<GraphicsPipeline>
 create_material_pass_template(Context *context,
                               const MaterialInfo &mat_info,
                               const MaterialPassInfo &pass_info) {
     switch (mat_info.shading_model) {
     case MaterialShadingModel::Unlit:
-        return create_unlit_material_pass_template(
-            context, mat_info, pass_info);
+        return create_unlit_material_pipeline(context, mat_info, pass_info);
     case MaterialShadingModel::MetallicRoughnessPBR:
-        return create_metallic_roughness_pbr_material_pass_template(
+        return create_metallic_roughness_pbr_material_pipeline(
             context, mat_info, pass_info);
     }
     return {};
 }
+} // namespace
 
-MaterialTemplate create_material_template(Context *context,
-                                          const MaterialInfo &mat_info) {
-    MaterialTemplate t{};
-    t.info = mat_info;
+std::unique_ptr<MaterialPrototype>
+create_material_prototype(Context *context, const MaterialInfo &mat_info) {
+    auto proto = std::make_unique<MaterialPrototype>();
+    proto->info = mat_info;
+    proto->property_layout = create_material_property_layout(context, mat_info);
     for (int id = 0; id < RenderPassID_Count; id++) {
         MaterialPassInfo pass_info{};
         pass_info.pass_id = static_cast<RenderPassID>(id);
 
         pass_info.skinned = false;
-        t.passes[pass_info.encode()] =
+        proto->passes[pass_info.encode()] =
             create_material_pass_template(context, mat_info, pass_info);
 
         pass_info.skinned = true;
-        t.passes[pass_info.encode()] =
+        proto->passes[pass_info.encode()] =
             create_material_pass_template(context, mat_info, pass_info);
     }
 
-    MaterialPropertyBlockInfo block{};
-    block.name = "Material";
-
-    std::set<std::string> existing_properties{};
-    for (auto &p : t.passes) {
-        if (p.property_layout == nullptr) {
-            continue;
-        }
-        for (auto &prop : p.property_layout->info().properties) {
-            if (existing_properties.count(prop.name) > 0) {
-                continue;
-            }
-            existing_properties.insert(prop.name);
-            block.properties.push_back(prop);
-        }
-    }
-
-    t.property_layout =
-        std::make_shared<MaterialPropertyBlockLayout>(context, block);
-    return t;
+    return proto;
 }
 
 std::shared_ptr<GraphicsPipeline>
@@ -100,7 +96,10 @@ create_draw_pipeline(Context *context,
     }
 
     std::vector<VkVertexInputAttributeDescription> vert_attrs = {
-        {0, 0, VK_FORMAT_R32_UINT, offsetof(InstanceDrawParam, instance_id)},
+        {0,
+         0,
+         VK_FORMAT_R32_UINT,
+         static_cast<uint32_t>(offsetof(InstanceDrawParam, instance_id))},
         {1, 1, VK_FORMAT_R32G32B32_SFLOAT, 0},
         {2, 2, VK_FORMAT_R32G32B32_SFLOAT, 0},
         {3, 3, VK_FORMAT_R32G32B32A32_SFLOAT, 0},

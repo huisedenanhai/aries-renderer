@@ -30,19 +30,19 @@ struct MaterialPropertyBlockInfo {
                             std::forward<T>(default_value));
     }
 
-    uint32_t texture_count() const;
+    [[nodiscard]] uint32_t texture_count() const;
 
-    std::string to_glsl() const;
+    [[nodiscard]] std::string to_glsl() const;
 };
 
 class MaterialPropertyBlockLayout {
   public:
     MaterialPropertyBlockLayout(Context *context,
                                 MaterialPropertyBlockInfo info);
-    const MaterialPropertyBlockInfo &info() const;
-    uint32_t property_offset(uint32_t index) const;
-    uint32_t data_block_size() const;
-    Context *context() const;
+    [[nodiscard]] const MaterialPropertyBlockInfo &info() const;
+    [[nodiscard]] uint32_t property_offset(uint32_t index) const;
+    [[nodiscard]] uint32_t data_block_size() const;
+    [[nodiscard]] Context *context() const;
 
   private:
     void init_data_block_layout();
@@ -58,7 +58,7 @@ class MaterialPropertyBlock {
     explicit MaterialPropertyBlock(
         std::shared_ptr<MaterialPropertyBlockLayout> layout);
 
-    std::shared_ptr<MaterialPropertyBlockLayout> layout() const;
+    [[nodiscard]] std::shared_ptr<MaterialPropertyBlockLayout> layout() const;
 
     // If the property with name is not found, return std::nullopt.
     // If the property is found and is not set, return default value.
@@ -103,12 +103,6 @@ struct MaterialPass {
     MaterialPropertyBlock *property_block = nullptr;
 };
 
-struct MaterialPassOwned {
-    std::shared_ptr<GraphicsPipeline> pipeline = nullptr;
-    // Can be null if no property is required
-    std::unique_ptr<MaterialPropertyBlock> property_block = nullptr;
-};
-
 struct MaterialPassInfo {
     RenderPassID pass_id = {};
     bool skinned = false;
@@ -118,15 +112,11 @@ struct MaterialPassInfo {
     constexpr static uint32_t MAX_INDEX = RenderPassID_Count * 2;
 };
 
-using MaterialPassArray =
-    std::array<MaterialPassOwned, MaterialPassInfo::MAX_INDEX>;
+struct MaterialPrototype;
 
 class Material : public IMaterial {
   public:
-    Material(
-        const MaterialInfo &info,
-        const std::shared_ptr<MaterialPropertyBlockLayout> &property_layout,
-        MaterialPassArray passes);
+    Material(const MaterialInfo &info, MaterialPrototype *prototype);
 
     void set_variant(const std::string &name,
                      const MaterialPropertyVariant &value) override;
@@ -141,22 +131,16 @@ class Material : public IMaterial {
   private:
     MaterialInfo _info{};
     std::unique_ptr<MaterialPropertyBlock> _property_block{};
-    MaterialPassArray _passes{};
+    MaterialPrototype *_prototype = nullptr;
 };
 
 std::shared_ptr<Material> upcast(const std::shared_ptr<IMaterial> &m);
 
-struct MaterialPassTemplate {
-    std::shared_ptr<MaterialPropertyBlockLayout> property_layout{};
-    std::shared_ptr<GraphicsPipeline> pipeline{};
-
-    MaterialPassOwned create();
-};
-
-struct MaterialTemplate {
+struct MaterialPrototype {
     MaterialInfo info{};
     std::shared_ptr<MaterialPropertyBlockLayout> property_layout{};
-    std::array<MaterialPassTemplate, MaterialPassInfo::MAX_INDEX> passes{};
+    std::array<std::shared_ptr<GraphicsPipeline>, MaterialPassInfo::MAX_INDEX>
+        passes{};
 
     std::shared_ptr<Material> create();
 };
@@ -172,7 +156,8 @@ class MaterialFactory {
     void init_default_material();
 
     Context *_context{};
-    std::map<MaterialInfo, MaterialTemplate> _material_templates{};
+    std::map<MaterialInfo, std::unique_ptr<MaterialPrototype>>
+        _material_prototypes{};
     std::shared_ptr<Material> _default_material{};
 };
 } // namespace ars::render::vk

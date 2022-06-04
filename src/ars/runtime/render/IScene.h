@@ -114,7 +114,7 @@ struct Frustum {
     // 3 --- 2
     glm::vec3 vertices[8]{};
 
-    bool culled(const math::AABB<float> &aabb) const;
+    [[nodiscard]] bool culled(const math::AABB<float> &aabb) const;
     static std::array<uint32_t, 24> edges();
     // Get a vertex based on normalized coord.
     // p.z == 0.0f return points on the near plane, p.z == 1.0f return points on
@@ -122,10 +122,10 @@ struct Frustum {
     // p.xy == 0 return the upper left corner, p.xy == 1.0 return lower right
     // corner.
     // Vertices are interpolated linearly
-    glm::vec3 lerp(const glm::vec3 &p) const;
-    Frustum crop(const math::AABB<float> &proportion) const;
+    [[nodiscard]] glm::vec3 lerp(const glm::vec3 &p) const;
+    [[nodiscard]] Frustum crop(const math::AABB<float> &proportion) const;
     void update_planes_by_vertices();
-    math::AABB<float> aabb() const;
+    [[nodiscard]] math::AABB<float> aabb() const;
 };
 
 Frustum transform_frustum(const glm::mat4 &mat, const Frustum &frustum);

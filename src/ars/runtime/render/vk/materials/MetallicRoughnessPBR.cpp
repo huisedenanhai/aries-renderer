@@ -3,15 +3,10 @@
 #include "MaterialTemplate.h"
 
 namespace ars::render::vk {
-namespace {
-MaterialPassTemplate
-create_pbr_pass_template(Context *context,
-                         const MaterialInfo &mat_info,
-                         const MaterialPassInfo &pass_info,
-                         VkBool32 depth_bias_enable,
-                         const std::vector<const char *> &common_flags) {
+std::shared_ptr<MaterialPropertyBlockLayout>
+create_metallic_roughness_pbr_material_property_layout(
+    Context *context, const MaterialInfo &mat_info) {
     auto white_tex = context->default_texture(DefaultTexture::White);
-    MaterialPassTemplate t{};
     MaterialPropertyBlockInfo pbr{};
     pbr.name = "MetallicRoughnessLit";
     pbr.add_property("base_color_factor", glm::vec4(1.0f));
@@ -31,40 +26,48 @@ create_pbr_pass_template(Context *context,
         pbr.add_property("alpha_cutoff", 0.5f);
     }
 
+    return std::make_shared<MaterialPropertyBlockLayout>(context, pbr);
+}
+
+namespace {
+std::shared_ptr<GraphicsPipeline>
+create_pbr_pass_pipeline(Context *context,
+                         const MaterialInfo &mat_info,
+                         const MaterialPassInfo &pass_info,
+                         VkBool32 depth_bias_enable,
+                         const std::vector<const char *> &common_flags) {
+
     auto raster = rasterization_state(mat_info);
     raster.depthBiasEnable = depth_bias_enable;
 
-    t.property_layout =
-        std::make_shared<MaterialPropertyBlockLayout>(context, pbr);
-    t.pipeline = create_draw_pipeline(context,
-                                      mat_info,
-                                      pass_info,
-                                      "Draw/Uber.glsl",
-                                      VK_SHADER_STAGE_VERTEX_BIT |
-                                          VK_SHADER_STAGE_FRAGMENT_BIT,
-                                      &raster,
-                                      common_flags);
-    return t;
+    return create_draw_pipeline(context,
+                                mat_info,
+                                pass_info,
+                                "Draw/Uber.glsl",
+                                VK_SHADER_STAGE_VERTEX_BIT |
+                                    VK_SHADER_STAGE_FRAGMENT_BIT,
+                                &raster,
+                                common_flags);
 }
 } // namespace
 
-MaterialPassTemplate create_metallic_roughness_pbr_material_pass_template(
+std::shared_ptr<GraphicsPipeline>
+create_metallic_roughness_pbr_material_pipeline(
     Context *context,
     const MaterialInfo &mat_info,
     const MaterialPassInfo &pass_info) {
-
     if (pass_info.pass_id == RenderPassID_Geometry) {
-        return create_pbr_pass_template(
+        return create_pbr_pass_pipeline(
             context, mat_info, pass_info, VK_FALSE, {"ARS_GEOMETRY_PASS"});
     }
 
     if (pass_info.pass_id == RenderPassID_Shadow) {
-        return create_pbr_pass_template(
+        return create_pbr_pass_pipeline(
             context, mat_info, pass_info, VK_TRUE, {"ARS_DEPTH_ONLY_PASS"});
     }
 
     if (pass_info.pass_id == RenderPassID_ObjectID) {
-        return create_pbr_pass_template(
+        return create_pbr_pass_pipeline(
             context, mat_info, pass_info, VK_FALSE, {"ARS_OBJECT_ID_PASS"});
     }
 

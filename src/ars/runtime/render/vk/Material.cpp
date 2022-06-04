@@ -289,11 +289,11 @@ MaterialFactory::MaterialFactory(Context *context) : _context(context) {
 
 std::shared_ptr<Material>
 MaterialFactory::create_material(const MaterialInfo &info) {
-    auto it = _material_templates.find(info);
-    if (it == _material_templates.end()) {
-        _material_templates[info] = create_material_template(_context, info);
+    auto it = _material_prototypes.find(info);
+    if (it == _material_prototypes.end()) {
+        _material_prototypes[info] = create_material_prototype(_context, info);
     }
-    return _material_templates[info].create();
+    return _material_prototypes[info]->create();
 }
 
 std::shared_ptr<Material> MaterialFactory::default_material() {
@@ -315,18 +315,6 @@ void Material::set_variant(const std::string &name,
     if (_property_block != nullptr) {
         _property_block->set_variant(name, value);
     }
-    // Also set properties with same name for passes
-    for (auto &p : _passes) {
-        if (p.property_block == nullptr) {
-            continue;
-        }
-        if (p.property_block->layout()
-                ->info()
-                .find_property_index(name)
-                .has_value()) {
-            p.property_block->set(name, value);
-        }
-    }
 }
 
 std::optional<MaterialPropertyVariant>
@@ -337,14 +325,11 @@ Material::get_variant(const std::string &name) {
     return _property_block->get_variant(name);
 }
 
-Material::Material(
-    const MaterialInfo &info,
-    const std::shared_ptr<MaterialPropertyBlockLayout> &property_layout,
-    MaterialPassArray passes)
-    : _info(info), _passes(std::move(passes)) {
-    if (property_layout != nullptr) {
-        _property_block =
-            std::make_unique<MaterialPropertyBlock>(property_layout);
+Material::Material(const MaterialInfo &info, MaterialPrototype *prototype)
+    : _info(info), _prototype(prototype) {
+    auto layout = _prototype->property_layout;
+    if (layout != nullptr) {
+        _property_block = std::make_unique<MaterialPropertyBlock>(layout);
     }
 }
 
@@ -360,8 +345,8 @@ MaterialPass Material::pass(const MaterialPassInfo &info) {
     assert(id < _passes.size());
 
     MaterialPass p{};
-    p.property_block = _passes[id].property_block.get();
-    p.pipeline = _passes[id].pipeline.get();
+    p.property_block = _property_block.get();
+    p.pipeline = _prototype->passes[id].get();
 
     return p;
 }
@@ -374,25 +359,8 @@ std::shared_ptr<Material> upcast(const std::shared_ptr<IMaterial> &m) {
     return std::dynamic_pointer_cast<Material>(m);
 }
 
-MaterialPassOwned MaterialPassTemplate::create() {
-    MaterialPassOwned p{};
-
-    if (property_layout != nullptr) {
-        p.property_block =
-            std::make_unique<MaterialPropertyBlock>(property_layout);
-    }
-    p.pipeline = pipeline;
-
-    return p;
-}
-
-std::shared_ptr<Material> MaterialTemplate::create() {
-    MaterialPassArray ps{};
-    for (int i = 0; i < passes.size(); i++) {
-        ps[i] = passes[i].create();
-    }
-
-    return std::make_shared<Material>(info, property_layout, std::move(ps));
+std::shared_ptr<Material> MaterialPrototype::create() {
+    return std::make_shared<Material>(info, this);
 }
 
 uint32_t MaterialPassInfo::encode() const {

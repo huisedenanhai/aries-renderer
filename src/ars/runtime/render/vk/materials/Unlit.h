@@ -3,8 +3,12 @@
 #include "../Material.h"
 
 namespace ars::render::vk {
-MaterialPassTemplate
-create_unlit_material_pass_template(Context *context,
-                                    const MaterialInfo &mat_info,
-                                    const MaterialPassInfo &pass_info);
-}
+std::shared_ptr<GraphicsPipeline>
+create_unlit_material_pipeline(Context *context,
+                               const MaterialInfo &mat_info,
+                               const MaterialPassInfo &pass_info);
+
+std::shared_ptr<MaterialPropertyBlockLayout>
+create_unlit_material_property_layout(Context *context,
+                                      const MaterialInfo &mat_info);
+} // namespace ars::render::vk

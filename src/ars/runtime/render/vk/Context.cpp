@@ -110,6 +110,8 @@ get_instance_extension_requirement(bool enable_validation,
 
     // required by potentially enabled VK_KHR_portability_subset
     req.add_extension("VK_KHR_get_physical_device_properties2", false);
+    // required on portability layer like MoltenVK
+    req.add_extension(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME, false);
 
     return req;
 }
@@ -160,8 +162,16 @@ create_vulkan_instance(const ApplicationInfo &app_info,
         layers.push_back(VALIDATION_LAYER);
     }
 
+    auto has_portability_enumeration = contains_extension(
+        available_extensions, VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+
     VkInstanceCreateInfo info{};
     info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+
+    if (has_portability_enumeration) {
+        info.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+    }
+
     info.pApplicationInfo = &vk_app_info;
     info.enabledExtensionCount =
         static_cast<uint32_t>(enabled_extensions.size());
@@ -684,8 +694,7 @@ void Queue::submit(CommandBuffer *command_buffer,
     auto cmd = command_buffer->command_buffer();
     info.pCommandBuffers = &cmd;
 
-    if (device->QueueSubmit(_queue, 1, &info, VK_NULL_HANDLE) !=
-        VK_NULL_HANDLE) {
+    if (device->QueueSubmit(_queue, 1, &info, VK_NULL_HANDLE) != VK_SUCCESS) {
         ARS_LOG_CRITICAL("Failed to submit command to queue");
     }
 }

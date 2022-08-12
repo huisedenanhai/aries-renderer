@@ -1,4 +1,4 @@
-add_library(engine
+aries_add_library(engine
         Spawn.cpp
         Spawn.h
         Entity.cpp
@@ -7,7 +7,6 @@ add_library(engine
         Entity.Editor.h
         Engine.cpp
         Engine.h)
-aries_setup_common_target(engine)
 
 target_link_libraries(engine PUBLIC
         core

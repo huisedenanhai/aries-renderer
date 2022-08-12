@@ -1,4 +1,4 @@
-aries_target_sources(render PRIVATE
+target_sources(render PRIVATE
         Bindless.cpp
         Bindless.h
         ShaderLib.cpp

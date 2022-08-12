@@ -1,4 +1,4 @@
-add_executable(aries_editor
+aries_add_executable(aries_editor
         Entity.cpp
         Entity.h
         FileBrowser.cpp
@@ -9,7 +9,6 @@ add_executable(aries_editor
         Scene3DView.h
         Main.cpp)
 
-aries_setup_common_target(aries_editor)
 target_link_libraries(aries_editor PRIVATE
         engine
         )

@@ -1,4 +1,4 @@
-add_library(render
+aries_add_library(render
         Common.cpp
         Common.h
         IEffect.cpp
@@ -18,7 +18,6 @@ add_library(render
 
 target_link_libraries(render PUBLIC core imgui)
 target_link_libraries(render PRIVATE glfw imgui_glfw shaderc mikktspace)
-aries_setup_common_target(render)
 
 add_subdirectory(vk)
 add_subdirectory(res)

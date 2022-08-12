@@ -1,4 +1,4 @@
-aries_target_sources(script PUBLIC
+target_sources(script PUBLIC
         LuaContext.h
         LuaContext.cpp
         )

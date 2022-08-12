@@ -1,4 +1,4 @@
-aries_target_sources(render PRIVATE
+target_sources(render PRIVATE
         Material.cpp
         Material.h
         Mesh.cpp

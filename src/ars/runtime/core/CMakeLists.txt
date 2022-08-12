@@ -1,4 +1,4 @@
-add_library(core
+aries_add_library(core
         Core.cpp
         Core.h
         Profiler.cpp
@@ -12,7 +12,6 @@ add_library(core
         Res.h
         Log.h
         )
-aries_setup_common_target(core)
 
 target_link_libraries(core PUBLIC
         imgui

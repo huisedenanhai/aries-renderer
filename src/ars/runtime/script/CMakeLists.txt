@@ -1,4 +1,3 @@
-add_library(script IScriptContext.h)
-aries_setup_common_target(script)
+aries_add_library(script IScriptContext.h)
 
 add_subdirectory(lua)

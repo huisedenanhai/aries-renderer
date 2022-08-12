@@ -1,18 +1,15 @@
-add_executable(playground_lua Lua.cpp)
-aries_setup_common_target(playground_lua)
+aries_add_executable(playground_lua Lua.cpp)
 
 target_link_libraries(playground_lua PRIVATE liblua)
 
-add_executable(playground_render Render.cpp)
-aries_setup_common_target(playground_render)
+aries_add_executable(playground_render Render.cpp)
 
 target_link_libraries(playground_render PRIVATE
         engine
         tinygltf
         )
 
-add_executable(playground_hierarchy Hierarchy.cpp)
-aries_setup_common_target(playground_hierarchy)
+aries_add_executable(playground_hierarchy Hierarchy.cpp)
 
 target_link_libraries(playground_hierarchy PRIVATE engine)
 

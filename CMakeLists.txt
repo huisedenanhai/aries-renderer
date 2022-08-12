@@ -7,8 +7,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 macro(aries_pre_add_target)
-    file(GLOB_RECURSE all_sources CONFIGURE_DEPENDS "*.h" "*.hpp" "*.cpp" "*.c")
-    source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX sources FILES ${all_sources})
+    file(GLOB_RECURSE all_sources CONFIGURE_DEPENDS "*")
+    source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${all_sources})
 endmacro()
 
 macro(aries_post_add_target target)

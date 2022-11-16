@@ -265,22 +265,19 @@ void Drawer::draw(CommandBuffer *cmd,
 
     {
         ARS_PROFILER_SAMPLE("Update Instance Buffer", 0xFF184FA1);
-        // Prepare data on CPU side and copy to device buffer is MUCH faster
-        // than directly write to mapped device pointer on windows with RTX
-        // 2060.
-        std::vector<InstanceDrawParam> inst_data{};
-        inst_data.resize(sorted_requests.size());
-        for (int i = 0; i < sorted_requests.size(); i++) {
-            auto &inst = inst_data[i];
-            auto req = sorted_requests[i];
-            inst.MV = V * req->M;
-            inst.I_MV = glm::inverse(inst.MV);
-            inst.material_id = 0;
-            inst.instance_id = i;
-            inst.custom_id = req->custom_id;
-        }
-
-        inst_buffer->set_data(inst_data);
+	inst_buffer->map_once([&](void* ptr) {
+	    auto inst_data = reinterpret_cast<InstanceDrawParam *>(ptr);
+            for (int i = 0; i < sorted_requests.size(); i++) {
+                auto &inst = inst_data[i];
+                auto req = sorted_requests[i];
+		auto MV = V * req->M;
+                inst.MV = MV;
+                inst.I_MV = glm::inverse(MV);
+                inst.material_id = 0;
+                inst.instance_id = i;
+                inst.custom_id = req->custom_id;
+            }
+	});
     }
 
     DrawRequest bound_req{};

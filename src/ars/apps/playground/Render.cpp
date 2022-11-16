@@ -163,7 +163,7 @@ class Application : public ars::engine::IApplication {
         auto ctx = ars::engine::render_context();
         // Test create cube map
         auto cube_map = ctx->create_texture(
-            TextureInfo::create_cube_map(Format::R8G8B8A8_SRGB, 256));
+            TextureInfo::create_cube_map("test cube", Format::R8G8B8A8_SRGB, 256));
         std::vector<std::string> face_names{"px", "nx", "py", "ny", "pz", "nz"};
         for (int i = 0; i < 6; i++) {
             auto face_file_name =

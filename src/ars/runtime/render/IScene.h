@@ -135,7 +135,7 @@ struct Perspective {
     float y_fov = glm::radians(45.0f);
     // use infinite Z if z_far == 0, otherwise z_far should > 0
     float z_far = 100.0f;
-    float z_near = 0.1f; // must > 0
+    float z_near = 1e-3f; // must > 0
 
     [[nodiscard]] glm::mat4 projection_matrix(float w_div_h) const;
     [[nodiscard]] Frustum frustum(float w_div_h) const;

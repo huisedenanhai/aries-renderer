@@ -34,6 +34,9 @@ std::vector<uint64_t> QuerySelection::query_selection(uint32_t x,
         ID_COLOR_ATTACHMENT_FORMAT, width, height, 1);
     color_attach_info.usage =
         VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    color_attach_info.mipmap_mode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+    color_attach_info.min_filter = VK_FILTER_NEAREST;
+    color_attach_info.mag_filter = VK_FILTER_NEAREST;
 
     auto depth_attach_info =
         TextureCreateInfo::sampled_2d(RT_FORMAT_DEPTH, width, height, 1);

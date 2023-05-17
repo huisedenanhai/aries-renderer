@@ -97,6 +97,7 @@ void OverlayRenderer::ensure_outline_rts() {
             VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
         info.mag_filter = VK_FILTER_NEAREST;
         info.min_filter = VK_FILTER_NEAREST;
+        info.mipmap_mode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
         _outline_id_rt = _view->rt_manager()->alloc(info);
     }
 

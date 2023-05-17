@@ -83,14 +83,32 @@ Frustum Perspective::frustum(float w_div_h) const {
     f.vertices[1] = glm::vec3{tan_half_fov_x, tan_half_fov_y, -1.0f} * z_near;
     f.vertices[2] = glm::vec3{tan_half_fov_x, -tan_half_fov_y, -1.0f} * z_near;
     f.vertices[3] = glm::vec3{-tan_half_fov_x, -tan_half_fov_y, -1.0f} * z_near;
-    f.vertices[4] = glm::vec3{-tan_half_fov_x, tan_half_fov_y, -1.0f} * z_far;
-    f.vertices[5] = glm::vec3{tan_half_fov_x, tan_half_fov_y, -1.0f} * z_far;
-    f.vertices[6] = glm::vec3{tan_half_fov_x, -tan_half_fov_y, -1.0f} * z_far;
-    f.vertices[7] = glm::vec3{-tan_half_fov_x, -tan_half_fov_y, -1.0f} * z_far;
+    auto clipped_z_far = z_far;
+    if (is_infinite_z()) {
+        clipped_z_far = 10000.0f;
+    }
+    f.vertices[4] =
+        glm::vec3{-tan_half_fov_x, tan_half_fov_y, -1.0f} * clipped_z_far;
+    f.vertices[5] =
+        glm::vec3{tan_half_fov_x, tan_half_fov_y, -1.0f} * clipped_z_far;
+    f.vertices[6] =
+        glm::vec3{tan_half_fov_x, -tan_half_fov_y, -1.0f} * clipped_z_far;
+    f.vertices[7] =
+        glm::vec3{-tan_half_fov_x, -tan_half_fov_y, -1.0f} * clipped_z_far;
 
     f.update_planes_by_vertices();
 
+    if (is_infinite_z()) {
+        f.plane_count = 5;
+    } else {
+        f.plane_count = 6;
+    }
+
     return f;
+}
+
+bool Perspective::is_infinite_z() const {
+    return z_far == 0;
 }
 
 glm::mat4 Orthographic::projection_matrix(float w_div_h) const {
@@ -111,6 +129,7 @@ Frustum Orthographic::frustum(float w_div_h) const {
     f.vertices[7] = {-x_mag, -y_mag, -z_far};
 
     f.update_planes_by_vertices();
+    f.plane_count = 6;
 
     return f;
 }
@@ -220,7 +239,8 @@ float linear_z_to_depth01(const glm::mat4 &P, float linear_z) {
 bool Frustum::culled(const math::AABB<float> &aabb) const {
     // Conservative culling, some aabb that not intersect with frustum may not
     // be culled. But those culled are definitely out of view.
-    for (auto &p : planes) {
+    for (int i = 0; i < plane_count; i++) {
+        auto p = planes[i];
         auto culled_point = [&](const glm::vec3 &v) {
             return glm::dot(p, glm::vec4(aabb.lerp(v), 1.0f)) > 0;
         };

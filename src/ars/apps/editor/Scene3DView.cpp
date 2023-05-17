@@ -103,9 +103,18 @@ void transform_gizmo(Scene3DViewState &state,
                       region_max.x - region_min.x,
                       region_max.y - region_min.y);
     ImGuizmo::SetDrawlist(ImGui::GetWindowDrawList());
-    auto proj_matrix = view->camera().projection_matrix(
-        static_cast<float>(view->size().width) /
-        static_cast<float>(view->size().height));
+    float w_div_h = static_cast<float>(view->size().width) /
+                    static_cast<float>(view->size().height);
+    auto proj_matrix = view->camera().projection_matrix(w_div_h);
+
+    if (std::holds_alternative<render::Perspective>(view->camera())) {
+        auto perspective = std::get<render::Perspective>(view->camera());
+        if (perspective.is_infinite_z()) {
+            perspective.z_far = 100000.0f;
+            proj_matrix = perspective.projection_matrix(w_div_h);
+        }
+    }
+
     auto model_matrix = current_selected->world_xform().matrix();
     auto view_matrix = glm::inverse(view->xform().matrix_no_scale());
     auto view_matrix_imguizmo =

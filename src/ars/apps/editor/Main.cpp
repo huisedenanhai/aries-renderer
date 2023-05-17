@@ -77,7 +77,8 @@ class Editor : public engine::IApplication {
                 math::XformTRS<float>::from_translation({0, 0.3f, 2.0f}));
 
             render::Perspective cam{};
-            cam.z_far = 10000.0f;
+            // use infinite Z
+            cam.z_far = 0;
             _view->set_camera(cam);
             _view->overlay()->set_light_gizmo(_light_bulb_icon, 0.1f);
 

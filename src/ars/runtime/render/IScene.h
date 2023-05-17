@@ -105,6 +105,7 @@ struct Frustum {
     // n may be not normalized.
     // Planes are ordered as +X, -X, +Y, -Y, +Z, -Z
     glm::vec4 planes[6]{};
+    uint32_t plane_count = 6;
     // The first 4 vertices are corners of near plane, the last 4 vertices are
     // corners of far plane.
     // The order of vertices is clockwise from the view of camera, i.e. by
@@ -132,11 +133,13 @@ Frustum transform_frustum(const glm::mat4 &mat, const Frustum &frustum);
 
 struct Perspective {
     float y_fov = glm::radians(45.0f);
-    float z_far = 100.0f; // z_far > 0
-    float z_near = 0.1f;  // must > 0
+    // use infinite Z if z_far == 0, otherwise z_far should > 0
+    float z_far = 100.0f;
+    float z_near = 0.1f; // must > 0
 
     [[nodiscard]] glm::mat4 projection_matrix(float w_div_h) const;
     [[nodiscard]] Frustum frustum(float w_div_h) const;
+    [[nodiscard]] bool is_infinite_z() const;
 };
 
 struct Orthographic {

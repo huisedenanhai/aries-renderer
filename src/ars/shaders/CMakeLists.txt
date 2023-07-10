@@ -9,15 +9,20 @@ aries_pre_add_target()
 add_custom_target(shaders ALL
         COMMAND
         ${ARS_FRILL_EXECUTABLE}
-        -S="${CMAKE_CURRENT_SOURCE_DIR}"
-        -B="${CMAKE_BINARY_DIR}/spv"
-        -C="${CMAKE_BINARY_DIR}"
+        -s="${CMAKE_CURRENT_SOURCE_DIR}"
+        -o="${CMAKE_BINARY_DIR}/spv"
 
         SOURCES ${all_shader_sources}
 
         BYPRODUCTS
-        ${CMAKE_BINARY_DIR}/spv/frill_shaders.hpp
+        ${CMAKE_BINARY_DIR}/spv/frill.h
+        ${CMAKE_BINARY_DIR}/spv/frill.cpp
 
         COMMENT
         "compile shaders to spirv"
+        )
+
+aries_add_library(frill_shaders
+        ${CMAKE_BINARY_DIR}/spv/frill.h
+        ${CMAKE_BINARY_DIR}/spv/frill.cpp
         )

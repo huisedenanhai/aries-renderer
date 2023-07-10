@@ -43,7 +43,8 @@ target_sources(render PRIVATE
         )
 
 target_link_libraries(render PRIVATE
-        vulkan)
+        vulkan
+        frill_shaders)
 
 add_dependencies(render shaders)
 

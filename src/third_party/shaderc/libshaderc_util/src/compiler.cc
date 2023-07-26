@@ -694,8 +694,8 @@ std::vector<uint32_t> ConvertStringToVector(const std::string& str) {
   size_t vector_length =
       (num_bytes_str + sizeof(uint32_t) - 1) / sizeof(uint32_t);
   std::vector<uint32_t> result_vec(vector_length, 0);
-  std::strncpy(reinterpret_cast<char*>(result_vec.data()), str.c_str(),
-               str.size());
+  std::memcpy(result_vec.data(), str.c_str(), str.size());
+  reinterpret_cast<char*>(result_vec.data())[str.size()] = 0;
   return result_vec;
 }
 
